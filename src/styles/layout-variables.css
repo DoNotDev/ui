@@ -1,0 +1,1161 @@
+/* packages/ui/src/styles/layout-variables.css */
+
+/* ===========================
+   DEFAULT VALUES (Landing Preset)
+   All presets inherit these - only override what's different
+     =========================== */
+
+:root {
+  /* Layout structure dimensions */
+  /* Height values include borders (box-sizing: border-box) */
+  /* Content heights are multiples of 12px, then add 2px border */
+  --header-height: 62px;
+  /* 60px content + 2px border-bottom */
+  --header-padding: 1rem;
+  --sidebar-width: 0px;
+  --sidebar-padding: 0px;
+  --footer-height: 50px;
+  /* 48px content + 2px border-top */
+  --footer-padding: 1rem;
+
+  /* Layout-specific horizontal padding (for breadcrumbs, full-width components) */
+  /* PageContainer uses density system for spacing and typography */
+  --content-padding: var(--gap-md);
+  /* Controlled by density system - minimal horizontal padding for layout elements */
+
+  /* Component-specific sizing (derived from layout dimensions) */
+  --header-icon-size: calc(var(--header-height) - 2rem);
+  --header-logo-max-height: calc(var(--header-height) - 1rem);
+  --sidebar-item-height: var(--touch-target);
+  --sidebar-icon-size: var(--icon-md);
+  --sidebar-edge-padding: 1rem;
+  --sidebar-edge-padding-collapsed: 0.5rem;
+  --sidebar-resize-handle-width: 6px;
+
+  /* Content width - max constraint only, grid handles sidebar space */
+  /* PageContainer sets --max-content-width per variant, components use --content-width */
+  --max-content-width: 100%;
+  --content-width: var(--max-content-width, 100%);
+
+  /* Narrow content (mobile-first PWA, app-like single column) - single source of truth */
+  --narrow-content-max: 37.5rem;
+  /* 600px */
+  --narrow-form-max: 30rem;
+  /* 480px - inner form/input width within narrow layout */
+
+  /* Content Area Calculations */
+  /* Header content area (excludes sidebar on some presets) */
+  --header-content-width: 100%;
+
+  /* ===========================
+     ROUTING ANIMATIONS
+     Overridable in themes.css: --routing-animation: slide; or --routing-animation: none;
+     =========================== */
+
+  /* Single animation type (fade, slide, or none to disable) - app-wide */
+  --routing-animation: none;
+  --routing-default-duration: var(--dur-normal);
+
+  /* Breakpoint-specific durations */
+  --routing-mobile-duration: var(--routing-default-duration);
+  --routing-tablet-duration: var(--routing-default-duration);
+  --routing-desktop-duration: var(--routing-default-duration);
+  --routing-wide-duration: var(--routing-default-duration);
+}
+
+/* ===========================
+   ROUTING ANIMATIONS - KEYFRAMES
+   =========================== */
+
+@keyframes routeFadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes routeFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide animations - RTL-aware */
+@keyframes routeSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes routeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* RTL slide animations: @keyframes can't be scoped with :dir(rtl).
+   RTL direction is handled via logical properties in the consuming components. */
+
+/* Routing animations - applied to main content area */
+/* Default: visible (progressive enhancement - content shows even if JS fails) */
+main[role='main'] {
+  opacity: 1;
+}
+
+/* Fade animation - keyframes handle opacity 0→1 */
+main[role='main'][data-routing-animation='fade'] {
+  animation: routeFadeIn var(--routing-default-duration, 300ms) ease-in forwards;
+}
+
+/* Slide animation - keyframes handle opacity 0→1 */
+main[role='main'][data-routing-animation='slide'] {
+  animation: routeSlideIn var(--routing-default-duration, 300ms) ease-in
+    forwards;
+}
+
+/* No animation - already visible by default, explicit for clarity */
+main[role='main'][data-routing-animation='none'] {
+  animation: none;
+  opacity: 1;
+}
+
+/* Mobile (< 768px) */
+@media (width < 768px) {
+  main[role='main'][data-routing-animation='fade'] {
+    animation: routeFadeIn
+      var(--routing-mobile-duration, var(--routing-default-duration, 300ms))
+      ease-in forwards;
+  }
+
+  main[role='main'][data-routing-animation='slide'] {
+    animation: routeSlideIn
+      var(--routing-mobile-duration, var(--routing-default-duration, 300ms))
+      ease-in forwards;
+  }
+}
+
+/* Tablet (768px - 1023px) */
+@media (width >=768px) and (width <=1023px) {
+  main[role='main'][data-routing-animation='fade'] {
+    animation: routeFadeIn
+      var(--routing-tablet-duration, var(--routing-default-duration, 300ms))
+      ease-in forwards;
+  }
+
+  main[role='main'][data-routing-animation='slide'] {
+    animation: routeSlideIn
+      var(--routing-tablet-duration, var(--routing-default-duration, 300ms))
+      ease-in forwards;
+  }
+}
+
+/* Desktop (1024px - 1439px) */
+@media (width >=1024px) and (width <=1439px) {
+  main[role='main'][data-routing-animation='fade'] {
+    animation: routeFadeIn
+      var(--routing-desktop-duration, var(--routing-default-duration, 300ms))
+      ease-in forwards;
+  }
+
+  main[role='main'][data-routing-animation='slide'] {
+    animation: routeSlideIn
+      var(--routing-desktop-duration, var(--routing-default-duration, 300ms))
+      ease-in forwards;
+  }
+}
+
+/* Wide (>= 1440px) */
+@media (width >=1440px) {
+  main[role='main'][data-routing-animation='fade'] {
+    animation: routeFadeIn
+      var(--routing-wide-duration, var(--routing-default-duration, 300ms))
+      ease-in forwards;
+  }
+
+  main[role='main'][data-routing-animation='slide'] {
+    animation: routeSlideIn
+      var(--routing-wide-duration, var(--routing-default-duration, 300ms))
+      ease-in forwards;
+  }
+}
+
+/* Respect prefers-reduced-motion - disable all routing animations */
+@media (prefers-reduced-motion: reduce) {
+  main[role='main'] {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Header content width adjustments for sidebar layouts */
+[data-layout='moolti'],
+[data-layout='docs'],
+[data-layout='blog'] {
+  --header-content-width: calc(100% - var(--sidebar-width));
+}
+
+/* Mobile/Tablet: Hide sidebars - WCAG & Lighthouse best practices */
+@media (width <=1023px) {
+  .dndev-layout aside[role='navigation'].sidebar,
+  aside[role='navigation'].sidebar {
+    display: none !important;
+  }
+}
+
+/* ===========================
+   LAYOUT CONTAINER
+   Relative positioning container for absolute positioned elements
+   =========================== */
+
+.dndev-layout {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: grid;
+  /* Grid structure: 3 rows, 2 columns */
+  grid-template-areas:
+    'header header'
+    'sidebar main'
+    'footer footer';
+  grid-template-rows: var(--header-height) 1fr minmax(
+      var(--footer-height),
+      auto
+    );
+  grid-template-columns: var(--sidebar-width) 1fr;
+}
+
+/* Footer inline: renders inside main, grid drops to 2 rows */
+.dndev-layout[data-footer-inline] {
+  grid-template-areas:
+    'header header'
+    'sidebar main';
+  grid-template-rows: var(--header-height) 1fr;
+}
+
+/* Custom footer: content-driven grid row height (no 50px minimum from --footer-height) */
+.dndev-layout:has(> footer[data-custom]) {
+  grid-template-rows: var(--header-height) 1fr auto;
+}
+
+/* Footer inside main: spacing + sizing (slotted mode only) */
+main[role='main'] > footer[role='contentinfo']:not([data-custom]) {
+  margin-top: var(--gap-lg);
+  flex-shrink: 0;
+  height: auto;
+}
+main[role='main'] > footer[role='contentinfo']:not([data-custom]) > * {
+  height: auto;
+  min-height: var(--footer-height);
+}
+
+/* Presets with no footer at all */
+[data-layout='moolti'] footer[role='contentinfo'],
+[data-layout='plain'] footer[role='contentinfo'] {
+  display: none;
+}
+
+/* ===========================
+   LAYOUT ZONE POSITIONING RULES
+   Follows logical flow: Header → Sidebar → Main → Footer
+   =========================== */
+
+/* Header: Always at top, full width, defined height */
+/* box-sizing: border-box ensures borders are included in height (already set globally, explicit here for clarity) */
+header[role='banner'] {
+  /* Structural - always applies */
+  grid-area: header;
+  box-sizing: border-box;
+  height: var(--header-height);
+  min-height: var(--header-height);
+  max-height: var(--header-height);
+  position: relative;
+  z-index: var(--z-header);
+  contain: layout style;
+  overflow: visible; /* Allow absolutely positioned children's shadows to extend beyond bounds */
+
+  /* Container queries support for responsive components */
+  container-type: inline-size;
+  container-name: header;
+
+  /* Flex container to properly wrap Grid/flex children from preset headers */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  /* Mobile: Sticky header (for presets that keep header visible) */
+  @media (width <=1023px) {
+    position: sticky;
+    top: 0;
+  }
+}
+
+/* Header visual polish - slotted mode only (custom mode owns its own visuals) */
+header[role='banner']:not([data-custom]) {
+  gap: var(--gap-sm);
+  padding-inline-start: var(--content-padding);
+  padding-inline-end: var(--content-padding);
+  background: var(--background);
+  border-bottom: var(--border-hairline) solid var(--border);
+}
+
+.header-start {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 100%;
+  max-height: 100%;
+  gap: var(--gap-sm);
+  overflow: visible; /* Allow shadows to show */
+  /* Theme-controlled padding for shadows that extend beyond bounds (e.g., brutalist hard-offset shadows) */
+  /* Shadows extend rightward, so only end padding needed */
+  /* Defaults to 0 for themes with diffused shadows that don't extend beyond bounds */
+  padding-inline-end: var(--header-shadow-padding, 0);
+}
+
+.header-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  height: 100%;
+  max-height: 100%;
+  margin-inline-start: auto;
+  gap: var(--gap-sm);
+  overflow: visible; /* Allow shadows to show */
+  /* Theme-controlled padding for shadows that extend beyond bounds (e.g., brutalist hard-offset shadows) */
+  /* Shadows extend rightward, so only end padding needed */
+  /* Defaults to 0 for themes with diffused shadows that don't extend beyond bounds */
+  padding-inline-end: var(--header-shadow-padding, 0);
+}
+
+/* Viewport-centered center content - absolutely positioned overlay */
+header[role='banner'] .header-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: fit-content;
+  z-index: 1;
+  /* Theme-controlled padding for shadows that extend beyond bounds (e.g., brutalist hard-offset shadows) */
+  /* Shadows extend rightward, so only end padding needed */
+  /* Defaults to 0 for themes with diffused shadows that don't extend beyond bounds */
+  padding-inline-end: var(--header-shadow-padding, 0);
+}
+
+/* ===========================
+   ICON HEIGHT FIX
+   =========================== */
+
+/* AppIcon SVG height fix - ensures SVG respects --header-height */
+.h-\[var\(--header-height\)\] svg,
+[class*='h-[var(--header-height)'] svg {
+  height: 100%;
+  width: auto;
+}
+
+/* Sidebar: Underneath header, left = 0, width controlled by grid column */
+/* box-sizing: border-box ensures borders are included in width (already set globally, explicit here for clarity) */
+aside[role='navigation'].sidebar {
+  /* Structural - always applies */
+  grid-area: sidebar;
+  box-sizing: border-box;
+  min-width: calc(var(--sidebar-resize-handle-width) + 48px);
+  /* Min: 48px content + 6px handle = 54px */
+  max-width: calc(var(--sidebar-resize-handle-width) + 400px);
+  /* Max: 400px content + 6px handle = 406px */
+  z-index: var(--z-sidebar);
+  overflow-x: hidden;
+  /* Horizontal must be clipped — handle is in grid so vertical needs no clipping */
+  contain: layout style;
+  padding: 0;
+  display: grid;
+  grid-template-columns: auto var(--sidebar-resize-handle-width);
+  /* Content | Handle - column 1 width set inline */
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* Top | Content | Bottom. `minmax(0, 1fr)` overrides the default `auto`
+     min track size so the content row can shrink below its content height,
+     which is what lets `.sidebar-content`'s overflow-y: auto actually fire. */
+  height: 100%;
+
+  /* Desktop presets with no sidebar: Hide sidebar element for performance/accessibility */
+  /* Landing, Plain, Game have --sidebar-width: 0px, also need display: none */
+  :root[data-layout='landing'] &,
+  :root[data-layout='plain'] &,
+  :root[data-layout='game'] & {
+    display: none;
+  }
+
+  /* Moolti: Sidebar spans full height (no header/footer on desktop) */
+  :root[data-layout='moolti'] & {
+    grid-row: 1 / -1;
+  }
+}
+
+/* Sidebar visual polish - slotted mode only (custom mode owns its own visuals) */
+aside[role='navigation'].sidebar:not([data-custom]) {
+  background: var(--background);
+  /* No border - resize handle is the visual separator */
+}
+
+/* ===========================
+   RESIZABLE SIDEBAR STYLES
+   =========================== */
+
+/* Resize handle - now in grid column 2, no absolute positioning needed */
+aside[role='navigation'].sidebar .dndev-sidebar-resize-handle {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  width: var(--sidebar-resize-handle-width);
+  cursor: col-resize;
+  background: var(--border);
+  z-index: var(--z-sidebar);
+  transition: background var(--dur-fast);
+  pointer-events: auto;
+}
+
+aside[role='navigation'].sidebar .dndev-sidebar-resize-handle:hover,
+aside[role='navigation'].sidebar .dndev-sidebar-resize-handle:focus-visible {
+  background: var(--primary);
+  outline: none;
+}
+
+/* Active drag state */
+aside[role='navigation'].sidebar[data-dragging='true']
+  .dndev-sidebar-resize-handle {
+  background: var(--primary);
+}
+
+/* Touch-friendly handle */
+@media (hover: none) {
+  aside[role='navigation'].sidebar .dndev-sidebar-resize-handle {
+    width: calc(var(--sidebar-resize-handle-width) * 2);
+    /* 12px for touch */
+  }
+}
+
+/* Landing: AUTO display mode - compact below wide breakpoint (< 1440px) */
+@media (width < 1440px) {
+  [data-layout='landing']
+    header[role='banner']
+    [data-display='auto']
+    .dndev-interactive-label {
+    display: none;
+  }
+}
+
+/* Sidebar zones: top, content, bottom - shared layout rules */
+/* All zones: flex column, no padding, 100% width, vertical stacking */
+/* Explicit grid-row ensures correct placement even when top slot is missing */
+.sidebar-top,
+.sidebar-content,
+.sidebar-bottom {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: var(--gap-none);
+  gap: var(--gap-none);
+}
+
+/* Zone-specific overrides with explicit grid rows */
+.sidebar-top {
+  grid-row: 1;
+  flex-shrink: 0;
+  gap: var(--gap-sm);
+  padding-block-end: var(--gap-md);
+}
+
+.sidebar-content {
+  grid-row: 2;
+  overflow-y: auto;
+  min-height: 0;
+  /* `safe` falls back to flex-start on overflow. Without it, centered overflow
+     pushes the top half above scrollTop=0 where it's unreachable. */
+  justify-content: safe center;
+  /* Zero gap between items - they touch vertically */
+  gap: var(--gap-none);
+
+  /* Add horizontal padding to menu items */
+  .dndev-interactive[data-role='menu-item'],
+  .dndev-interactive[data-role='command-item'],
+  .dndev-interactive[data-role='nav-trigger'] {
+    padding-inline-start: var(--gap-sm);
+    padding-inline-end: var(--gap-sm);
+
+    /* Remove padding if compact (icon alone) */
+    &[data-display='compact'] {
+      padding-inline-start: 0 !important;
+      padding-inline-end: 0 !important;
+    }
+  }
+
+  /* Ensure 48px height always - override padding-block to maintain exact height */
+  .dndev-interactive[data-role='menu-item'],
+  .dndev-interactive[data-role='nav-trigger'] {
+    height: var(--touch-target);
+    min-height: var(--touch-target);
+    padding-block: 0;
+    /* No vertical padding - buttons fill exact 48px */
+  }
+
+  /* Other interactive elements (not menu items) - consistent padding */
+  .dndev-interactive:not([data-role='menu-item']):not(
+      [data-role='command-item']
+    ):not([data-role='nav-trigger']) {
+    padding-inline-start: var(--gap-sm);
+    padding-inline-end: var(--gap-sm);
+  }
+}
+
+.sidebar-bottom {
+  grid-row: 3;
+  flex-shrink: 0;
+  gap: var(--gap-sm);
+  padding-block-start: var(--gap-md);
+}
+
+/* Reduce Section padding when inside sidebar - sidebar space is precious */
+.sidebar-content .dndev-section-content {
+  padding-inline: var(--gap-sm);
+  padding-block: var(--gap-sm);
+}
+
+/* Interactive elements in all zones: full width */
+.sidebar-top .dndev-interactive,
+.sidebar-content .dndev-interactive,
+.sidebar-bottom .dndev-interactive {
+  width: 100%;
+  min-width: 0;
+  /* justify-content handled by patterns.css parent selector */
+}
+
+/* Hide kbd elements in sidebar when collapsed - prevents collapse blocking */
+aside[role='navigation'].sidebar[data-collapsed='true'] .dndev-interactive kbd {
+  display: none;
+}
+
+/* Force sidebar children to shrink - no blocking resize */
+aside[role='navigation'].sidebar {
+  .sidebar-top,
+  .sidebar-bottom {
+    overflow: hidden;
+  }
+
+  .sidebar-content {
+    overflow-x: hidden;
+    /* Prevent horizontal scroll, allow vertical */
+  }
+
+  .dndev-interactive {
+    overflow: hidden;
+  }
+
+  .dndev-interactive-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+}
+
+/* Sidebar top slot: consistent 48px, no padding shift */
+.sidebar-top {
+  .dndev-interactive {
+    height: var(--touch-target);
+    min-height: var(--touch-target);
+    padding-block: 0;
+
+    /* When collapsed, ensure compact buttons have no padding */
+    &[data-display='compact'] {
+      padding-inline: 0 !important;
+      width: var(--touch-target);
+      justify-content: center;
+    }
+  }
+}
+
+/* Collapsed sidebar: hide labels, center icons */
+aside[role='navigation'].sidebar[data-collapsed='true'] {
+  /* Hide all auto-display labels */
+  .dndev-interactive-label[data-display='auto'] {
+    display: none;
+  }
+
+  /* Center all interactive elements */
+  .dndev-interactive {
+    padding-inline: 0;
+    justify-content: center;
+  }
+
+  /* AppBranding: hide title, center logo */
+  .app-branding-link {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .app-branding {
+    justify-content: center;
+
+    .app-branding-title {
+      display: none;
+    }
+  }
+
+  /* Custom sidebar content: hide labeled text, keep icons */
+  .sidebar-collapsible {
+    display: none;
+  }
+}
+
+/* Main content: Starts at header-height and sidebar-width */
+main[role='main'] {
+  grid-area: main;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  contain: layout style;
+
+  /* First child after breadcrumbs grows to fill space, never shrinks (scroll container owns overflow) */
+  & > *:not(.breadcrumbs-container):first-of-type,
+  & > .breadcrumbs-container + * {
+    flex: 1 0 auto;
+  }
+}
+
+/* Footer: Full width by default, app presets start after sidebar */
+/* box-sizing: border-box ensures borders are included in height */
+footer[role='contentinfo'] {
+  /* Structural - always applies */
+  grid-area: footer;
+  box-sizing: border-box;
+  grid-column: 1 / -1;
+  z-index: var(--z-footer);
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+/* Footer sizing + visual polish - slotted mode only (custom mode owns its own visuals) */
+footer[role='contentinfo']:not([data-custom]) {
+  min-height: var(--footer-height);
+  background: var(--background);
+  border-top: var(--border-hairline) solid var(--border);
+
+  & > * {
+    width: 100%;
+    height: 100%;
+    padding-inline-start: var(--content-padding);
+    padding-inline-end: var(--content-padding);
+  }
+
+  /* Mobile: Allow footer to grow when content wraps */
+  @media (width <=1023px) {
+    height: auto;
+
+    & > * {
+      height: auto;
+      min-height: var(--footer-height);
+    }
+  }
+}
+
+/* Footer text styles - slotted mode only */
+footer[role='contentinfo']:not([data-custom]) .footer-copyright {
+  color: var(--muted-foreground);
+  font-size: var(--font-size-xs);
+}
+
+footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive) {
+  transition: color var(--dur-fast) ease-out;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--muted-foreground);
+  font-size: var(--font-size-sm);
+  background: transparent;
+}
+
+footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
+  color: var(--primary);
+}
+
+/* ===========================
+   MERGED BAR - Mobile Navigation
+   Position:fixed trigger bar + Sheet
+   CSS toggles visibility based on preset + breakpoint
+   =========================== */
+
+.merged-bar {
+  position: fixed;
+  inset-inline: 0;
+  display: none;
+  /* Hidden by default - CSS shows on mobile */
+  align-items: center;
+  background: var(--background);
+  z-index: var(--z-header);
+  contain: layout style;
+
+  /* Safe area padding for notched devices */
+  padding-inline-start: max(var(--content-padding), env(safe-area-inset-left));
+  padding-inline-end: max(var(--content-padding), env(safe-area-inset-right));
+}
+
+.merged-bar[data-position='top'] {
+  top: 0;
+  height: var(--header-height);
+  border-bottom: 2px solid var(--border);
+  padding-top: env(safe-area-inset-top);
+}
+
+.merged-bar[data-position='bottom'] {
+  bottom: 0;
+  height: 48px;
+  border-top: 2px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.merged-bar-trigger {
+  width: 100%;
+  height: 100%;
+}
+
+.merged-bar-sheet-content {
+  padding: var(--gap-md);
+  height: 100%;
+}
+
+.merged-bar-sheet-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Mobile (<1024px): Show merged-bar, hide zones */
+@media (width <=1023px) {
+  /* Generic: show mergedBar on mobile when rendered (DnDevLayout only renders it when config has mobile.mergedBar) */
+  .merged-bar[data-position='top'],
+  .merged-bar[data-position='bottom'] {
+    display: flex;
+  }
+
+  /* Generic: hide header on mobile when mergedBar replaces it */
+  .dndev-layout[data-has-mergedbar] header[role='banner'] {
+    display: none;
+  }
+
+  /* Bottom mergedBar: hide footer + add safe-area padding */
+  .dndev-layout:has(.merged-bar[data-position='bottom'])
+    > footer[role='contentinfo'] {
+    display: none;
+  }
+  .dndev-layout:has(.merged-bar[data-position='bottom']) {
+    padding-bottom: calc(48px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Desktop (>=1024px): Always hide merged-bar */
+@media (width >=1024px) {
+  .merged-bar {
+    display: none !important;
+  }
+}
+
+/* ===========================
+   PRESET DEFINITIONS
+   Each preset only shows what's different from defaults
+   =========================== */
+
+/**
+ * ADMIN PRESET
+ * Perfect for: Admin panels, dashboards, management interfaces
+ * Overrides: Adds sidebar (240px), constrains width (1480px), tighter spacing
+ */
+[data-layout='admin'] {
+  /* Desktop/Wide (>=1024px) - only overrides */
+  --sidebar-width: var(--custom-sidebar-width, 240px);
+
+  /* Admin: Mobile/Tablet (<1024px) - only overrides */
+  @media (width <=1023px) {
+    --sidebar-width: 0px;
+    /* Override: hide sidebar on mobile */
+  }
+}
+
+/**
+ * MOOLTI PRESET
+ * Perfect for: SaaS applications, productivity tools, focused workflows
+ * Overrides: No header/footer (sidebar only), sidebar (256px), balanced spacing
+ */
+[data-layout='moolti'] {
+  /* Desktop/Wide (>=1024px) - only overrides */
+  --header-height: 0px;
+  --sidebar-width: var(--custom-sidebar-width, 256px);
+  --footer-height: 0px;
+
+  header[role='banner'] {
+    display: none;
+  }
+
+  footer[role='contentinfo'] {
+    display: none;
+  }
+
+  /* Moolti: Mobile/Tablet (<1024px) - only overrides */
+  @media (width <=1023px) {
+    --header-height: 62px;
+    --sidebar-width: 0px;
+  }
+}
+
+/**
+ * DOCS PRESET
+ * Perfect for: Documentation sites, knowledge bases, content platforms
+ * Overrides: No header, sidebar (300px), comfortable reading spacing
+ */
+[data-layout='docs'] {
+  /* Desktop/Wide (>=1024px) - only overrides */
+  --header-height: 0px;
+  /* Override: no header - maximizes reading space */
+  --sidebar-width: var(--custom-sidebar-width, 300px);
+
+  header[role='banner'] {
+    display: none;
+  }
+
+  /* Docs: Mobile/Tablet (<1024px) - only overrides */
+  @media (width <=1023px) {
+    --sidebar-width: 0px;
+    /* Override: hide sidebar on mobile */
+  }
+}
+
+/**
+ * LANDING PRESET (Default)
+ * Perfect for: Marketing sites, landing pages, public content
+ * Uses all default values - no overrides needed
+ */
+
+/**
+ * BLOG PRESET
+ * Perfect for: Blogs, news sites, content management
+ * Overrides: Sidebar (280px), constrains width (1480px), content-focused spacing
+ */
+[data-layout='blog'] {
+  --sidebar-width: var(--custom-sidebar-width, 280px);
+
+  /* Blog: Mobile/Tablet (<1024px) - only overrides */
+  @media (width <=1023px) {
+    --header-height: 0px;
+    --sidebar-width: 0px;
+
+    header[role='banner'] {
+      display: none;
+    }
+  }
+}
+
+/**
+ * PLAIN PRESET
+ * Perfect for: Full-screen apps, embedded widgets, clean content
+ * Overrides: No header/footer/sidebar, minimal spacing
+ */
+[data-layout='plain'] {
+  --header-height: 0px;
+  --sidebar-width: 0px;
+  --footer-height: 0px;
+
+  header[role='banner'] {
+    display: none;
+  }
+
+  aside[role='navigation'].sidebar {
+    display: none;
+  }
+
+  footer[role='contentinfo'] {
+    display: none;
+  }
+}
+
+/* Plain: Mobile/Tablet (<1024px) - same as desktop, no overrides needed */
+
+/**
+ * GAME PRESET
+ * Perfect for: Mobile gaming apps, full-screen experiences, touch interfaces
+ * Overrides: Minimal spacing for maximum screen real estate
+ */
+[data-layout='game'] {
+  --header-height: 92px;
+
+  /* Game: Mobile/Tablet (<1024px) - only overrides */
+  @media (width <=1023px) {
+    --footer-height: 0px;
+
+    footer[role='contentinfo'] {
+      display: none;
+    }
+  }
+}
+
+/* ===========================
+   BREADCRUMBS CONTAINER
+   Global breadcrumbs styling
+   =========================== */
+
+.breadcrumbs-container {
+  /* Sticky: stays pinned at top of scrollable main area */
+  position: sticky;
+  top: 0;
+  z-index: var(--z-breadcrumbs);
+
+  /* Prevent flex grow - should stay at natural height */
+  flex: 0 0 auto;
+  /* Opaque background so scrolling content doesn't show through */
+  background: var(--background);
+  border-bottom: 1px solid rgb(from var(--border) r g b / 0.5);
+
+  /* Hide breadcrumbs container when breadcrumbs return null (smart variant on simple routes) */
+  &:not(:has([role='navigation'])) {
+    display: none;
+  }
+}
+
+/* Breadcrumbs navigation */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding-inline-start: var(--gap-sm);
+  font-size: var(--font-size-base);
+  min-height: 32px;
+  color: var(--muted-foreground);
+}
+
+.breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.breadcrumbs .separator,
+.breadcrumbs .icon {
+  color: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
+  width: var(--icon-md);
+  height: var(--icon-md);
+  flex-shrink: 0;
+}
+
+.breadcrumb-link {
+  transition: color var(--dur-fast) ease-out;
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+.breadcrumb-link:hover {
+  color: var(--primary);
+}
+
+.breadcrumb-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+.breadcrumb-label {
+  color: var(--foreground);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ===========================
+   FRAMEWORK INTEGRATION NOTES
+   =========================== */
+
+/*
+ * USAGE:
+ * Use CSS variables directly in CSS or inline styles in components.
+ *
+ * 1. Direct CSS variable in CSS:
+ *    .my-component { height: var(--header-height); }
+ *
+ * 2. Direct CSS variable in inline style:
+ *    style={{ height: 'var(--header-height)' }}
+ *
+ * 3. Runtime customization:
+ *    Use AppProviders layoutOverrides prop for runtime CSS variable injection:
+ *    <AppProviders
+ *      layoutOverrides={{
+ *        '--header-height': '96px',
+ *        '--sidebar-width': '320px',
+ *      }}
+ *    />
+ */
+
+/* ===========================
+   PAGE CONTAINER
+   Semantic layout wrapper with width constraints
+   =========================== */
+
+.dndev-container {
+  width: 100%;
+  max-width: var(--max-content-width);
+  min-width: 0; /* Allow shrinking in flex so max-width wins */
+  flex: 1 1 auto;
+
+  /* First child spacing when enabled */
+  &[data-gap-first='true'] > *:first-child {
+    padding-top: var(--gap-lg);
+  }
+
+  /* First Section child gets gap-md spacing from top */
+  > .dndev-section-full-width:first-child {
+    margin-top: var(--gap-md);
+  }
+
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--gap-lg);
+  /* Controlled by density system */
+  /* Default: centered */
+  margin-inline-start: auto;
+  margin-inline-end: auto;
+  /* Always have padding to prevent edge touching */
+  padding-inline: var(--gap-md);
+
+  /* Disable centering when explicitly set to false */
+  &[data-centered='false'] {
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+    justify-content: flex-start;
+  }
+
+  /* Full width - no constraints */
+  &[data-variant='full'] {
+    --max-content-width: 100%;
+    max-width: none;
+  }
+
+  /* Standard width - responsive.
+     Base rule `max-width: var(--max-content-width)` picks up the local override.
+     Do NOT add an explicit `max-width: var(--content-width)` here — `--content-width`
+     is resolved eagerly at :root (where --max-content-width is 100%) and inherits as
+     100%, overriding the local variant. The base rule reads --max-content-width
+     directly at the element and gets the correct value. */
+  &[data-variant='standard'] {
+    --max-content-width: var(--content-width-standard);
+  }
+
+  /* Docs width - responsive. See [data-variant='standard'] for why there's no
+     explicit max-width here. */
+  &[data-variant='docs'] {
+    --max-content-width: var(--content-width-docs);
+  }
+
+  /* Narrow width - mobile-first single column (PWA, app-like on every device).
+     See [data-variant='standard'] for why there's no explicit max-width here. */
+  &[data-variant='narrow'] {
+    --max-content-width: var(--content-width-narrow);
+  }
+
+  /* Fixed frame - fills parent exactly, prevents parent scroll */
+  &[data-variant='fixed'] {
+    --max-content-width: 100%;
+    /* Fill main area */
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    gap: 0;
+    padding-inline: 0;
+    /* Exception: fullscreen games need no padding */
+  }
+
+  /* Remove gap entirely when only one child */
+  &:has(> *:only-child) {
+    gap: 0;
+  }
+}
+
+/* ===========================
+   BREAKTHROUGH COMPONENTS
+   Components that break out of PageContainer width constraints
+   =========================== */
+
+/* 
+ * ARCHITECTURAL DECISION:
+ * Breakthrough CSS lives in @donotdev/ui (not @donotdev/components) because:
+ * 
+ * 1. **Dependency on PageContainer**: The breakthrough pattern (negative margins + calc width)
+ *    only works correctly when inside PageContainer, which provides the padding to break out of.
+ * 
+ * 2. **Components Package Independence**: @donotdev/components must work standalone without UI.
+ *    When used without PageContainer, breakthrough CSS causes overlapping/breaking issues.
+ * 
+ * 3. **Scoped Application**: By scoping to `.dndev-container >`, breakthrough only applies
+ *    when components are children of PageContainer, ensuring safe standalone usage.
+ * 
+ * 4. **Package Boundaries**: UI package manages layout relationships (PageContainer ↔ components).
+ *    Components package provides standalone, reusable components.
+ */
+
+/* Breakthrough pattern: only applies inside PageContainer */
+.dndev-container > .dndev-section-full-width,
+.dndev-container > .dndev-cta,
+.dndev-container > .dndev-tech-bento {
+  /* Break out of PageContainer padding and max-width constraint */
+  /* Account for sidebar: --sidebar-width is 0px for presets without sidebar */
+  width: calc(100vw - var(--sidebar-width));
+  width: calc(100dvw - var(--sidebar-width));
+  max-width: calc(100vw - var(--sidebar-width));
+  max-width: calc(100dvw - var(--sidebar-width));
+  margin-inline: calc((-50vw + var(--sidebar-width) / 2) + 50%);
+  margin-inline: calc((-50dvw + var(--sidebar-width) / 2) + 50%);
+  /* Eat gap BEFORE section only */
+  margin-top: calc(-1 * var(--gap-lg));
+  margin-bottom: 0;
+  /* Pass through so inner content (e.g. .dndev-section-content) can use it */
+  --content-width: var(--max-content-width, 100%);
+}
+
+/* HeroSection: breakthrough when fullHeight or contain mode */
+.dndev-container > .dndev-hero-section[style*='height'],
+.dndev-container > .dndev-hero-section--bg-contain {
+  width: calc(100vw - var(--sidebar-width));
+  width: calc(100dvw - var(--sidebar-width));
+  max-width: calc(100vw - var(--sidebar-width));
+  max-width: calc(100dvw - var(--sidebar-width));
+  margin-inline: calc((-50vw + var(--sidebar-width) / 2) + 50%);
+  margin-inline: calc((-50dvw + var(--sidebar-width) / 2) + 50%);
+  margin-top: calc(-1 * var(--gap-lg));
+  margin-bottom: 0;
+  --content-width: var(--max-content-width, 100%);
+}
+
+.footer-mobile-button:hover {
+  background-color: rgb(from var(--muted) r g b / 0.5);
+}

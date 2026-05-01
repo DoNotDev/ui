@@ -1,0 +1,96 @@
+/* packages/ui/src/styles/index.css */
+
+/* ===========================
+   BASE DESIGN SYSTEM
+   =========================== */
+
+/* Import complete design system from @donotdev/components */
+@import '@donotdev/components/styles';
+
+/* ===========================
+   LAYOUT SYSTEM (UI-SPECIFIC)
+   =========================== */
+
+/* Layout-specific CSS custom properties */
+@import './layout-variables.css';
+
+/* ===========================
+   LAYOUT COMPONENT STYLES
+   =========================== */
+
+/* GameContainer - Content + CTA grid for game screens */
+@import '../components/layout/GameContainer.css';
+
+/* AppIcon - header icon styling */
+.app-icon-header {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  width: auto;
+  height: var(--header-height);
+}
+
+.app-icon-header svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ===========================
+   APP BRANDING
+   =========================== */
+
+.app-branding-link {
+  display: inline-flex;
+  height: 100%;
+}
+
+.app-branding {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  height: 100%;
+}
+
+.app-branding-logo {
+  display: inline-flex;
+  flex-shrink: 0;
+  /* Use header-height when available, fallback to touch-target for sidebar */
+  height: max(
+    calc(var(--header-height) - 2 * var(--gap-sm)),
+    var(--touch-target)
+  );
+  width: auto;
+}
+
+.app-branding-logo svg,
+.app-branding-logo img {
+  width: auto;
+  height: 100%;
+  object-fit: contain;
+}
+
+.app-branding-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* COMPACT mode - always hide title */
+.app-branding[data-display='compact'] .app-branding-title {
+  display: none;
+}
+
+/* FULL mode - always show title */
+.app-branding[data-display='full'] .app-branding-title {
+  display: inline;
+}
+
+/* AUTO mode - responds to header-start container query in layout-variables.css */
+.app-branding[data-display='auto'] .app-branding-title {
+  display: inline;
+}

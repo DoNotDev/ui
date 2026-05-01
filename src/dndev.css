@@ -1,0 +1,26 @@
+/* packages/ui/src/dndev.css */
+
+/* 1. Complete UI system (base design system + layout variables) */
+@import './styles/index.css';
+
+/* 2. Fonts from @fontsource (bundled; no external fetch, no public/fonts required) */
+@import '@fontsource/inter/300.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/playfair-display/400.css';
+@import '@fontsource/playfair-display/500.css';
+@import '@fontsource/playfair-display/600.css';
+@import '@fontsource/playfair-display/700.css';
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/700.css';
+@import '@fontsource/space-grotesk/300.css';
+@import '@fontsource/space-grotesk/400.css';
+@import '@fontsource/space-grotesk/500.css';
+@import '@fontsource/space-grotesk/600.css';
+@import '@fontsource/space-grotesk/700.css';
+@import '@fontsource/press-start-2p/400.css';
+
+/* Ensure valid CSS file termination for Turbopack */
+:root {
+}

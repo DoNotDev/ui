@@ -1,64 +1,302 @@
 # @donotdev/ui
 
-UI components for DoNotDev
+Complete UI system and provider architecture for the DoNotDev Framework.
 
 ## Installation
 
-### One-Time Setup (Per Project/Monorepo)
-
-**Step 1: Create Personal Access Token**
-
-Create a GitHub Personal Access Token with `read:packages` scope (create once, reuse forever across unlimited projects):
-1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. Generate new token with `read:packages` scope
-3. Copy the token (save it securely - you'll use this same token for all your projects)
-
-**Step 2: Configure .npmrc**
-
-Create `.npmrc` in your project root (copy this file to each new project/monorepo, reuse the same PAT):
-
 ```bash
-@donotdev:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=ghp_YourPersonalAccessToken
-```
-
-Replace `ghp_YourPersonalAccessToken` with your actual token. You can copy this `.npmrc` file to any new project/monorepo.
-
-### Install Package
-
-**If using `dndev init`:** Your `package.json` with the correct dependencies will be scaffolded, so you just need to run `bun install`.
-
-**If adding to an existing project:**
-
-```bash
-bun add @donotdev/ui
-# or
 npm install @donotdev/ui
+# or
+bun install @donotdev/ui
 ```
-
-**Note:** Once PAT and `.npmrc` are set up, you can install any `@donotdev/*` package without repeating these steps.
-
-**Note:** This is a private package. You need to be a member of the DoNotDev community to access it.
-
-## Documentation
-
-Visit [donotdev.com](https://donotdev.com) for full showcase.
-Visit [docs.donotdev.com](https://docs.donotdev.com) for full documentation.
-
-## Issues & Feedback
-
-This repository is for **issues and feedback only**. 
-
-- [Report a bug](https://github.com/donotdev/ui/issues/new?template=bug_report.md)
-- [Request a feature](https://github.com/donotdev/ui/issues/new?template=feature_request.md)
-
-**Source code is private.** All development happens in the private monorepo. Issues reported here will be addressed by the maintainers.
 
 ## License
 
-Commercial © DoNotDev
+MIT. See [LICENSE.md](./LICENSE.md).
+
+## Quick Start
+
+### Vite Applications
+
+```tsx
+import { ViteAppProviders } from '@donotdev/ui/vite';
+import HomePage from './pages/HomePage';
+
+export function App() {
+  return (
+    <ViteAppProviders
+      config={{
+        app: { name: 'My App' },
+        layout: { preset: 'landing' },
+      }}
+      LandingPage={HomePage}
+    />
+  );
+}
+```
+
+### Next.js Applications
+
+```tsx
+import { NextJsAppProviders } from '@donotdev/ui/next';
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        <NextJsAppProviders
+          config={{
+            app: { name: 'My App' },
+            layout: { preset: 'landing' },
+          }}
+        >
+          {children}
+        </NextJsAppProviders>
+      </body>
+    </html>
+  );
+}
+```
+
+## Configuration
+
+### App Configuration
+
+All configuration is passed through a single `config` prop with smart defaults:
+
+```tsx
+<ViteAppProviders
+  config={{
+    app: {
+      name: 'My Application',
+      description: 'Built with DoNotDev',
+      logo: '/logo.svg',
+    },
+    auth: {
+      authRoute: '/signin', // Default: '/login'
+      roleRoute: '/403', // Default: '/404'
+      tierRoute: '/pricing', // Default: '/404'
+    },
+    seo: {
+      baseUrl: 'https://example.com',
+      defaultImage: '/og-image.png',
+    },
+    layout: {
+      preset: 'admin', // Use LAYOUT_PRESET constants from @donotdev/types
+      footerPosition: 'fixed',
+      breadcrumbs: 'smart',
+    },
+    features: {
+      debug: true, // Auto-detects isDev() by default
+    },
+  }}
+  LandingPage={HomePage}
+  layout={{
+    header: { end: () => <LoginButton /> },
+    footer: () => <CustomFooter />,
+  }}
+/>
+```
+
+### Minimal Configuration
+
+Everything has defaults - only override what you need:
+
+```tsx
+<ViteAppProviders LandingPage={HomePage} />
+```
+
+## Layout Presets
+
+The framework includes professional layout presets:
+
+- **`landing`** - Marketing sites (header + footer)
+- **`admin`** - Admin dashboards (header + sidebar + footer)
+- **`docs`** - Documentation (sidebar + footer)
+- **`moolti`** - SaaS apps (sidebar only)
+- **`dashboard`** - Data dashboards (header + sidebar + footer)
+- **`plain`** - Minimal (content only)
+
+## Layout Customization
+
+### Layout Overrides
+
+Customize specific zones without rebuilding layouts:
+
+```tsx
+<ViteAppProviders
+  layout={{
+    preset: 'admin',
+    header: {
+      start: () => <CustomLogo />,
+      center: () => <SearchBar />,
+      end: () => <UserMenu />,
+    },
+    sidebar: {
+      top: () => <Branding />,
+      content: () => <Navigation />,
+      bottom: () => <UserProfile />,
+    },
+    footer: () => <CustomFooter />,
+  }}
+/>
+```
+
+**Simple API:**
+- `preset?: string` - Layout preset name (default: 'landing')
+- `header?: DnDevOverride | { start?, center?, end? }` - Full override or slot overrides
+- `footer?: DnDevOverride` - Full footer override
+- `sidebar?: DnDevOverride | { top?, content?, bottom? }` - Full override or slot overrides
+- `mergedbar?: DnDevOverride | { trigger?, top?, content?, bottom? }` - Mobile navigation override
+
+**Slot override behavior:**
+- Omit property → Uses preset defaults merged with framework defaults
+- `() => null` → Explicitly hides the slot (no content rendered)
+- `() => ReactNode` → Custom component override
+
+All overrides are lazy functions: `() => ReactNode | null` - components load when rendered, not in provider tree.
+
+**Example:**
+```tsx
+layout={{
+  header: {
+    center: () => null,  // Hide center slot
+    end: () => <MyCustomActions />  // Override end slot
+    // start omitted → uses defaults
+  }
+}}
+```
+
+### CSS Variable Overrides
+
+Fine-tune layout dimensions:
+
+```tsx
+<ViteAppProviders
+  config={{
+    layout: {
+      preset: 'admin',
+      overrides: {
+        '--header-height': '96px',
+        '--sidebar-width': '320px',
+        '--main-padding': '2rem',
+      },
+    },
+  }}
+/>
+```
+
+## Components
+
+### Layout Components
+
+Access config anywhere with hooks:
+
+```tsx
+import { useAppConfig } from '@donotdev/hooks';
+
+function Header() {
+  const name = useAppConfig('name');
+  const url = useAppConfig('url');
+  return <h1>{name}</h1>;
+}
+```
+
+### SEO Components
+
+Automatic SEO meta tags:
+
+```tsx
+// SEO is automatic - uses useSeoConfig() internally
+// Configure via config.seo
+```
+
+### Favicon System
+
+Automatic PWA-compliant favicons:
+
+```tsx
+// Favicon is automatic - uses useFaviconConfig() internally
+// Configure via config.favicon
+```
+
+## Provider Hierarchy
+
+```
+AppConfigProvider (configuration context)
+  ↓
+HelmetProvider (head management)
+  ↓
+StoresInitializer (state management)
+  ↓
+NavigationProvider (routing)
+  ↓
+QueryProviders (React Query)
+  ↓
+UIProviders (design system)
+  ↓
+Layout + Content
+```
+
+## Platform Support
+
+### Vite Features
+
+- React Router integration
+- Virtual module imports
+- SPA optimization
+- Fast HMR
+
+### Next.js Features
+
+- App Router integration
+- Server-side rendering
+- Static generation
+- Server components
+
+## TypeScript Support
+
+Full TypeScript support with intelligent defaults:
+
+```tsx
+import type { AppConfig } from '@donotdev/types';
+
+const config: AppConfig = {
+  app: { name: 'My App' },
+  layout: { preset: 'admin' },
+};
+```
+
+## Exports
+
+### Platform-Specific
+
+```tsx
+import { ViteAppProviders } from '@donotdev/ui/vite';
+import { NextJsAppProviders } from '@donotdev/ui/next';
+```
+
+### Components
+
+```tsx
+import { Layout, Breadcrumbs, GlobalGoTo } from '@donotdev/ui';
+```
+
+### Hooks (Re-exported from @donotdev/hooks)
+
+```tsx
+import {
+  useAppConfig,
+  useAppMetadata,
+  useAuthConfig,
+  useSeoConfig,
+  useFaviconConfig,
+  useFeaturesConfig,
+} from '@donotdev/ui';
+```
 
 ---
 
-**This is an issue-only repository.** Source code is maintained in a private monorepo.
-
+**Package:** @donotdev/ui  
+**Version:** 1.0.0  
+**Author:** AMBROISE PARK Consulting

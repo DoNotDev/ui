@@ -1,0 +1,94 @@
+/* packages/ui/src/components/layout/GameContainer.css */
+
+/* Container - fills parent */
+.dndev-game-container {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100%;
+  width: 100%;
+}
+
+/* Content Area - Scrollable with centering */
+.dndev-game-container__content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Critical: Allow shrinking for scroll */
+  width: 100%;
+}
+
+/* Scroll wrapper - stretches to full width so scrollbar is at viewport edge */
+.dndev-game-container__scroll-wrapper {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  align-self: stretch;
+}
+
+/* ScrollArea - fills wrapper */
+.dndev-game-container__scroll {
+  width: 100%;
+  height: 100%;
+}
+
+/* Content alignment variants */
+.dndev-game-container__content[data-align='center'] {
+  align-items: center;
+}
+
+.dndev-game-container__content[data-align='start'] {
+  align-items: flex-start;
+}
+
+.dndev-game-container__content[data-align='stretch'] {
+  align-items: stretch;
+}
+
+/* Content justify variants */
+.dndev-game-container__content[data-justify='center'] {
+  justify-content: center;
+}
+
+.dndev-game-container__content[data-justify='start'] {
+  justify-content: flex-start;
+}
+
+.dndev-game-container__content[data-justify='end'] {
+  justify-content: flex-end;
+}
+
+.dndev-game-container__content[data-justify='between'] {
+  justify-content: space-between;
+}
+
+/* Narrow content wrapper - constrained by --narrow-content-max, centered inside scroll */
+/* height: 100% fills the scroll viewport so children can use percentage heights.
+   Content taller than viewport still scrolls — overflow propagates to the scroll container. */
+.dndev-game-container__content-narrow {
+  width: 100%;
+  max-width: var(--narrow-content-max);
+  margin-inline: auto;
+  height: 100%;
+}
+
+/* CTA Zone - Fixed at bottom; safe area for notched devices */
+.dndev-game-container__cta {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--gap-md);
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 2px solid var(--border);
+}
+
+/* CTA Button */
+.dndev-game-container__cta-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--gap-sm);
+  width: 100%;
+}
+
+.dndev-game-container__cta-button {
+  height: var(--touch-target);
+  width: 100%;
+  border-radius: 0;
+}

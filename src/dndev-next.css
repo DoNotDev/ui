@@ -1,0 +1,9 @@
+/* packages/ui/src/dndev-next.css */
+/* Next.js variant: @fontsource fonts loaded via public/dndev-fonts.css (see FontPreloadLinks) */
+
+/* 1. Complete UI system (base design system + layout variables) */
+@import './styles/index.css';
+
+/* Ensure valid CSS file termination for Turbopack */
+:root {
+}
