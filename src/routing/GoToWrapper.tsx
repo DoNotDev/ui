@@ -55,7 +55,10 @@ const GoToWrapper = () => {
       }
     },
     {
-      target: document,
+      // `document` is referenced at render time (hook argument), so guard it for
+      // SSR — the listener itself only attaches in an effect (client). Without
+      // this, server rendering throws `document is not defined`.
+      target: typeof document !== 'undefined' ? document : undefined,
       options: {
         passive: false,
         capture: false,

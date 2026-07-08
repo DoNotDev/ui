@@ -21,7 +21,7 @@
  */
 
 import { useMemo } from 'react';
-import { Helmet } from 'react-helmet-async';
+import { HeadTags } from './HeadTags';
 
 import { useTranslation, useIsClient } from '@donotdev/core';
 import { getDndevConfig } from '@donotdev/core';
@@ -374,7 +374,7 @@ export const AutoMetaTags: ComponentType = () => {
   const shouldEmitHreflang = hreflangEnabled && languages.length >= 2;
 
   return (
-    <Helmet>
+    <HeadTags>
       {/* CORE: Basic SEO tags */}
       <title>{metaData.title}</title>
       {metaData.description && (
@@ -564,7 +564,7 @@ export const AutoMetaTags: ComponentType = () => {
           {JSON.stringify(buildSpeculationRules())}
         </script>
       )}
-    </Helmet>
+    </HeadTags>
   );
 };
 

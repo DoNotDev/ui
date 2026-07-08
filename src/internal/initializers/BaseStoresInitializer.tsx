@@ -20,8 +20,6 @@ import {
   useAbortControllerStore,
   useConsentStore,
   useLanguageStore,
-  useConsentReady,
-  useThemeReady,
   getPlatformEnvVar,
 } from '@donotdev/core';
 import { initRipple } from '@donotdev/components';
@@ -335,9 +333,40 @@ export function BaseStoresInitializer({
     initializeStores();
   }, [skipStoreInit, handlers, appConfig, customStores]);
 
-  const consentReady = useConsentReady();
-  const themeReady = useThemeReady();
-  const i18nReady = useI18nReady();
+  // Built-in store readiness (consent, theme, i18n). Read non-reactively via
+  // getState()/instance flags and track changes with subscriptions, instead of
+  // zustand's reactive hooks (useConsentReady/useThemeReady). Under React 19
+  // static prerendering those useSyncExternalStore-based hooks hit a null
+  // dispatcher and crash `next build`. This pattern is SSR-, static-generation-,
+  // and client-safe, and keeps readiness reactive on the client.
+  const [builtinReady, setBuiltinReady] = useState(
+    () =>
+      useConsentStore.getState().isReady === true &&
+      useThemeStore.getState().isReady === true &&
+      useI18nReady()
+  );
+
+  useEffect(() => {
+    if (!isClient()) return;
+    const check = () =>
+      setBuiltinReady(
+        useConsentStore.getState().isReady === true &&
+          useThemeStore.getState().isReady === true &&
+          useI18nReady()
+      );
+    const unsubConsent = useConsentStore.subscribe(check);
+    const unsubTheme = useThemeStore.subscribe(check);
+    const i18n = getI18nInstance();
+    i18n.on?.('initialized', check);
+    i18n.on?.('loaded', check);
+    check();
+    return () => {
+      unsubConsent();
+      unsubTheme();
+      i18n.off?.('initialized', check);
+      i18n.off?.('loaded', check);
+    };
+  }, []);
 
   const criticalCustomStores = customStores.filter(
     (config) => config.type === 'critical'
@@ -380,8 +409,7 @@ export function BaseStoresInitializer({
     // criticalCustomStores reference changes only when customStores prop changes
   }, [customStores]);
 
-  const criticalReady =
-    consentReady && themeReady && i18nReady && allCustomReady;
+  const criticalReady = builtinReady && allCustomReady;
 
   // Two-phase loader: wait for BOTH framework AND route to be ready
   useLayoutEffect(() => {

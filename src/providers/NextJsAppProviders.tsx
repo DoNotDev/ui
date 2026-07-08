@@ -11,7 +11,9 @@
  */
 
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { HelmetProvider } from 'react-helmet-async';
+// No react-helmet-async on Next: React 19 hoists <title>/<meta>/<link> to <head>
+// natively (see HeadTags). Rendering Helmet on the server throws (`document`),
+// which is what blocked SSR. Vite keeps HelmetProvider in ViteAppProviders.
 
 import { QueryProviders, AppConfigProvider } from '@donotdev/core';
 import { useConsent } from '@donotdev/core';
@@ -105,24 +107,29 @@ export interface NextJsAppProvidersProps extends AppProvidersProps {
 
 export function NextJsAppProviders(props: NextJsAppProvidersProps) {
   const { config = {}, layout, children, serverCookies, customStores } = props;
+  // SSR is the default for Next apps: render the provider tree on the server so
+  // page content is present in the initial HTML (crawlable, real SSR). An app
+  // opts OUT with appConfig.ssr === false, restoring the legacy client-only
+  // render (the tree mounts after hydration). Hooks are still called
+  // unconditionally to keep render order stable.
+  const ssr = (config as { ssr?: boolean }).ssr !== false;
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
+  if (!ssr && !isMounted) {
     return <>{children}</>;
   }
 
   return (
     <AppConfigProvider config={config} platform="nextjs">
       <SentryInitializer />
-      <HelmetProvider>
-        <NextJsStoresInitializer
-          serverCookies={serverCookies}
-          customStores={customStores}
-        >
+      <NextJsStoresInitializer
+        serverCookies={serverCookies}
+        customStores={customStores}
+      >
           {/* Favicon - uses useFaviconConfig() internally */}
           <FaviconHead />
 
@@ -158,8 +165,7 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
               </Suspense>
             </UIProviders>
           </QueryProviders>
-        </NextJsStoresInitializer>
-      </HelmetProvider>
+      </NextJsStoresInitializer>
     </AppConfigProvider>
   );
 }

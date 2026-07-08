@@ -39,7 +39,7 @@
 
 import type { ReactElement } from 'react';
 
-import { Helmet } from 'react-helmet-async';
+import { HeadTags } from '../internal/layout/components/HeadTags';
 
 import { useAppConfig } from '@donotdev/core';
 
@@ -215,11 +215,11 @@ export function Seo({
   );
 
   return (
-    <Helmet>
+    <HeadTags>
       <title>{resolvedTitle}</title>
       {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
       {metaTags}
-    </Helmet>
+    </HeadTags>
   );
 }
 

@@ -14,7 +14,7 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { Helmet } from 'react-helmet-async';
+import { HeadTags } from './HeadTags';
 
 import type { ComponentType } from 'react';
 
@@ -140,7 +140,7 @@ const PerformanceHints: ComponentType<PerformanceHintsProps> = ({
         );
 
   return (
-    <Helmet>
+    <HeadTags>
       {/* Font Preload: Initiate font downloads early for faster LCP */}
       {allFontPreloads.map((font) => (
         <link
@@ -167,7 +167,7 @@ const PerformanceHints: ComponentType<PerformanceHintsProps> = ({
       {allDnsPrefetch.map((origin) => (
         <link key={`dns-${origin}`} rel="dns-prefetch" href={origin} />
       ))}
-    </Helmet>
+    </HeadTags>
   );
 };
 

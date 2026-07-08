@@ -1,6 +1,6 @@
 {
   "name": "@donotdev/ui",
-  "version": "0.1.44",
+  "version": "0.1.45",
   "type": "module",
   "private": false,
   "license": "MIT",
@@ -56,13 +56,13 @@
     "@fontsource/space-grotesk": "^5.2.10"
   },
   "peerDependencies": {
-    "@donotdev/ai": "^0.1.42",
-    "@donotdev/auth": "^0.1.43",
-    "@donotdev/billing": "^0.1.43",
+    "@donotdev/ai": "^0.1.44",
+    "@donotdev/auth": "^0.1.44",
+    "@donotdev/billing": "^0.1.44",
     "@donotdev/components": "^0.1.44",
-    "@donotdev/core": "^0.1.43",
+    "@donotdev/core": "^0.1.45",
     "@donotdev/crud": "^0.1.44",
-    "@donotdev/oauth": "^0.1.43",
+    "@donotdev/oauth": "^0.1.44",
     "@hookform/resolvers": "^5.2.2",
     "lucide-react": "^0.575.0",
     "react": "^19.2.4",
