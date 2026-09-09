@@ -100,7 +100,7 @@ export const DnDevLayout = ({
   const preset = useLayout('layoutPreset');
   const routePresetOverride = useLayout('routePresetOverride');
   const isMobile = useBreakpoint('isMobileOrTablet');
-  const { app, features, customPresets } = useAppConfig();
+  const { app, features, customPresets, preset: configPreset } = useAppConfig();
   const debugEnabled = isDev() && features?.debug === true;
 
   // Subscribe to language changes for zone re-renders
@@ -124,10 +124,17 @@ export const DnDevLayout = ({
     return { ...presetRegistry, ...customPresets };
   }, [customPresets]);
 
-  // Effective preset: route override > app default > fallback
+  // Effective preset: route override > store > appConfig > fallback.
+  // appConfig sits between the store and the fallback on purpose: the store starts
+  // at `layoutPreset: null` and only receives appConfig.preset from themeStore's
+  // async initialize() (a post-hydration effect). Falling straight through to
+  // 'landing' made SSR and the first client paint render the landing chrome for
+  // every non-landing app, then swap it out on hydration — a visible flash.
+  // appConfig is available synchronously on both server and client, so reading it
+  // here makes the first paint already correct; the later store init is a no-op.
   const effectivePreset: LayoutPreset = useMemo(() => {
-    return routePresetOverride || preset || 'landing';
-  }, [routePresetOverride, preset]);
+    return routePresetOverride || preset || configPreset || 'landing';
+  }, [routePresetOverride, preset, configPreset]);
 
   // Get preset config (presets only override what's different, defaults fill the rest)
   const config = useMemo((): PresetConfig => {
