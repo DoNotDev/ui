@@ -9,10 +9,10 @@
  * @author AMBROISE PARK Consulting
  */
 
+import type { ReactNode } from 'react';
+
 import { Button, ScrollArea } from '@donotdev/components';
 import { cn } from '@donotdev/components';
-
-import type { ReactNode } from 'react';
 
 /**
  * CTA button definition

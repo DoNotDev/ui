@@ -16,12 +16,11 @@
 
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
+import type { ComponentType } from 'react';
 import { Helmet } from 'react-helmet-async';
 
 import { useTranslation, getDndevConfig, useIsClient } from '@donotdev/core';
 import { useAppConfig, getPlatformEnvVar } from '@donotdev/core';
-
-import type { ComponentType } from 'react';
 import type { SeoMeta } from '@donotdev/core';
 
 interface MetaTagsConfig {

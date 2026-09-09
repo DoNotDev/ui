@@ -39,11 +39,10 @@
 
 import type { ReactElement } from 'react';
 
-import { HeadTags } from '../internal/layout/components/HeadTags';
-
 import { useAppConfig } from '@donotdev/core';
-
 import type { SeoMeta } from '@donotdev/core';
+
+import { HeadTags } from '../internal/layout/components/HeadTags';
 
 /**
  * Dynamic SEO props

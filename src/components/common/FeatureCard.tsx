@@ -13,6 +13,8 @@
  * @author AMBROISE PARK Consulting
  */
 
+import type { CSSProperties, ReactNode } from 'react';
+
 import {
   Card,
   IconBox,
@@ -23,8 +25,6 @@ import {
 import type { CardProps, CardVariant, CardContent } from '@donotdev/components';
 
 import { Link } from '../../routing';
-
-import type { CSSProperties, ReactNode } from 'react';
 
 /** Variant type alias for FeatureCard (matches CardVariant). */
 export type FeatureCardVariant = CardVariant;

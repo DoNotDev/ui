@@ -11,7 +11,9 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 
+import { initRipple } from '@donotdev/components';
 import {
   useThemeStore,
   useNavigationStore,
@@ -22,7 +24,6 @@ import {
   useLanguageStore,
   getPlatformEnvVar,
 } from '@donotdev/core';
-import { initRipple } from '@donotdev/components';
 import {
   useI18nReady,
   getI18nInstance,
@@ -36,8 +37,6 @@ import {
 } from '@donotdev/core';
 import { useAppConfig } from '@donotdev/core';
 import type { AppConfig, CustomStoreConfig } from '@donotdev/core';
-
-import type { ReactNode } from 'react';
 
 /**
  * Removes the shell loader instantly or with fade-out transition

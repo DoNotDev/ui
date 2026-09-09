@@ -22,18 +22,18 @@
  * @author AMBROISE PARK Consulting
  */
 
+import type { ReactNode } from 'react';
+
 import { Button, Stack, Stepper } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
-import { isCrudModuleAvailable, useEntityWorkflow } from '../crudImports';
 import type {
   WorkflowConfig,
   UseEntityWorkflowOptions,
   EntityWorkflowReturn,
 } from '@donotdev/crud';
 
+import { isCrudModuleAvailable, useEntityWorkflow } from '../crudImports';
 import { EntityFormRenderer } from './EntityFormRenderer';
-
-import type { ReactNode } from 'react';
 
 /** Props for EntityWorkflow */
 export interface EntityWorkflowProps {
@@ -69,7 +69,7 @@ export function EntityWorkflow({
   className,
 }: EntityWorkflowProps) {
   // Safe guard: isCrudModuleAvailable is a module-level constant (immutable after load).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   if (!isCrudModuleAvailable) return null;
 
   const { t } = useTranslation('crud');

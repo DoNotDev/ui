@@ -14,8 +14,8 @@
 import { Card, Section, Skeleton, Stack } from '@donotdev/components';
 import { useTranslation, useBreakpoint } from '@donotdev/core';
 import type { EntityRecommendationsProps } from '@donotdev/core';
-import { isCrudModuleAvailable, useCrudCardList } from '../crudImports';
 
+import { isCrudModuleAvailable, useCrudCardList } from '../crudImports';
 import { CrudCard } from './CrudCardLink';
 
 /**
@@ -68,7 +68,7 @@ export function EntityRecommendations({
   className,
 }: EntityRecommendationsProps) {
   // Safe guard: isCrudModuleAvailable is a module-level constant (immutable after load).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   if (!isCrudModuleAvailable) return null;
 
   const { t } = useTranslation([entity.namespace, 'crud']);

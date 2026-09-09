@@ -427,25 +427,38 @@ export const DnDevLayout = ({
     mainRef.current.setAttribute('data-routing-animation', routingAnimation);
   }, [pathname]);
 
-  // Apply data attributes
+  const effectiveDensity = effectivePreset
+    ? LAYOUT_DENSITY_DEFAULTS[effectivePreset] || DENSITY.STANDARD
+    : undefined;
+
+  // Mirror the preset onto <html>. Client-only by nature (documentElement is not
+  // ours to render), so it lands after hydration — which is why the same
+  // attributes are rendered on the wrapper below. Kept because a handful of rules
+  // are scoped to :root[data-layout=...] rather than to a descendant.
   useLayoutEffect(() => {
     if (!isClient() || !effectivePreset) return;
 
     const updateDOM = () => {
       const root = document.documentElement;
       root.setAttribute('data-layout', effectivePreset);
-
-      const density =
-        LAYOUT_DENSITY_DEFAULTS[effectivePreset] || DENSITY.STANDARD;
-      root.setAttribute('data-density', density);
+      if (effectiveDensity) root.setAttribute('data-density', effectiveDensity);
     };
 
     startTransition(updateDOM);
-  }, [effectivePreset]);
+  }, [effectivePreset, effectiveDensity]);
 
   return (
+    // data-layout / data-density are rendered here, not only pushed onto <html>
+    // by the effect above: a preset hides its chrome through CSS
+    // (`[data-layout='plain'] header[role='banner'] { display: none }`), and
+    // header, sidebar and footer are all descendants of this wrapper. Setting the
+    // attribute only from a client effect — deferred further by startTransition —
+    // meant the server shipped the full chrome with nothing to hide it, so every
+    // first paint flashed a header and a sidebar the preset had removed.
     <div
       className={cn('dndev-layout', className)}
+      data-layout={effectivePreset || undefined}
+      data-density={effectiveDensity}
       data-footer-inline={footerInline || undefined}
       data-has-mergedbar={resolvedMergedBar ? '' : undefined}
     >

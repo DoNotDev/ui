@@ -11,6 +11,8 @@
  * @author AMBROISE PARK Consulting
  */
 
+import type { ReactNode } from 'react';
+
 import { DISPLAY } from '@donotdev/components';
 import { LanguageSelector } from '@donotdev/core';
 
@@ -21,8 +23,6 @@ import {
 } from '../../../components/layout/components';
 import { DnDevNavigationMenu } from '../../../routing';
 import { GoTo } from '../../../routing/GoTo';
-
-import type { ReactNode } from 'react';
 
 /**
  * Default slot functions - zones use these unless preset overrides

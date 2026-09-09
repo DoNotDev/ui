@@ -11,10 +11,9 @@
  */
 
 import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
 
 import { cn } from '@donotdev/components';
-
-import type { ComponentType } from 'react';
 
 interface ProgressBarProps {
   /** Whether the progress bar is active */

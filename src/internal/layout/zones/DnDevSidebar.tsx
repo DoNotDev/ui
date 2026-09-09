@@ -15,12 +15,11 @@
  */
 
 import { memo, useRef, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 
 import { useLayout } from '@donotdev/core';
 
 import { DEFAULT_SLOTS } from '../config/defaults';
-
-import type { ReactNode } from 'react';
 
 /** Resize handle width - matches CSS variable --sidebar-resize-handle-width */
 const RESIZE_HANDLE_WIDTH = 6;

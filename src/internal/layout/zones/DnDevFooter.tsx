@@ -14,6 +14,7 @@
  */
 
 import { memo } from 'react';
+import type { ReactNode } from 'react';
 
 import { Stack } from '@donotdev/components';
 import type { AppMetadata } from '@donotdev/core';
@@ -26,7 +27,6 @@ import {
   type FooterLegalLink,
 } from '../components/footer/useLegalLinks';
 
-import type { ReactNode } from 'react';
 // import { renderSlotValue } from '../renderers/slotUtils'; // Reserved for future slot override support
 
 export interface DnDevFooterProps {

@@ -11,6 +11,7 @@
 
 import { Link as LinkIcon, Star } from 'lucide-react';
 import { useCallback, useEffect, useRef } from 'react';
+import type { ComponentType } from 'react';
 
 import { Badge, Command, CommandDialog } from '@donotdev/components';
 import type {
@@ -20,10 +21,8 @@ import type {
 import { useOverlayStore, useTranslation } from '@donotdev/core';
 
 import { useGoTo } from './useGoTo';
-import { Icon } from '../components/common/icon';
-
 import type { NavigationItem } from './useNavigation';
-import type { ComponentType } from 'react';
+import { Icon } from '../components/common/icon';
 
 /**
  * Navigation dialog content

@@ -11,11 +11,11 @@
  */
 
 import { Link as LinkIcon } from 'lucide-react';
-import {
-  type ReactNode,
-  type ComponentType,
-  type MouseEvent,
-  type AnchorHTMLAttributes,
+import type {
+  ReactNode,
+  ComponentType,
+  MouseEvent,
+  AnchorHTMLAttributes,
 } from 'react';
 
 import { cn } from '@donotdev/components';

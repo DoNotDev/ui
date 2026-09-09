@@ -34,6 +34,7 @@ import {
 import type { ListCardLayout } from '@donotdev/core';
 import type { Entity } from '@donotdev/core';
 import type { EntityCardListProps, EntityRecord } from '@donotdev/core';
+
 import {
   isCrudModuleAvailable,
   useCrudCardList,
@@ -179,7 +180,7 @@ export function EntityCardList({
   preview,
 }: EntityCardListProps) {
   // Safe guard: isCrudModuleAvailable is a module-level constant (immutable after load).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   if (!isCrudModuleAvailable) return null;
 
   const isPreview = !!preview;

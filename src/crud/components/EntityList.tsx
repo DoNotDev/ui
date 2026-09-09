@@ -29,6 +29,9 @@ import type { TableColumn } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
 import type { Entity } from '@donotdev/core';
 import type { EntityListProps } from '@donotdev/core';
+import type { InferEntityData } from '@donotdev/crud';
+
+import { Link, useNavigate } from '../../routing';
 import {
   isCrudModuleAvailable,
   translateFieldLabel,
@@ -39,9 +42,6 @@ import {
   formatValue,
   useReferenceResolver,
 } from '../crudImports';
-import type { InferEntityData } from '@donotdev/crud';
-
-import { Link, useNavigate } from '../../routing';
 
 export type { EntityListProps };
 
@@ -68,7 +68,7 @@ export function EntityList({
   tone,
 }: EntityListProps) {
   // Safe guard: isCrudModuleAvailable is a module-level constant (immutable after load).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   if (!isCrudModuleAvailable) return null;
 
   const isPreview = !!preview;

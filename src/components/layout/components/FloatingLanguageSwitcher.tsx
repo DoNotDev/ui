@@ -9,9 +9,9 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { Card, cn } from '@donotdev/components';
-
 import type { ComponentType } from 'react';
+
+import { Card, cn } from '@donotdev/components';
 
 /** Props for the FloatingLanguageSwitcher component. */
 export interface FloatingLanguageSwitcherProps {

@@ -11,14 +11,13 @@
  */
 
 import { Suspense } from 'react';
+import type { ComponentProps, ComponentType, ReactNode } from 'react';
 
 import { cn } from '@donotdev/components';
 import type { Density } from '@donotdev/core';
 
 import DnDevErrorBoundary from '../../internal/common/DnDevErrorBoundary';
 import RouteErrorFallback from '../../internal/common/RouteErrorFallback';
-
-import type { ComponentProps, ComponentType, ReactNode } from 'react';
 
 function PageContainerErrorFallback(
   props: ComponentProps<typeof RouteErrorFallback>

@@ -10,12 +10,11 @@
  */
 
 import * as LucideIcons from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
 import { isValidElement } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 import { cn } from '@donotdev/components';
-
-import type { LucideProps } from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
 
 function getLucideIcon(name: string | undefined): ComponentType<LucideProps> {
   if (!name) return LucideIcons.Palette;

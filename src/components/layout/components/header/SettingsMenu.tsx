@@ -11,6 +11,7 @@
 
 import { Settings, Check } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import type { ComponentType } from 'react';
 
 import {
   Button,
@@ -30,8 +31,6 @@ import {
 
 import CacheSettings from './CacheSettings';
 import { AuthHeader } from '../../../auth/AuthHeader';
-
-import type { ComponentType } from 'react';
 
 /** Props for the SettingsMenu component. */
 export interface SettingsMenuProps {

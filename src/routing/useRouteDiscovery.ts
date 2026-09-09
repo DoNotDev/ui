@@ -25,6 +25,8 @@
  */
 
 import { useMemo } from 'react';
+import type { JSX } from 'react';
+import type { ReactNode } from 'react';
 
 import {
   useNavigationStore,
@@ -37,9 +39,6 @@ import type {
 } from '@donotdev/core';
 
 import { useAuthSafe } from '../utils/useAuthSafe';
-
-import type { JSX } from 'react';
-import type { ReactNode } from 'react';
 
 // Use the single source of truth
 type RouteData = RoutesPluginConfig['mapping'][0];

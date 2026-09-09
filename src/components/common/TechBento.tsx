@@ -1,6 +1,7 @@
 // packages/ui/src/components/common/TechBento.tsx
 
 import { useState } from 'react';
+import type { CSSProperties } from 'react';
 
 import {
   Bento,
@@ -21,8 +22,6 @@ import type {
 
 import { techLogos, type TechKey } from '../../data/techLogos';
 import { sanitizeSvg } from '../../utils/sanitizeSvg';
-
-import type { CSSProperties } from 'react';
 
 /** Props for the TechBento component. */
 export type TechBentoProps = {

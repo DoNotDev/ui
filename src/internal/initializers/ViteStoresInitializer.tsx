@@ -9,6 +9,8 @@
  * @author AMBROISE PARK Consulting
  */
 
+import type { ReactNode } from 'react';
+
 import { isTest } from '@donotdev/core';
 import type { CustomStoreConfig } from '@donotdev/core';
 
@@ -16,8 +18,6 @@ import {
   BaseStoresInitializer,
   type StoreHandlers,
 } from './BaseStoresInitializer';
-
-import type { ReactNode } from 'react';
 
 interface ViteStoresInitializerProps {
   children: ReactNode;

@@ -15,10 +15,9 @@
  */
 
 import { MoreHorizontal } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Button, BUTTON_VARIANT, DropdownMenu } from '@donotdev/components';
-
-import type { ReactNode } from 'react';
 
 /** Props for the HeaderMenu component. */
 export interface HeaderMenuProps {

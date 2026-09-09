@@ -15,6 +15,7 @@
 
 import { ChevronUp, Menu } from 'lucide-react';
 import { memo, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 
 import {
   Stack,
@@ -26,8 +27,6 @@ import {
 } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
 import { useLocation } from '@donotdev/ui/routing/hooks';
-
-import type { ReactNode } from 'react';
 
 export interface DnDevMergedBarProps {
   /** Bar position */

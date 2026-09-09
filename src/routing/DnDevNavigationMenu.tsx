@@ -43,9 +43,8 @@ import { useTranslation } from '@donotdev/core';
 
 import { Link } from './Link';
 import { useNavigationItems } from './useNavigation';
-import { Icon } from '../components/common/icon';
-
 import type { NavigationItem } from './useNavigation';
+import { Icon } from '../components/common/icon';
 
 /** Props for the DnDevNavigationMenu component. */
 export interface DnDevNavigationMenuProps {

@@ -13,6 +13,7 @@
 import { Bug, Trash2, X } from 'lucide-react';
 import { Cookie } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
 
 import {
   Button,
@@ -27,8 +28,6 @@ import {
 import { useBreakpoint, useConsent } from '@donotdev/core';
 
 import { DebugDialog } from './components/DebugDialog';
-
-import type { MouseEvent } from 'react';
 
 interface DebugToolsProps {
   className?: string;

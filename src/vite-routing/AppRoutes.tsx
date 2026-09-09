@@ -48,18 +48,16 @@
  */
 
 import { lazy, Suspense, useLayoutEffect } from 'react';
+import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
+import type { RouteObject } from 'react-router-dom';
 
+import { Spinner } from '@donotdev/components';
 import type { PageAuth, LayoutConfig, LayoutPreset } from '@donotdev/core';
 import { useLayout } from '@donotdev/core';
 
-import { Spinner } from '@donotdev/components';
-
 import { RootLayout } from './RootLayout';
 import { AuthGuard } from '../routing/AuthGuard';
-
-import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
-import type { RouteObject } from 'react-router-dom';
 
 /** Lazy-loadable page component factory or Vite glob string reference */
 type PageComponentFactory =

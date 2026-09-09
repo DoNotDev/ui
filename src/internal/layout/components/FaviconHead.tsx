@@ -21,13 +21,12 @@
  */
 
 import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
 
 import { useFaviconConfig } from '@donotdev/core';
 
 import { AssetResolver } from '../../../utils/assetResolver';
-
 import type { FaviconSet } from '../../../utils/assetResolver';
-import type { ComponentType } from 'react';
 
 /**
  * Modern favicon system component

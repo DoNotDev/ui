@@ -19,6 +19,7 @@
 
 import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
+import type { ComponentType } from 'react';
 
 import { cn } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
@@ -27,8 +28,6 @@ import { useLocation } from '@donotdev/ui/routing/hooks';
 
 import { Link } from '../../../routing/Link';
 import { useAllRoutes } from '../../../routing/useRouteDiscovery';
-
-import type { ComponentType } from 'react';
 
 /** Single breadcrumb navigation item. */
 export interface BreadcrumbItem {

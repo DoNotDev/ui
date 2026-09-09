@@ -12,11 +12,10 @@
 
 import { Trash2 } from 'lucide-react';
 import { memo, useState, useCallback } from 'react';
+import type { ComponentType } from 'react';
 
 import { cn, Stack } from '@donotdev/components';
 import { isClient } from '@donotdev/core';
-
-import type { ComponentType } from 'react';
 
 export const LayoutReset: ComponentType = memo(() => {
   const [isResetting, setIsResetting] = useState(false);

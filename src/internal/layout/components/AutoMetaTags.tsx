@@ -21,17 +21,17 @@
  */
 
 import { useMemo } from 'react';
-import { HeadTags } from './HeadTags';
+import type { ComponentType } from 'react';
 
 import { useTranslation, useIsClient } from '@donotdev/core';
 import { getDndevConfig } from '@donotdev/core';
 import { useSeoConfig, useAppConfig, getPlatformEnvVar } from '@donotdev/core';
+import type { SeoMeta } from '@donotdev/core';
 import { AssetResolver } from '@donotdev/ui';
 // Platform-specific hooks via conditional exports
 import { useLocation } from '@donotdev/ui/routing/hooks';
 
-import type { ComponentType } from 'react';
-import type { SeoMeta } from '@donotdev/core';
+import { HeadTags } from './HeadTags';
 
 interface RouteMetadata {
   namespace?: string;

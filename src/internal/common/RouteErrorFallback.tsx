@@ -19,6 +19,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
 
 import {
   Button,
@@ -34,8 +35,6 @@ import { useLocation, useBack } from '@donotdev/ui/routing/hooks';
 
 // Platform-specific hooks via conditional exports
 import { Link } from '../../routing/Link';
-
-import type { ComponentType } from 'react';
 
 interface RouteErrorFallbackProps {
   error: unknown;

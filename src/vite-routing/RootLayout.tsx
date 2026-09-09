@@ -21,8 +21,8 @@ import type { LayoutConfig } from '@donotdev/core';
 
 import { DnDevLayout } from '../internal/layout/DnDevLayout';
 import { UIProviders } from '../internal/providers/UIProviders';
-import { PasswordResetCallback } from '../utils/useAuthSafe';
 import { AuthReturnTo } from '../routing/AuthReturnTo';
+import { PasswordResetCallback } from '../utils/useAuthSafe';
 
 // Only lazy load non-critical components (not in render path)
 const AutoMetaTags = lazy(() =>

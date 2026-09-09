@@ -9,14 +9,13 @@
  * @author AMBROISE PARK Consulting
  */
 
+import type { TFunction } from 'i18next';
 import { CheckCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { List } from '@donotdev/components';
 import { translateArray } from '@donotdev/core';
-
-import type { TFunction } from 'i18next';
-import type { LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 /**
  * Framework default icon for list items

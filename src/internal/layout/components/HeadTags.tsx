@@ -18,11 +18,10 @@
  * @author AMBROISE PARK Consulting
  */
 
+import type { ReactNode } from 'react';
 import { Helmet } from 'react-helmet-async';
 
 import { isNextJs } from '@donotdev/core';
-
-import type { ReactNode } from 'react';
 
 export function HeadTags({ children }: { children: ReactNode }) {
   // On any server render, never touch react-helmet-async — it reads `document`

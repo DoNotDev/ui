@@ -11,6 +11,7 @@
  */
 
 import * as LucideIcons from 'lucide-react';
+import type { ComponentType, ReactNode } from 'react';
 
 import {
   Button,
@@ -22,8 +23,6 @@ import type { DropdownMenuItemData } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
 import { useTheme } from '@donotdev/core';
 import type { ThemeInfo } from '@donotdev/core';
-
-import type { ComponentType, ReactNode } from 'react';
 
 interface ThemeToggleProps {
   /**

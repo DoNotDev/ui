@@ -16,14 +16,14 @@
  * @author AMBROISE PARK Consulting
  */
 
+import type { ComponentType, ReactNode } from 'react';
+
 import { DropdownMenu, Button, cn, Stack } from '@donotdev/components';
 import type { DropdownMenuItemData } from '@donotdev/components';
 import type { NavigationRoute } from '@donotdev/core';
 
 import { Link } from '../../../routing/Link';
 import { NavigationItemComponent } from '../../../routing/NavigationItem';
-
-import type { ComponentType, ReactNode } from 'react';
 
 /**
  * Navigation menu item type (can have subroutes for dropdowns).

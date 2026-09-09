@@ -13,9 +13,9 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { cn, Stack } from '@donotdev/components';
-
 import type { ComponentType, CSSProperties } from 'react';
+
+import { cn, Stack } from '@donotdev/components';
 
 interface SkeletonProps {
   /** The type of skeleton to render */

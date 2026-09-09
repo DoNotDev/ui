@@ -14,11 +14,10 @@
  */
 
 import { AlertCircle, RefreshCw, Mail, Cookie } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Card, Button, BUTTON_VARIANT, Stack } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
-
-import type { ReactNode } from 'react';
 
 /** Props for the FeatureDisabled component. */
 export interface FeatureDisabledProps {

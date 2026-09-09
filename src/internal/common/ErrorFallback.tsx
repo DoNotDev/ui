@@ -12,7 +12,6 @@
  */
 
 import { useState } from 'react';
-
 import type { ComponentType } from 'react';
 interface ErrorFallbackProps {
   error: unknown;

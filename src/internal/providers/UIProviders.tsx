@@ -10,13 +10,13 @@
  * @author AMBROISE PARK Consulting
  */
 
+import type { ReactNode, ReactElement, ComponentProps } from 'react';
+
 import { TooltipProvider, Toaster, Dialog } from '@donotdev/components';
 import { useOverlayStore } from '@donotdev/core';
 
 import DnDevErrorBoundary from '../common/DnDevErrorBoundary';
 import GlobalErrorFallback from '../common/GlobalErrorFallback';
-
-import type { ReactNode, ReactElement, ComponentProps } from 'react';
 
 function UIGlobalErrorFallback(
   props: ComponentProps<typeof GlobalErrorFallback>

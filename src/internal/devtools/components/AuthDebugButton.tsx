@@ -11,10 +11,9 @@
  */
 
 import { useState } from 'react';
+import type { ComponentType } from 'react';
 
 import { useAuthSafe } from '../../../utils/useAuthSafe';
-
-import type { ComponentType } from 'react';
 
 /**
  * Auth Debug Button Component

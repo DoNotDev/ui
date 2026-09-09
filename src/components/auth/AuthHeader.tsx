@@ -12,6 +12,8 @@
 
 import { User } from 'lucide-react';
 import React, { Suspense, lazy, useState } from 'react';
+import type { CSSProperties } from 'react';
+import type { ComponentType } from 'react';
 
 import {
   Button,
@@ -28,9 +30,6 @@ import type { AuthPartnerId } from '@donotdev/core';
 import { AuthMenu } from './AuthMenu';
 import { Link } from '../../routing';
 import { useAuthSafe, useAuthVisibility } from '../../utils';
-
-import type { CSSProperties } from 'react';
-import type { ComponentType } from 'react';
 
 // Lazy load auth components for code splitting; degrade to null if auth pkg missing
 const NullComponent = () => null;

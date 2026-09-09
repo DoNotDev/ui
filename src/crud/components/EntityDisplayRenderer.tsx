@@ -17,13 +17,13 @@ import { Stack, Spinner } from '@donotdev/components';
 import { useTranslation, isFieldVisible } from '@donotdev/core';
 import type { Entity, UserRole } from '@donotdev/core';
 import type { EntityDisplayRendererProps, EntityRecord } from '@donotdev/core';
+
+import { useAuthSafe } from '../../utils/useAuthSafe';
 import {
   isCrudModuleAvailable,
   useCrud,
   DisplayFieldRenderer,
 } from '../crudImports';
-
-import { useAuthSafe } from '../../utils/useAuthSafe';
 
 export type { EntityDisplayRendererProps };
 
@@ -55,7 +55,7 @@ export function EntityDisplayRenderer<T extends EntityRecord = EntityRecord>({
   preview,
 }: EntityDisplayRendererProps<T>) {
   // Safe guard: isCrudModuleAvailable is a module-level constant (immutable after load).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   if (!isCrudModuleAvailable) return null;
 
   const isPreview = !!preview;

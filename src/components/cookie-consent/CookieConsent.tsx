@@ -56,6 +56,18 @@ function CookieConsent({
     useState<AppCookieCategories>(categories);
   const bannerRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Consent lives in localStorage, so the server cannot know whether the banner
+   * is needed: it always rendered it, and the client removed it on mount. For an
+   * app whose categories are all necessary, that auto-accept path below made the
+   * banner unconditional — every single load flashed a banner nobody could ever
+   * act on, in whatever locale had not loaded yet. Rendering nothing until mount
+   * makes the first client render match the server's, so there is no flash and no
+   * hydration mismatch.
+   */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (storeShowBanner) {
       setShowBanner(true);
@@ -147,6 +159,7 @@ function CookieConsent({
     };
   }, [hasConsented, showBanner]);
 
+  if (!mounted) return null;
   if (hasConsented && !storeShowBanner) return null;
 
   const handleSave = () => {
@@ -239,11 +252,7 @@ function CookieConsent({
                             }}
                           />
                           <Stack gap="none" style={{ minWidth: 0 }}>
-                            <Text
-                              as="span"
-                              level="small"
-                              weight="semibold"
-                            >
+                            <Text as="span" level="small" weight="semibold">
                               {cat.title}
                             </Text>
                             <Text

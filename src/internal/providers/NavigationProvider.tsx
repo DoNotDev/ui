@@ -30,12 +30,12 @@
  */
 
 import React, { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { RouterProvider } from 'react-router-dom';
+import type { createBrowserRouter } from 'react-router-dom';
 
 import { useAbortControllerStore, useOverlayStore } from '@donotdev/core';
 
-import type { ReactNode } from 'react';
-import type { createBrowserRouter } from 'react-router-dom';
 // NOTE: abortAll/closeAll are accessed via getState() inside the effect to avoid
 // Zustand action-in-deps bug (selectors cause re-subscriptions on every store update).
 

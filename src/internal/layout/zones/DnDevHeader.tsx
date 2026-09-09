@@ -15,10 +15,9 @@
  */
 
 import { memo } from 'react';
+import type { ReactNode } from 'react';
 
 import { cn } from '@donotdev/components';
-
-import type { ReactNode } from 'react';
 
 export interface DnDevHeaderProps {
   /** Custom mode: full zone replacement. When provided, slot props are ignored and no polish CSS applies. */

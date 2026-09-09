@@ -10,6 +10,7 @@
  */
 
 import { Link as LinkIcon } from 'lucide-react';
+import type { ComponentType } from 'react';
 
 import { navigationMenuTriggerStylePrimitive } from '@donotdev/components';
 import type { NavigationRoute } from '@donotdev/core';
@@ -17,8 +18,6 @@ import type { NavigationRoute } from '@donotdev/core';
 import { Link } from './Link';
 import { useNavigationItems } from './useNavigation';
 import { Icon } from '../components/common/icon';
-
-import type { ComponentType } from 'react';
 
 /**
  * Props for NavigationItemComponent.

@@ -18,6 +18,7 @@
 
 import { MoreHorizontal } from 'lucide-react';
 import { Link as LinkIcon } from 'lucide-react';
+import type { ComponentType } from 'react';
 
 import {
   DISPLAY,
@@ -36,8 +37,6 @@ import {
   useNavigationRoute,
 } from '../../../../routing/useNavigation';
 import { Icon } from '../../../common/icon';
-
-import type { ComponentType } from 'react';
 
 /** Props for the HeaderNavigation component. */
 export interface HeaderNavigationProps {

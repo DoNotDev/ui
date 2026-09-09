@@ -12,12 +12,12 @@
  */
 
 import type { CrudCardProps } from '@donotdev/core';
+
+import { Link } from '../../routing';
 import {
   isCrudModuleAvailable,
   CrudCard as BaseCrudCard,
 } from '../crudImports';
-
-import { Link } from '../../routing';
 
 /**
  * CrudCard with Link wrapping for web navigation.
@@ -29,7 +29,7 @@ export function CrudCard({
   ...rest
 }: CrudCardProps & { detailHref?: string }) {
   // Safe guard: isCrudModuleAvailable is a module-level constant (immutable after load).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   if (!isCrudModuleAvailable) return null;
 
   // When detailHref is set, Link handles navigation — don't pass onClick to inner card

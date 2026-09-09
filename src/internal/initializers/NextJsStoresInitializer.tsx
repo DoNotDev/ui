@@ -11,6 +11,7 @@
  */
 
 import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 
 import { isTest, isClient, getDndevConfig } from '@donotdev/core';
 import { useThemeStore } from '@donotdev/core';
@@ -20,8 +21,6 @@ import {
   BaseStoresInitializer,
   type StoreHandlers,
 } from './BaseStoresInitializer';
-
-import type { ReactNode } from 'react';
 
 interface NextJsStoresInitializerProps {
   children: ReactNode;

@@ -14,9 +14,9 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { HeadTags } from './HeadTags';
-
 import type { ComponentType } from 'react';
+
+import { HeadTags } from './HeadTags';
 
 /**
  * Common third-party origins that benefit from preconnect

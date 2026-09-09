@@ -12,7 +12,8 @@
  */
 
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
-import { FormProvider } from 'react-hook-form';
+import { FormProvider, useWatch } from 'react-hook-form';
+import type { Control, FieldValues } from 'react-hook-form';
 
 import {
   Badge,
@@ -28,6 +29,10 @@ import type {
   EntityRecord,
   Visibility,
 } from '@donotdev/core';
+import type { InferEntityData } from '@donotdev/crud';
+
+import { useNavigate } from '../../routing';
+import { useAuthSafe } from '../../utils/useAuthSafe';
 import {
   isCrudModuleAvailable,
   DisplayFieldRenderer,
@@ -37,12 +42,35 @@ import {
   useFormStore,
   useFieldConditions,
 } from '../crudImports';
-import type { InferEntityData } from '@donotdev/crud';
-
-import { useNavigate } from '../../routing';
-import { useAuthSafe } from '../../utils/useAuthSafe';
 
 export type { EntityFormRendererProps };
+
+/**
+ * Read-only field inside a form.
+ *
+ * Subscribes to the field's live form value rather than reading the initial
+ * `defaultValues`, so fields written during the session — a computed value set
+ * by another field's component via `setValue`, for instance — display what the
+ * form will actually submit, not what it was loaded with.
+ *
+ * Mirrors FormFieldRenderer's contract: takes `control`, subscribes itself.
+ */
+function FormDisplayField({
+  name,
+  config,
+  control,
+  t,
+}: {
+  name: string;
+  config: Parameters<typeof DisplayFieldRenderer>[0]['config'];
+  control: Control<FieldValues>;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
+  const value = useWatch({ control, name });
+  return (
+    <DisplayFieldRenderer name={name} config={config} value={value} t={t} />
+  );
+}
 
 /**
  * EntityFormRenderer - Dumb component that renders a form from entity definition.
@@ -92,7 +120,7 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
 }: Omit<EntityFormRendererProps<T>, 'instanceKey'>) {
   // Safe guard: isCrudModuleAvailable is a module-level constant (immutable after load).
   // Hooks below are either ALL called or NONE — no Rules-of-Hooks violation at runtime.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   if (!isCrudModuleAvailable) return null;
 
   const navigate = useNavigate();
@@ -333,7 +361,9 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
           {isLoading && <Spinner overlay />}
           <form
             onSubmit={(e) => {
-              console.log('[EntityFormRenderer] native form onSubmit event', { defaultPrevented: e.defaultPrevented });
+              console.log('[EntityFormRenderer] native form onSubmit event', {
+                defaultPrevented: e.defaultPrevented,
+              });
               return handleSubmit(handleFormSubmit)(e);
             }}
             noValidate
@@ -375,11 +405,11 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
                 config.visibility;
               // Wrap field with visibility badge when enabled
               const fieldElement = !effectiveEditable ? (
-                <DisplayFieldRenderer
+                <FormDisplayField
                   key={name}
                   name={name}
                   config={effectiveConfig}
-                  value={defaultValues?.[name as keyof T]}
+                  control={control as unknown as Control<FieldValues>}
                   t={translate}
                 />
               ) : (

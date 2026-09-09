@@ -20,9 +20,9 @@ import { useEffect } from 'react';
 
 import { useToast } from '@donotdev/components';
 import { isClient, safeSessionStorage, useTranslation } from '@donotdev/core';
+import { useNavigate } from '@donotdev/ui/routing/hooks';
 
 import { useAuthSafe } from '../utils/useAuthSafe';
-import { useNavigate } from '@donotdev/ui/routing/hooks';
 
 /**
  * AuthReturnTo - Restores navigation after OAuth redirect.

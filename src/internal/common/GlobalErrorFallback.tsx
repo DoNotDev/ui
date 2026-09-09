@@ -11,12 +11,12 @@
  */
 
 import { useEffect } from 'react';
+import type { ComponentType } from 'react';
 
 import { handleError } from '@donotdev/core';
 
 import ErrorFallback from './ErrorFallback';
 
-import type { ComponentType } from 'react';
 // Update the interface to match both Sentry's types and our custom boundary
 interface SentryFallbackProps {
   error: unknown;

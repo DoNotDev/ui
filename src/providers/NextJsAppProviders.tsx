@@ -15,6 +15,8 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 // natively (see HeadTags). Rendering Helmet on the server throws (`document`),
 // which is what blocked SSR. Vite keeps HelmetProvider in ViteAppProviders.
 
+import type { ComponentType, ReactNode } from 'react';
+
 import { QueryProviders, AppConfigProvider } from '@donotdev/core';
 import { useConsent } from '@donotdev/core';
 import type { AppProvidersProps } from '@donotdev/core';
@@ -26,10 +28,8 @@ import PerformanceHints from '../internal/layout/components/PerformanceHints';
 import { DnDevLayout } from '../internal/layout/DnDevLayout';
 import { SentryInitializer } from '../internal/providers/SentryInitializer';
 import { UIProviders } from '../internal/providers/UIProviders';
-import { PasswordResetCallback } from '../utils/useAuthSafe';
 import { AuthReturnTo } from '../routing/AuthReturnTo';
-
-import type { ComponentType, ReactNode } from 'react';
+import { PasswordResetCallback } from '../utils/useAuthSafe';
 
 // Null fallback for lazy components that fail to load (e.g., optional auth dependency absent)
 const NullFallback = () => null;
@@ -130,41 +130,41 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
         serverCookies={serverCookies}
         customStores={customStores}
       >
-          {/* Favicon - uses useFaviconConfig() internally */}
-          <FaviconHead />
+        {/* Favicon - uses useFaviconConfig() internally */}
+        <FaviconHead />
 
-          {/* Performance hints - preconnects for faster third-party loads */}
-          <PerformanceHints />
+        {/* Performance hints - preconnects for faster third-party loads */}
+        <PerformanceHints />
 
-          <QueryProviders>
-            <UIProviders>
-              {/* SEO - Metadata is now generated server-side via generateMetadata() in page files */}
-              {/* NextJsAutoMetaTags is deprecated - metadata comes from Next.js Metadata API */}
-              {/* <NextJsAutoMetaTags /> */}
+        <QueryProviders>
+          <UIProviders>
+            {/* SEO - Metadata is now generated server-side via generateMetadata() in page files */}
+            {/* NextJsAutoMetaTags is deprecated - metadata comes from Next.js Metadata API */}
+            {/* <NextJsAutoMetaTags /> */}
 
-              {/* Layout - uses config hooks internally */}
-              <DnDevLayout layout={layout}>{children}</DnDevLayout>
+            {/* Layout - uses config hooks internally */}
+            <DnDevLayout layout={layout}>{children}</DnDevLayout>
 
-              {/* Cookie consent */}
-              <ConsentBanner />
+            {/* Cookie consent */}
+            <ConsentBanner />
 
-              {/* Auth return-to after OAuth redirect */}
-              <AuthReturnTo />
+            {/* Auth return-to after OAuth redirect */}
+            <AuthReturnTo />
 
-              {/* Password reset overlay - auto-detects from URL hash / store */}
-              <PasswordResetCallback />
+            {/* Password reset overlay - auto-detects from URL hash / store */}
+            <PasswordResetCallback />
 
-              {/* PWA update notification - auto-injected when PWA enabled */}
-              <Suspense fallback={null}>
-                <PWAUpdateNotification />
-              </Suspense>
+            {/* PWA update notification - auto-injected when PWA enabled */}
+            <Suspense fallback={null}>
+              <PWAUpdateNotification />
+            </Suspense>
 
-              {/* Redirect overlay - auto-shown by billing/auth hooks */}
-              <Suspense fallback={null}>
-                <RedirectOverlay />
-              </Suspense>
-            </UIProviders>
-          </QueryProviders>
+            {/* Redirect overlay - auto-shown by billing/auth hooks */}
+            <Suspense fallback={null}>
+              <RedirectOverlay />
+            </Suspense>
+          </UIProviders>
+        </QueryProviders>
       </NextJsStoresInitializer>
     </AppConfigProvider>
   );

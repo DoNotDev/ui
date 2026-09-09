@@ -73,6 +73,8 @@
 import { User, LogOut, Settings, UserCheck, Trash2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import React, { useMemo, lazy, Suspense } from 'react';
+import type { CSSProperties } from 'react';
+import type { ComponentType } from 'react';
 
 import {
   Avatar,
@@ -94,9 +96,6 @@ import { useNavigate } from '@donotdev/ui/routing/hooks';
 
 import { useNavigationItems } from '../../routing';
 import { useAuthSafe, useAuthVisibility } from '../../utils';
-
-import type { CSSProperties } from 'react';
-import type { ComponentType } from 'react';
 
 const NullComponent = () => null;
 
