@@ -12,7 +12,7 @@
 import { useMemo } from 'react';
 
 import type { NavigationRoute } from '@donotdev/core';
-import { useNavigationStore } from '@donotdev/core';
+import { useNavigationStore, useTranslation } from '@donotdev/core';
 import { USER_ROLES } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
 import { useLocation } from '@donotdev/ui/routing/hooks';
@@ -56,6 +56,7 @@ export function useNavigationItems(): NavigationItem[] {
   // Get auth state - hooks must be called at top level
   const user = useAuthSafe('user');
   const authenticated = !!user;
+  const { t } = useTranslation();
   const role = user?.role || USER_ROLES.GUEST;
 
   // Use Zustand selector for proper caching - only re-runs when auth state changes
@@ -90,6 +91,7 @@ export function useNavigationItems(): NavigationItem[] {
     return filteredRoutes
       .map((route) => ({
         ...route,
+        label: routeLabel(route, t),
         isActive: isRouteActive(route.path, location.pathname),
         hasChildren: false,
         children: undefined,
@@ -97,7 +99,7 @@ export function useNavigationItems(): NavigationItem[] {
       .sort((a, b) =>
         a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
       ); // Alphabetical sorting by label
-  }, [filteredRoutes, location.pathname]);
+  }, [filteredRoutes, location.pathname, t]);
 }
 
 /**
@@ -135,6 +137,19 @@ export function useNavigationRoute(path: string): NavigationItem | undefined {
 }
 
 // ===== HELPER FUNCTIONS =====
+
+/**
+ * Navigation label of a route: the page's `<namespace>:title` (the PageMeta contract,
+ * same key as the page `<title>`), else the label discovery derived from the file name.
+ */
+function routeLabel(
+  route: NavigationRoute,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  const namespace = route.meta?.namespace;
+  if (typeof namespace !== 'string' || namespace === '') return route.label;
+  return t(`${namespace}:title`, { defaultValue: route.label });
+}
 
 /**
  * Determines if a route path is currently active

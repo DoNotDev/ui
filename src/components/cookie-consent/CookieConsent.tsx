@@ -115,12 +115,9 @@ function CookieConsent({
 
   const hasOptionalCategories = checkHasOptionalCookies();
 
-  // Auto-accept if only necessary cookies (GDPR/CCPA — necessary don't need consent)
-  useEffect(() => {
-    if (!hasConsented && !hasOptionalCategories) {
-      acceptAll();
-    }
-  }, [hasConsented, hasOptionalCategories, acceptAll]);
+  // Functional cookies only (sign-in, language, consent): nothing to consent to, but the
+  // visitor is told once — an information bar with a single OK that records it.
+  const informationOnly = !hasOptionalCategories;
 
   // Sync local draft state when accordion opens — default optional ON for easier UX
   useEffect(() => {
@@ -138,7 +135,8 @@ function CookieConsent({
 
   // Dismiss on outside click when banner is showing pre-consent
   useEffect(() => {
-    if (!isClient() || hasConsented || !showBanner) return;
+    // The information bar stays until acknowledged (OK), no dismiss by outside click.
+    if (!isClient() || hasConsented || !showBanner || informationOnly) return;
 
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -157,7 +155,7 @@ function CookieConsent({
       clearTimeout(timeoutId);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [hasConsented, showBanner]);
+  }, [hasConsented, showBanner, informationOnly]);
 
   if (!mounted) return null;
   if (hasConsented && !storeShowBanner) return null;
@@ -199,7 +197,9 @@ function CookieConsent({
   const bannerContent = (
     <Stack gap="medium">
       <Text as="p" variant="muted" level="small" style={{ lineHeight: 1.55 }}>
-        {t('cookieBannerDescription')}
+        {informationOnly
+          ? t('necessaryOnlyDescription')
+          : t('cookieBannerDescription')}
       </Text>
 
       {hasOptionalCategories && (
@@ -331,7 +331,7 @@ function CookieConsent({
         variant={BUTTON_VARIANT.DEFAULT}
         style={{ flex: 1 }}
       >
-        {t('acceptAll')}
+        {informationOnly ? t('acknowledge') : t('acceptAll')}
       </Button>
     </Stack>
   );
@@ -343,7 +343,9 @@ function CookieConsent({
           ref={bannerRef}
           elevated
           icon={Cookie}
-          title={t('cookiePreferences')}
+          title={
+            informationOnly ? t('necessaryOnlyTitle') : t('cookiePreferences')
+          }
           content={bannerContent}
           footer={bannerFooter}
           className={cn('dndev-fixed dndev-z-modal', className)}
@@ -356,7 +358,7 @@ function CookieConsent({
         />
       )}
 
-      {!showBanner && !hasConsented && (
+      {!showBanner && !hasConsented && !informationOnly && (
         <Button
           onClick={() => setShowBanner(true)}
           variant={BUTTON_VARIANT.OUTLINE}

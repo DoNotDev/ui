@@ -10,14 +10,24 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 // No react-helmet-async on Next: React 19 hoists <title>/<meta>/<link> to <head>
 // natively (see HeadTags). Rendering Helmet on the server throws (`document`),
 // which is what blocked SSR. Vite keeps HelmetProvider in ViteAppProviders.
 
 import type { ComponentType, ReactNode } from 'react';
 
-import { QueryProviders, AppConfigProvider } from '@donotdev/core';
+import { ReactQueryStreamedHydration } from '@tanstack/react-query-next-experimental';
+
+import {
+  AppConfigProvider,
+  AuthSessionProvider,
+  getProvider,
+  getRequestLanguage,
+  hasProvider,
+  QueryProviders,
+  RequestLanguageProvider,
+} from '@donotdev/core';
 import { useConsent } from '@donotdev/core';
 import type { AppProvidersProps } from '@donotdev/core';
 
@@ -102,11 +112,41 @@ function ConsentBanner() {
  * ```
  */
 export interface NextJsAppProvidersProps extends AppProvidersProps {
+  /**
+   * The request's `Cookie` header, passed by the app's root layout. The server render
+   * and the client's hydration pass read the language cookie and the auth session
+   * from it, so both render the visitor's language and signed-in state.
+   */
   serverCookies?: string;
+  /** The request's `Accept-Language` header, passed by the app's root layout. */
+  acceptLanguage?: string | null;
+}
+
+/** Auth session snapshot of the request, `null` when the auth provider cannot tell. */
+function readAuthSnapshot(cookieHeader: string | undefined) {
+  if (cookieHeader === undefined || !hasProvider('auth')) return null;
+  return getProvider('auth').readSessionSnapshot?.(cookieHeader) ?? null;
 }
 
 export function NextJsAppProviders(props: NextJsAppProvidersProps) {
-  const { config = {}, layout, children, serverCookies, customStores } = props;
+  const {
+    config = {},
+    layout,
+    children,
+    serverCookies,
+    acceptLanguage,
+    customStores,
+  } = props;
+  // Same header values on the server and in the hydration pass → same language and
+  // signed-in state on both, so the first paint is final (no keys, no auth swap).
+  const requestLanguage = useMemo(
+    () => getRequestLanguage(serverCookies, acceptLanguage),
+    [serverCookies, acceptLanguage]
+  );
+  const authSnapshot = useMemo(
+    () => readAuthSnapshot(serverCookies),
+    [serverCookies]
+  );
   // SSR is the default for Next apps: render the provider tree on the server so
   // page content is present in the initial HTML (crawlable, real SSR). An app
   // opts OUT with appConfig.ssr === false, restoring the legacy client-only
@@ -124,48 +164,57 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
   }
 
   return (
-    <AppConfigProvider config={config} platform="nextjs">
-      <SentryInitializer />
-      <NextJsStoresInitializer
-        serverCookies={serverCookies}
-        customStores={customStores}
-      >
-        {/* Favicon - uses useFaviconConfig() internally */}
-        <FaviconHead />
+    <RequestLanguageProvider language={requestLanguage}>
+      <AuthSessionProvider snapshot={authSnapshot}>
+        <AppConfigProvider config={config} platform="nextjs">
+          <SentryInitializer />
+          <NextJsStoresInitializer
+            serverCookies={serverCookies}
+            customStores={customStores}
+          >
+            {/* Favicon - uses useFaviconConfig() internally */}
+            <FaviconHead />
 
-        {/* Performance hints - preconnects for faster third-party loads */}
-        <PerformanceHints />
+            {/* Performance hints - preconnects for faster third-party loads */}
+            <PerformanceHints />
 
-        <QueryProviders>
-          <UIProviders>
-            {/* SEO - Metadata is now generated server-side via generateMetadata() in page files */}
-            {/* NextJsAutoMetaTags is deprecated - metadata comes from Next.js Metadata API */}
-            {/* <NextJsAutoMetaTags /> */}
+            <QueryProviders>
+              {/* Queries read during the server render (CRUD lists) stream to the
+                  browser cache with the HTML, so the hydration pass reads the same data
+                  as the server: no loading state, no layout swap on first paint. */}
+              <ReactQueryStreamedHydration>
+                <UIProviders>
+                  {/* SEO - Metadata is now generated server-side via generateMetadata() in page files */}
+                  {/* NextJsAutoMetaTags is deprecated - metadata comes from Next.js Metadata API */}
+                  {/* <NextJsAutoMetaTags /> */}
 
-            {/* Layout - uses config hooks internally */}
-            <DnDevLayout layout={layout}>{children}</DnDevLayout>
+                  {/* Layout - uses config hooks internally */}
+                  <DnDevLayout layout={layout}>{children}</DnDevLayout>
 
-            {/* Cookie consent */}
-            <ConsentBanner />
+                  {/* Cookie consent */}
+                  <ConsentBanner />
 
-            {/* Auth return-to after OAuth redirect */}
-            <AuthReturnTo />
+                  {/* Auth return-to after OAuth redirect */}
+                  <AuthReturnTo />
 
-            {/* Password reset overlay - auto-detects from URL hash / store */}
-            <PasswordResetCallback />
+                  {/* Password reset overlay - auto-detects from URL hash / store */}
+                  <PasswordResetCallback />
 
-            {/* PWA update notification - auto-injected when PWA enabled */}
-            <Suspense fallback={null}>
-              <PWAUpdateNotification />
-            </Suspense>
+                  {/* PWA update notification - auto-injected when PWA enabled */}
+                  <Suspense fallback={null}>
+                    <PWAUpdateNotification />
+                  </Suspense>
 
-            {/* Redirect overlay - auto-shown by billing/auth hooks */}
-            <Suspense fallback={null}>
-              <RedirectOverlay />
-            </Suspense>
-          </UIProviders>
-        </QueryProviders>
-      </NextJsStoresInitializer>
-    </AppConfigProvider>
+                  {/* Redirect overlay - auto-shown by billing/auth hooks */}
+                  <Suspense fallback={null}>
+                    <RedirectOverlay />
+                  </Suspense>
+                </UIProviders>
+              </ReactQueryStreamedHydration>
+            </QueryProviders>
+          </NextJsStoresInitializer>
+        </AppConfigProvider>
+      </AuthSessionProvider>
+    </RequestLanguageProvider>
   );
 }

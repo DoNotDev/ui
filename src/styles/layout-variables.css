@@ -229,6 +229,12 @@ main[role='main'][data-routing-animation='none'] {
 .dndev-layout {
   position: relative;
   width: 100%;
+  /* The density preset is rendered on this wrapper by the server, but <html> only
+     receives it after hydration. font-size and line-height inherit as computed
+     values from <body>, so re-read the density tokens here: otherwise the first
+     paint uses the root defaults and text grows once <html> is updated. */
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
   height: 100vh;
   height: 100dvh;
   max-height: 100vh;
@@ -404,7 +410,10 @@ aside[role='navigation'].sidebar {
   /* Landing, Plain, Game have --sidebar-width: 0px, also need display: none */
   :root[data-layout='landing'] &,
   :root[data-layout='plain'] &,
-  :root[data-layout='game'] & {
+  :root[data-layout='game'] &,
+  .dndev-layout[data-layout='landing'] &,
+  .dndev-layout[data-layout='plain'] &,
+  .dndev-layout[data-layout='game'] & {
     display: none;
   }
 
