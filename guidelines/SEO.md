@@ -112,6 +112,18 @@ export const meta: PageMeta = {
 
 ---
 
+## Link-Preview Image
+
+The build generates `public/og-image.png` (1200x630, logo centered) from `public/logo.svg`, next to the favicon and PWA icons. Vite and Next.js both default `og:image` to it, as an absolute URL when `APP_URL` is set.
+
+- **Replace it:** put your own `public/og-image.png`; an existing file is never overwritten.
+- **Per page:** `seo.image` in `PageMeta`, or `meta.image` in the namespace's translations.
+- **Dynamic pages:** `<Seo image={product.imageUrl} />`.
+
+Use JPG or PNG: link-preview crawlers do not reliably render SVG.
+
+---
+
 ## All SEO Options
 
 ```tsx

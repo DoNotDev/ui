@@ -11,7 +11,7 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { Stack, Spinner } from '@donotdev/components';
 import { useTranslation, isFieldVisible } from '@donotdev/core';
@@ -21,7 +21,7 @@ import type { EntityDisplayRendererProps, EntityRecord } from '@donotdev/core';
 import { useAuthSafe } from '../../utils/useAuthSafe';
 import {
   isCrudModuleAvailable,
-  useCrud,
+  useCrudDoc,
   DisplayFieldRenderer,
 } from '../crudImports';
 
@@ -31,7 +31,7 @@ export type { EntityDisplayRendererProps };
  * EntityDisplayRenderer - Automatically fetches and displays entity data
  *
  * Features:
- * - Automatic data fetching using useCrud
+ * - Reactive data fetching using useCrudDoc (stays in sync with edits)
  * - Loading state handling
  * - Error handling
  * - Automatic field rendering (respects visibility rules)
@@ -63,75 +63,23 @@ export function EntityDisplayRenderer<T extends EntityRecord = EntityRecord>({
   // Auto-detect role from auth; prop overrides. Preview = design-time showcase, show all fields.
   const authRole = useAuthSafe('userRole');
   const viewerRole = viewerRoleProp ?? (isPreview ? 'super' : authRole);
+  // Reactive read: re-renders on every cache write for this document (edits, deletes)
   const {
-    get,
+    data: fetchedData,
     loading,
-    data: storeData,
-    error: storeError,
-    isAvailable,
-  } = useCrud(entity);
-  const [isFetching, setIsFetching] = useState(false);
-  const [fetchError, setFetchError] = useState<Error | null>(null);
-  const [data, setData] = useState<T | null>(null);
+    error,
+    notFound,
+  } = useCrudDoc<T>(entity, id, { enabled: !isPreview });
 
   // Entity + crud namespaces so formatValue can resolve crud:price.* etc.
   const { t: tDual } = useTranslation([entity.namespace, 'crud']);
   const { t: tCrud } = useTranslation('crud');
   const translate = t || tDual;
 
-  // Fetch data when id is available and service is ready (skip in preview mode)
-  useEffect(() => {
-    if (isPreview) return;
-
-    // Early return if no ID
-    if (!id) {
-      setData(null);
-      setFetchError(null);
-      setIsFetching(false);
-      return;
-    }
-
-    // Early return if service not ready
-    if (!isAvailable || !get) {
-      return;
-    }
-
-    let cancelled = false;
-    setIsFetching(true);
-    setFetchError(null);
-
-    // Call get function - it should trigger the fetch
-    get(id)
-      .then((fetchedData) => {
-        if (cancelled) return;
-
-        setIsFetching(false);
-        if (fetchedData) {
-          setData(fetchedData as T);
-          setFetchError(null);
-        } else {
-          setData(null);
-          setFetchError(new Error('Entity not found'));
-        }
-      })
-      .catch((err) => {
-        if (cancelled) return;
-
-        setIsFetching(false);
-        setFetchError(err instanceof Error ? err : new Error(String(err)));
-        setData(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id, get, isAvailable, isPreview]);
-
-  // In preview mode: use preview data directly
-  // Priority: preview > store data (reactive) > local fetch data
-  const displayData = isPreview ? (preview as T) : storeData || data;
-  const displayError = isPreview ? null : storeError || fetchError;
-  const isLoading = isPreview ? false : loading || isFetching || !id;
+  // Preview: design-time showcase data, no read
+  const displayData = isPreview ? (preview as T) : fetchedData;
+  const displayError = isPreview ? null : error;
+  const isLoading = isPreview ? false : loading || !id;
 
   // Filter fields: respect visibility AND skip empty values
   // MUST be called before any early returns (Rules of Hooks)
@@ -154,7 +102,7 @@ export function EntityDisplayRenderer<T extends EntityRecord = EntityRecord>({
         return false;
       }
 
-      // Get field value (displayData may be preview T or store row; entity is AnyEntity in props)
+      // Get field value (displayData may be preview T or cached row; entity is AnyEntity in props)
       const value = (displayData as Record<string, unknown>)[fieldName];
 
       // Hide if value is empty/null/undefined
@@ -208,6 +156,9 @@ export function EntityDisplayRenderer<T extends EntityRecord = EntityRecord>({
       </div>
     );
   }
+
+  // CRUD unavailable (consent declined / feature absent): nothing will load
+  if (!displayData && !displayError && !notFound) return null;
 
   // Error or not found state
   if (displayError || !displayData) {

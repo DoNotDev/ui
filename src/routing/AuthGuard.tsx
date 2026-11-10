@@ -113,11 +113,6 @@ export function useCanNavigate(auth: PageAuth | false): boolean {
 }
 
 /**
- * @deprecated Use useCanNavigate instead
- */
-export const useCanAccess = useCanNavigate;
-
-/**
  * Hook to get current user's role - directly from store
  *
  * @version 0.1.0

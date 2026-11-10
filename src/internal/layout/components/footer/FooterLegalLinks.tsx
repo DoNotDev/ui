@@ -14,7 +14,7 @@ import { useTranslation, maybeTranslate, useAppConfig } from '@donotdev/core';
 import type { AppMetadata } from '@donotdev/core';
 
 import { FooterBranding } from './FooterBranding';
-import { useLegalLinks, type FooterLegalLink } from './useLegalLinks';
+import { getLegalLinks, type FooterLegalLink } from './useLegalLinks';
 import { Link } from '../../../../routing/Link';
 
 export interface FooterLegalLinksProps {
@@ -48,7 +48,7 @@ export const FooterLegalLinks: React.ComponentType<FooterLegalLinksProps> = ({
   const { t } = useTranslation('dndev');
   const appConfig = useAppConfig('app');
   const resolvedApp = app || appConfig || {};
-  const links = useLegalLinks(resolvedApp.footer);
+  const links = getLegalLinks(resolvedApp.footer);
 
   const linkStyle = {
     transition: 'color var(--dur-fast) ease-out',

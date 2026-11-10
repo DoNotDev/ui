@@ -207,7 +207,6 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
   const {
     control,
     handleSubmit,
-    formState: { errors },
     fields: rawFields,
     formStatus,
     uploadProgress,
@@ -418,7 +417,6 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
                   name={name}
                   config={effectiveConfig}
                   control={control}
-                  errors={errors}
                   t={translate}
                 />
               );

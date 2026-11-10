@@ -32,6 +32,7 @@ import { AssetResolver } from '@donotdev/ui';
 import { useLocation } from '@donotdev/ui/routing/hooks';
 
 import { HeadTags } from './HeadTags';
+import { readI18nSeoMeta, resolveSeoField } from './i18nSeoMeta';
 
 interface RouteMetadata {
   namespace?: string;
@@ -63,25 +64,6 @@ function matchRoutePath(pattern: string, pathname: string): boolean {
     if (segment !== pathSegment) return false;
   }
   return true;
-}
-
-/**
- * Resolve SEO field with i18n fallback
- * @description
- * - `undefined` → i18n lookup
- * - `string` → use literal value
- * - `null` → omit (return undefined)
- */
-function resolveSeoField(
-  seoValue: string | null | undefined,
-  translationKey: string,
-  t: (key: string) => string
-): string | undefined {
-  if (seoValue === null) return undefined; // Explicit null = omit
-  if (seoValue !== undefined) return seoValue; // Explicit string = use it
-  // undefined = i18n lookup
-  const translated = t(translationKey);
-  return translated !== translationKey ? translated : undefined;
 }
 
 /**
@@ -281,22 +263,15 @@ export const AutoMetaTags: ComponentType = () => {
   const metaData = useMemo(() => {
     if (!seoConfig) return null;
 
-    const { defaultNamespace = 'home', defaultImage } = seoConfig;
+    const { defaultNamespace = 'home', defaultImage = '/og-image.png' } =
+      seoConfig;
     // Construct absolute URL for canonical link
     const currentUrl = `${baseUrl}${location.pathname}`;
     const ns = routeMeta.namespace || defaultNamespace;
     const seo = routeMeta.seo;
 
-    // Get the meta object from i18n (for image, type, keywords, author, fullTitle)
-    const metaObject = t(`${ns}:meta`, { returnObjects: true }) as
-      | {
-          fullTitle?: string;
-          image?: string;
-          type?: string;
-          keywords?: string[] | string;
-          author?: string;
-        }
-      | undefined;
+    // Get the meta fields from i18n (image, type, keywords, author, fullTitle)
+    const metaObject = readI18nSeoMeta(t, ns);
 
     // Title resolution priority:
     // 1. i18n meta.fullTitle → translated, language-aware (wins)
@@ -335,10 +310,9 @@ export const AutoMetaTags: ComponentType = () => {
     const keywords = pageKeywords || undefined;
     const author = pageAuthor || undefined;
 
-    // Use relative image path instead of constructing absolute URL
-    // This prevents crashes from invalid baseUrl and works in all modes
+    // Link-preview crawlers need an absolute URL
     const imagePath =
-      image && image.startsWith('http') ? image : image ? image : undefined;
+      image && !image.startsWith('http') ? `${baseUrl}${image}` : image;
 
     return {
       title: fullTitle,

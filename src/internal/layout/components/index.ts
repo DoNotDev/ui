@@ -12,5 +12,5 @@
 export { FooterCopyright } from './footer/FooterCopyright';
 export { FooterLegalLinks } from './footer/FooterLegalLinks';
 export { FooterBranding } from './footer/FooterBranding';
-export { useLegalLinks } from './footer/useLegalLinks';
+export { getLegalLinks } from './footer/useLegalLinks';
 export type { FooterLegalLink } from './footer/useLegalLinks';

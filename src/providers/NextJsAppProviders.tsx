@@ -34,7 +34,6 @@ import type { AppProvidersProps } from '@donotdev/core';
 import { NextJsStoresInitializer } from '../internal/initializers/NextJsStoresInitializer';
 import FaviconHead from '../internal/layout/components/FaviconHead';
 import PerformanceHints from '../internal/layout/components/PerformanceHints';
-// import NextJsAutoMetaTags from '../internal/layout/components/NextJsAutoMetaTags'; // Deprecated - metadata now server-side
 import { DnDevLayout } from '../internal/layout/DnDevLayout';
 import { SentryInitializer } from '../internal/providers/SentryInitializer';
 import { UIProviders } from '../internal/providers/UIProviders';
@@ -185,8 +184,6 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
               <ReactQueryStreamedHydration>
                 <UIProviders>
                   {/* SEO - Metadata is now generated server-side via generateMetadata() in page files */}
-                  {/* NextJsAutoMetaTags is deprecated - metadata comes from Next.js Metadata API */}
-                  {/* <NextJsAutoMetaTags /> */}
 
                   {/* Layout - uses config hooks internally */}
                   <DnDevLayout layout={layout}>{children}</DnDevLayout>

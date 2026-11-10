@@ -40,10 +40,6 @@ export type TechBentoProps = {
    * @example [1, 1, 2, 3] - 1 col mobile/tablet, 2 laptop, 3 desktop
    */
   cols?: number | ResponsiveCols;
-  /**
-   * @deprecated Use `cols` prop instead. Kept for backward compatibility.
-   */
-  columns?: BentoColumns;
   gap?: BentoGap;
   separator?: boolean;
   /** Tone system for background colors (matches Section/CallToAction) */
@@ -105,7 +101,6 @@ export function TechBento({
   title,
   techs,
   cols = 3,
-  columns,
   gap = 'medium',
   separator = false,
   tone = TONE.GHOST,
@@ -119,9 +114,7 @@ export function TechBento({
   // Convert Grid's cols format to Bento's columns format
   // Grid: [mobile, tablet, laptop, desktop]
   // Bento: { mobile, tablet, desktop, wide }
-  const bentoColumns: BentoColumns = columns
-    ? columns
-    : typeof cols === 'number'
+  const bentoColumns: BentoColumns = typeof cols === 'number'
       ? {
           mobile: cols,
           tablet: cols,

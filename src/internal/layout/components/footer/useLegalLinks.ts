@@ -30,6 +30,3 @@ export const getLegalLinks = (
   // Use configured links or defaults
   return footerConfig?.legalLinks ?? DEFAULT_LINKS;
 };
-
-/** @deprecated Use getLegalLinks instead */
-export const useLegalLinks = getLegalLinks;

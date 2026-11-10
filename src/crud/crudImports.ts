@@ -26,6 +26,7 @@ export const useFormStore = crudModule?.useFormStore;
 export const useFieldConditions = crudModule?.useFieldConditions;
 export const useCrud = crudModule?.useCrud;
 export const useCrudList = crudModule?.useCrudList;
+export const useCrudDoc = crudModule?.useCrudDoc;
 export const useCrudCardList = crudModule?.useCrudCardList;
 export const useEntityFavorites = crudModule?.useEntityFavorites;
 export const useCrudFilters = crudModule?.useCrudFilters;
