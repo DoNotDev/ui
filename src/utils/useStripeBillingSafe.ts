@@ -43,12 +43,12 @@ import { DEGRADED_BILLING_API } from '@donotdev/core';
 export type { BillingAuthState } from '@donotdev/billing';
 
 // Check if real hook exists (will be undefined if Vite aliased to empty module)
-const realUseStripeBilling = billingModule?.useStripeBilling as
+const realUseStripeBilling:
   | (<K extends keyof BillingAPI>(
       key: K,
       authState?: BillingAuthState
     ) => BillingAPI[K])
-  | undefined;
+  | undefined = billingModule?.useStripeBilling;
 
 /**
  * Stub that returns degraded billing values.

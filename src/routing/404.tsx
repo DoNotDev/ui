@@ -17,7 +17,7 @@ import { Button, BUTTON_VARIANT, Stack, Text } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
 import type { PageMeta } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
-import { useLocation, useNavigate } from '@donotdev/ui/routing/hooks';
+import { useNavigate, useRoutePath } from '@donotdev/ui/routing/hooks';
 
 import { Link } from './Link';
 import { useNavigationItems } from './useNavigation';
@@ -51,7 +51,7 @@ export const meta: PageMeta = {
  */
 export default function NotFoundPage() {
   const { t } = useTranslation('dndev');
-  const location = useLocation();
+  const pathname = useRoutePath();
   const navigate = useNavigate();
   const navigationItems = useNavigationItems();
 
@@ -122,7 +122,7 @@ export default function NotFoundPage() {
           </Text>
 
           {/* Show requested URL if available */}
-          {location.pathname && (
+          {pathname && (
             <code
               style={{
                 padding: 'var(--gap-sm) var(--gap-md)',
@@ -138,7 +138,7 @@ export default function NotFoundPage() {
                 border: '1px solid var(--border-hairline)',
               }}
             >
-              {location.pathname}
+              {pathname}
             </code>
           )}
         </Stack>

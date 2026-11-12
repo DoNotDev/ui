@@ -73,6 +73,7 @@ export interface I18nSeoMeta {
  * @author AMBROISE PARK Consulting
  */
 export function readI18nSeoMeta(t: TFunction, ns: string): I18nSeoMeta {
+  // why: TFunction is an i18next overload set; a single-signature wrapper cannot satisfy it structurally
   const translateOrEmpty = ((key: string) =>
     t(key, EMPTY_WHEN_MISSING)) as unknown as TFunction;
   const field = (name: string) =>

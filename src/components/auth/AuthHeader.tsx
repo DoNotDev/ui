@@ -13,7 +13,7 @@
 import { User } from 'lucide-react';
 import React, { Suspense, lazy, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { ComponentType } from 'react';
+import type { ComponentProps, ComponentType } from 'react';
 
 import {
   Button,
@@ -26,6 +26,10 @@ import { useTranslation } from '@donotdev/core';
 import { useAuthConfig } from '@donotdev/core';
 import { getEnabledAuthPartners } from '@donotdev/core';
 import type { AuthPartnerId } from '@donotdev/core';
+import type {
+  AuthPartnerButton as AuthPartnerButtonImpl,
+  MultipleAuthProviders as MultipleAuthProvidersImpl,
+} from '@donotdev/auth';
 
 import { AuthMenu } from './AuthMenu';
 import { Link } from '../../routing';
@@ -66,23 +70,25 @@ function SignInButton({
   );
 }
 
-// @ts-expect-error - lazy() type doesn't account for graceful degradation fallback
-const AuthPartnerButton = lazy(async () => {
+const AuthPartnerButton = lazy<
+  ComponentType<ComponentProps<typeof AuthPartnerButtonImpl>>
+>(async () => {
   try {
     const module = await import('@donotdev/auth');
     return { default: module.AuthPartnerButton };
   } catch {
-    return { default: NullComponent as ComponentType<any> };
+    return { default: NullComponent };
   }
 });
 
-// @ts-expect-error - lazy() type doesn't account for graceful degradation fallback
-const MultipleAuthProviders = lazy(async () => {
+const MultipleAuthProviders = lazy<
+  ComponentType<ComponentProps<typeof MultipleAuthProvidersImpl>>
+>(async () => {
   try {
     const module = await import('@donotdev/auth');
     return { default: module.MultipleAuthProviders };
   } catch {
-    return { default: NullComponent as ComponentType<any> };
+    return { default: NullComponent };
   }
 });
 

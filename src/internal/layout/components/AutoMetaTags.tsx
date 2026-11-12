@@ -15,7 +15,7 @@
  * - Internationalization integration
  * - Canonical URL management
  *
- * @version 0.2.0
+ * @version 0.3.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
@@ -23,13 +23,20 @@
 import { useMemo } from 'react';
 import type { ComponentType } from 'react';
 
-import { useTranslation, useIsClient } from '@donotdev/core';
+import {
+  getLanguageRouting,
+  isMultilingual,
+  isNextJs,
+  languageUrls,
+  localizePath,
+  useTranslation,
+} from '@donotdev/core';
 import { getDndevConfig } from '@donotdev/core';
 import { useSeoConfig, useAppConfig, getPlatformEnvVar } from '@donotdev/core';
 import type { SeoMeta } from '@donotdev/core';
 import { AssetResolver } from '@donotdev/ui';
 // Platform-specific hooks via conditional exports
-import { useLocation } from '@donotdev/ui/routing/hooks';
+import { useRoutePath, useUrlLanguage } from '@donotdev/ui/routing/hooks';
 
 import { HeadTags } from './HeadTags';
 import { readI18nSeoMeta, resolveSeoField } from './i18nSeoMeta';
@@ -66,44 +73,50 @@ function matchRoutePath(pattern: string, pathname: string): boolean {
   return true;
 }
 
-/**
- * Get route metadata from window object (injected by build system).
- * Resolves dynamic routes by pattern (e.g. /cars/:id) so PageMeta (including namespace) is used for SEO.
- */
-function getRouteMetadata(pathname: string, isClient: boolean): RouteMetadata {
-  if (!isClient) return {};
+/** Route metadata plus whether it came from a dynamic (`:param`) route pattern. */
+interface ResolvedRouteMetadata {
+  meta: RouteMetadata;
+  dynamic: boolean;
+}
 
-  // Try to get route metadata from build-time injection
+/**
+ * Get route metadata from the build-time config (`globalThis._DNDEV_CONFIG_`).
+ * Resolves dynamic routes by pattern (e.g. /cars/:id) so PageMeta (including namespace) is used for SEO.
+ * The config is set at module load on the server (Next SSR) and in the browser, so the
+ * server render and the hydration pass resolve the same metadata.
+ */
+function getRouteMetadata(pathname: string): ResolvedRouteMetadata {
   const config = getDndevConfig();
   const routeData = config?.routes?.mapping;
   if (routeData && Array.isArray(routeData)) {
     // 1. Exact match (static routes)
     let route = routeData.find((r) => r.path === pathname);
-    if (route) return route.meta;
+    if (route) return { meta: route.meta, dynamic: false };
 
     // 2. Pattern match (dynamic routes: /cars/:id, /blog/:slug/comments/:id, etc.)
     const dynamicRoutes = routeData.filter(
-      (r) => typeof r.path === 'string' && r.path.includes(':')
+      (r): r is typeof r & { path: string } =>
+        typeof r.path === 'string' && r.path.includes(':')
     );
     const matches = dynamicRoutes.filter((r) =>
-      matchRoutePath(r.path as string, pathname)
+      matchRoutePath(r.path, pathname)
     );
     // Prefer most specific (longest path) so /blog/:slug/comments wins over /blog/:slug for /blog/a/comments
     if (matches.length > 0) {
       route = matches.reduce((best, r) =>
-        (r.path as string).length > (best.path as string).length ? r : best
+        r.path.length > best.path.length ? r : best
       );
-      return route.meta;
+      return { meta: route.meta, dynamic: true };
     }
   }
 
   // Fallback: first path segment as namespace (e.g. /cars/abc123 → ns: cars)
   const segments = pathname.split('/').filter(Boolean);
   if (segments.length > 0) {
-    return { namespace: segments[0] };
+    return { meta: { namespace: segments[0] }, dynamic: false };
   }
 
-  return {};
+  return { meta: {}, dynamic: false };
 }
 
 /**
@@ -112,7 +125,8 @@ function getRouteMetadata(pathname: string, isClient: boolean): RouteMetadata {
 function buildBreadcrumbSchema(
   pathname: string,
   baseUrl: string,
-  siteName: string
+  siteName: string,
+  localize: (path: string) => string
 ) {
   const segments = pathname.split('/').filter(Boolean);
   const items = [
@@ -120,7 +134,7 @@ function buildBreadcrumbSchema(
       '@type': 'ListItem' as const,
       position: 1,
       name: siteName,
-      item: baseUrl || '/',
+      item: `${baseUrl}${localize('/')}`,
     },
   ];
 
@@ -133,7 +147,7 @@ function buildBreadcrumbSchema(
       name: segments[i]!.split('-')
         .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
         .join(' '),
-      item: `${baseUrl}${currentPath}`,
+      item: `${baseUrl}${localize(currentPath)}`,
     });
   }
 
@@ -241,23 +255,26 @@ function buildSpeculationRules() {
  */
 export const AutoMetaTags: ComponentType = () => {
   const { t } = useTranslation();
-  const location = useLocation();
+  const pathname = useRoutePath();
   const seoConfig = useSeoConfig();
-  const isClient = useIsClient();
   const appMeta = useAppConfig('app');
   const siteName = (seoConfig && seoConfig.siteName) || appMeta?.name || '';
   const baseUrl = getPlatformEnvVar('APP_URL') || '';
 
-  // Get route metadata — computed from current pathname and client flag
-  const routeMeta = getRouteMetadata(location.pathname, isClient);
+  // Get route metadata — computed from current pathname
+  const { meta: routeMeta, dynamic: isDynamicRoute } = getRouteMetadata(
+    pathname
+  );
+  // On Next, a dynamic route's page renders the record's <Seo> (title, description,
+  // image). React 19 hoists every <title>/<meta> without deduping (unlike Helmet on
+  // Vite), so the page owns those tags there and this component emits site-level tags only.
+  const pageOwnsIdentity = isDynamicRoute && isNextJs();
 
-  // Read i18n languages from build-time config (for hreflang)
-  const i18nConfig = useMemo(() => {
-    const config = getDndevConfig();
-    return config?.i18n as
-      | { languages?: string[]; defaultLanguage?: string }
-      | undefined;
-  }, []);
+  // One URL per language (default language at the root): canonical, og:url, JSON-LD
+  // and hreflang use the page's URL in each language.
+  const routing = getLanguageRouting();
+  const language = useUrlLanguage();
+  const localize = (path: string) => localizePath(path, language, routing);
 
   // Memoize computed values for performance — must be called before any early return
   const metaData = useMemo(() => {
@@ -265,8 +282,8 @@ export const AutoMetaTags: ComponentType = () => {
 
     const { defaultNamespace = 'home', defaultImage = '/og-image.png' } =
       seoConfig;
-    // Construct absolute URL for canonical link
-    const currentUrl = `${baseUrl}${location.pathname}`;
+    // Canonical: this page in this language (`/en/x`; `/x` for the default language)
+    const currentUrl = `${baseUrl}${localizePath(pathname, language, routing)}`;
     const ns = routeMeta.namespace || defaultNamespace;
     const seo = routeMeta.seo;
 
@@ -326,7 +343,7 @@ export const AutoMetaTags: ComponentType = () => {
       publishDate: routeMeta.publishDate,
       modifiedDate: routeMeta.modifiedDate,
     };
-  }, [location.pathname, routeMeta, siteName, baseUrl, seoConfig, t]);
+  }, [pathname, language, routeMeta, siteName, baseUrl, seoConfig, t]);
 
   // Return null if SEO is disabled — after all hooks have been called
   if (!seoConfig || !metaData) return null;
@@ -343,78 +360,90 @@ export const AutoMetaTags: ComponentType = () => {
   const organizationSchemaEnabled = seoConfig.organizationSchema !== false;
 
   // hreflang: only emit when 2+ languages configured
-  const languages = i18nConfig?.languages || [];
-  const defaultLanguage = i18nConfig?.defaultLanguage || 'en';
-  const shouldEmitHreflang = hreflangEnabled && languages.length >= 2;
+  const shouldEmitHreflang =
+    hreflangEnabled && isMultilingual(routing.languages);
+  const alternates = languageUrls(pathname, baseUrl, routing);
 
   return (
     <HeadTags>
-      {/* CORE: Basic SEO tags */}
-      <title>{metaData.title}</title>
-      {metaData.description && (
-        <meta name="description" content={metaData.description} />
-      )}
+      {/* SITE: canonical + og:url, every route */}
       {baseUrl && <link rel="canonical" href={metaData.url} />}
-
-      {/* SEO: Additional meta tags */}
-      {metaData.keywords && (
-        <meta
-          name="keywords"
-          content={
-            Array.isArray(metaData.keywords)
-              ? metaData.keywords.join(', ')
-              : metaData.keywords
-          }
-        />
-      )}
-      {metaData.author && <meta name="author" content={metaData.author} />}
-      {metaData.noindex && <meta name="robots" content="noindex, nofollow" />}
-
-      {/* OPEN GRAPH: Facebook, LinkedIn, etc. */}
-      <meta property="og:title" content={metaData.title} />
-      {metaData.description && (
-        <meta property="og:description" content={metaData.description} />
-      )}
       {baseUrl && <meta property="og:url" content={metaData.url} />}
-      <meta property="og:type" content={metaData.type} />
-      {metaData.image && <meta property="og:image" content={metaData.image} />}
-      {metaData.image && <meta property="og:image:width" content="1200" />}
-      {metaData.image && <meta property="og:image:height" content="630" />}
       <meta property="og:site_name" content={siteName} />
 
-      {/* ARTICLES: Additional Open Graph for blog posts */}
-      {metaData.type === 'article' && (
+      {/* PAGE IDENTITY: owned by the page's <Seo> on Next dynamic routes */}
+      {!pageOwnsIdentity && (
         <>
+          <title>{metaData.title}</title>
+          {metaData.description && (
+            <meta name="description" content={metaData.description} />
+          )}
+
+          {/* SEO: Additional meta tags */}
+          {metaData.keywords && (
+            <meta
+              name="keywords"
+              content={
+                Array.isArray(metaData.keywords)
+                  ? metaData.keywords.join(', ')
+                  : metaData.keywords
+              }
+            />
+          )}
+          {metaData.author && <meta name="author" content={metaData.author} />}
+          {metaData.noindex && (
+            <meta name="robots" content="noindex, nofollow" />
+          )}
+
+          {/* OPEN GRAPH: Facebook, LinkedIn, etc. */}
+          <meta property="og:title" content={metaData.title} />
+          {metaData.description && (
+            <meta property="og:description" content={metaData.description} />
+          )}
+          <meta property="og:type" content={metaData.type} />
+          {metaData.image && (
+            <meta property="og:image" content={metaData.image} />
+          )}
+          {metaData.image && <meta property="og:image:width" content="1200" />}
+          {metaData.image && <meta property="og:image:height" content="630" />}
+
+          {/* ARTICLES: Additional Open Graph for blog posts */}
+          {metaData.type === 'article' && (
+            <>
+              {metaData.author && (
+                <meta property="article:author" content={metaData.author} />
+              )}
+              {metaData.publishDate && (
+                <meta
+                  property="article:published_time"
+                  content={metaData.publishDate}
+                />
+              )}
+              {metaData.modifiedDate && (
+                <meta
+                  property="article:modified_time"
+                  content={metaData.modifiedDate}
+                />
+              )}
+            </>
+          )}
+
+          {/* TWITTER CARDS: Enhanced social sharing */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={metaData.title} />
+          {metaData.description && (
+            <meta name="twitter:description" content={metaData.description} />
+          )}
+          {metaData.image && (
+            <meta name="twitter:image" content={metaData.image} />
+          )}
           {metaData.author && (
-            <meta property="article:author" content={metaData.author} />
-          )}
-          {metaData.publishDate && (
-            <meta
-              property="article:published_time"
-              content={metaData.publishDate}
-            />
-          )}
-          {metaData.modifiedDate && (
-            <meta
-              property="article:modified_time"
-              content={metaData.modifiedDate}
-            />
+            <meta name="twitter:creator" content={metaData.author} />
           )}
         </>
       )}
-
-      {/* TWITTER CARDS: Enhanced social sharing */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={metaData.title} />
-      {metaData.description && (
-        <meta name="twitter:description" content={metaData.description} />
-      )}
-      {metaData.image && <meta name="twitter:image" content={metaData.image} />}
       {twitterHandle && (
         <meta name="twitter:site" content={`@${twitterHandle}`} />
-      )}
-      {metaData.author && (
-        <meta name="twitter:creator" content={metaData.author} />
       )}
 
       {/* MOBILE: Mobile-specific meta tags */}
@@ -429,19 +458,19 @@ export const AutoMetaTags: ComponentType = () => {
 
       {/* HREFLANG: Alternate language links (only when 2+ languages) */}
       {shouldEmitHreflang &&
-        languages.map((lang) => (
+        routing.languages.map((lang) => (
           <link
             key={`hreflang-${lang}`}
             rel="alternate"
             hrefLang={lang}
-            href={`${baseUrl}${lang === defaultLanguage ? '' : `/${lang}`}${location.pathname}`}
+            href={alternates[lang]}
           />
         ))}
       {shouldEmitHreflang && (
         <link
           rel="alternate"
           hrefLang="x-default"
-          href={`${baseUrl}${location.pathname}`}
+          href={alternates[routing.defaultLanguage]}
         />
       )}
 
@@ -456,53 +485,57 @@ export const AutoMetaTags: ComponentType = () => {
       )}
 
       {/* PERFORMANCE: DNS prefetch for external images */}
-      {metaData.image && metaData.image.startsWith('http') && (
-        <link rel="dns-prefetch" href={new URL(metaData.image).origin} />
+      {!pageOwnsIdentity &&
+        metaData.image &&
+        metaData.image.startsWith('http') && (
+          <link rel="dns-prefetch" href={new URL(metaData.image).origin} />
+        )}
+
+      {/* JSON-LD: Page/Article structured data (the page's <Seo> owns it on Next dynamic routes) */}
+      {!pageOwnsIdentity && (
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': metaData.type === 'article' ? 'Article' : 'WebPage',
+            name: metaData.title,
+            ...(metaData.description && { description: metaData.description }),
+            url: metaData.url,
+            ...(metaData.image && { image: metaData.image }),
+            ...(metaData.type === 'article' && {
+              ...(metaData.author && {
+                author: {
+                  '@type': 'Person',
+                  name: metaData.author,
+                },
+              }),
+              ...(metaData.publishDate && {
+                datePublished: metaData.publishDate,
+              }),
+              ...(metaData.modifiedDate && {
+                dateModified: metaData.modifiedDate,
+              }),
+            }),
+            publisher: {
+              '@type': 'Organization',
+              name: siteName,
+              logo: {
+                '@type': 'ImageObject',
+                url: AssetResolver.assetExists('/icon-512x512.png')
+                  ? '/icon-512x512.png'
+                  : AssetResolver.assetExists('/icon-192x192.png')
+                    ? '/icon-192x192.png'
+                    : '/logo.svg',
+              },
+            },
+          })}
+        </script>
       )}
 
-      {/* JSON-LD: Page/Article structured data */}
-      <script type="application/ld+json">
-        {JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': metaData.type === 'article' ? 'Article' : 'WebPage',
-          name: metaData.title,
-          ...(metaData.description && { description: metaData.description }),
-          url: metaData.url,
-          ...(metaData.image && { image: metaData.image }),
-          ...(metaData.type === 'article' && {
-            ...(metaData.author && {
-              author: {
-                '@type': 'Person',
-                name: metaData.author,
-              },
-            }),
-            ...(metaData.publishDate && {
-              datePublished: metaData.publishDate,
-            }),
-            ...(metaData.modifiedDate && {
-              dateModified: metaData.modifiedDate,
-            }),
-          }),
-          publisher: {
-            '@type': 'Organization',
-            name: siteName,
-            logo: {
-              '@type': 'ImageObject',
-              url: AssetResolver.assetExists('/icon-512x512.png')
-                ? '/icon-512x512.png'
-                : AssetResolver.assetExists('/icon-192x192.png')
-                  ? '/icon-192x192.png'
-                  : '/logo.svg',
-            },
-          },
-        })}
-      </script>
-
       {/* JSON-LD: BreadcrumbList (auto from URL segments) */}
-      {breadcrumbSchemaEnabled && location.pathname !== '/' && (
+      {breadcrumbSchemaEnabled && pathname !== '/' && (
         <script type="application/ld+json">
           {JSON.stringify(
-            buildBreadcrumbSchema(location.pathname, baseUrl, siteName)
+            buildBreadcrumbSchema(pathname, baseUrl, siteName, localize)
           )}
         </script>
       )}
@@ -517,7 +550,7 @@ export const AutoMetaTags: ComponentType = () => {
       {/* JSON-LD: Organization (homepage only, when links are configured) */}
       {organizationSchemaEnabled &&
         baseUrl &&
-        location.pathname === '/' &&
+        pathname === '/' &&
         appMeta?.links &&
         Object.values(appMeta.links).some(Boolean) && (
           <script type="application/ld+json">

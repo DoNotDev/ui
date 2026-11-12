@@ -71,10 +71,9 @@
  */
 
 import { User, LogOut, Settings, UserCheck, Trash2 } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import React, { useMemo, lazy, Suspense } from 'react';
 import type { CSSProperties } from 'react';
-import type { ComponentType } from 'react';
+import type { ComponentProps, ComponentType } from 'react';
 
 import {
   Avatar,
@@ -86,76 +85,42 @@ import {
 } from '@donotdev/components';
 import type { DropdownMenuItemData } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
-import {
-  getEnabledAuthPartners,
-  useAuthConfig,
-  isClient,
-} from '@donotdev/core';
+import { getEnabledAuthPartners, useAuthConfig } from '@donotdev/core';
 import { useBreakpoint } from '@donotdev/core';
 import { useNavigate } from '@donotdev/ui/routing/hooks';
+import type {
+  ReauthDialog as ReauthDialogImpl,
+  ConfirmDeleteDialog as ConfirmDeleteDialogImpl,
+} from '@donotdev/auth';
 
 import { useNavigationItems } from '../../routing';
 import { useAuthSafe, useAuthVisibility } from '../../utils';
+import { useDeleteAccountSafe } from '../../utils/useDeleteAccountSafe';
+import { findLucideIcon } from '../common/lucideIconByName';
 
 const NullComponent = () => null;
 
-// @ts-expect-error - lazy() type doesn't account for graceful degradation fallback
-const ReauthDialog = lazy(async () => {
+const ReauthDialog = lazy<
+  ComponentType<ComponentProps<typeof ReauthDialogImpl>>
+>(async () => {
   try {
     const module = await import('@donotdev/auth');
     return { default: module.ReauthDialog };
   } catch {
-    return { default: NullComponent as ComponentType<any> };
+    return { default: NullComponent };
   }
 });
 
-// @ts-expect-error - lazy() type doesn't account for graceful degradation fallback
-const ConfirmDeleteDialog = lazy(async () => {
+const ConfirmDeleteDialog = lazy<
+  ComponentType<ComponentProps<typeof ConfirmDeleteDialogImpl>>
+>(async () => {
   try {
     const module = await import('@donotdev/auth');
     return { default: module.ConfirmDeleteDialog };
   } catch {
-    return { default: NullComponent as ComponentType<any> };
+    return { default: NullComponent };
   }
 });
-
-// Graceful degradation for useDeleteAccount hook
-// Resolved at module level (not render level) to avoid Rules of Hooks violation.
-// Once set, useDeleteAccount never changes identity during the app lifecycle.
-let useDeleteAccount: () => ReturnType<
-  typeof import('@donotdev/auth').useDeleteAccount
-> = () => {
-  // Fallback: always call useState to maintain stable hook order
-  const [showConfirmDialog] = React.useState(false);
-  const [showPasswordDialog] = React.useState(false);
-  const [isDeleting] = React.useState(false);
-  const [error] = React.useState<string | null>(null);
-
-  return {
-    showConfirmDialog,
-    showPasswordDialog,
-    isDeleting,
-    error,
-    startDeleteFlow: () => {},
-    confirmDelete: async () => {},
-    cancel: () => {},
-  };
-};
-
-// Preload useDeleteAccount (non-blocking)
-// The hook reference is swapped before the first render in practice,
-// but if the import resolves after first render, the fallback remains
-// stable for that session to avoid hook order changes mid-lifecycle.
-if (isClient()) {
-  import('@donotdev/auth')
-    .then((module) => {
-      useDeleteAccount = module.useDeleteAccount;
-    })
-    .catch((e) => {
-      if (process.env.NODE_ENV === 'development')
-        console.warn('Failed to load @donotdev/auth:', e);
-    });
-}
 
 /**
  * Custom menu item for AuthMenu
@@ -235,7 +200,7 @@ const getIcon = (
   if (!iconName) return Settings;
   if (typeof iconName === 'function') return iconName;
   const cleanIconName = iconName.replace(/['"]/g, '');
-  const resolved = (LucideIcons as any)[cleanIconName];
+  const resolved = findLucideIcon(cleanIconName);
   if (!resolved && process.env.NODE_ENV === 'development') {
     console.warn(
       `[AuthMenu] Icon name "${cleanIconName}" not found in Lucide icons, falling back to Settings.`
@@ -268,8 +233,8 @@ export const AuthMenu = ({
   // Extract role from user (declared early so getUserTooltip can reference it)
   const role = user?.role;
 
-  // Account deletion flow - managed by useDeleteAccount hook
-  const deletion = useDeleteAccount();
+  // Account deletion flow - managed by useDeleteAccountSafe hook
+  const deletion = useDeleteAccountSafe();
 
   /**
    * Get user display name with fallbacks
@@ -343,9 +308,7 @@ export const AuthMenu = ({
         : navItem?.icon &&
             (typeof navItem.icon === 'string' ||
               typeof navItem.icon === 'function')
-          ? getIcon(
-              navItem.icon as string | ComponentType<{ className?: string }>
-            )
+          ? getIcon(navItem.icon)
           : Settings;
       items.push({
         label,

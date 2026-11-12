@@ -22,6 +22,7 @@ import {
  */
 export type ScreenRegistry = Record<
   string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- why: public registry accepts screens with any props; narrowing is a consumer-facing change (see any-audit)
   () => Promise<{ default: ComponentType<any> }>
 >;
 
@@ -39,6 +40,9 @@ export interface GameFlowProps {
   fallback?: ReactNode;
 }
 
+/** Screen component type, derived from the public ScreenRegistry contract. */
+type ScreenComponent = Awaited<ReturnType<ScreenRegistry[string]>>['default'];
+
 /**
  * Module-level cache for preloaded screens
  * Tracks which screens have been preloaded to avoid duplicate preloading
@@ -52,7 +56,7 @@ const preloadedScreens = new Set<string>();
  * unmount/remount the entire subtree and can trigger Rules of Hooks violations.
  * This cache ensures each screen name always resolves to the same lazy component ref.
  */
-const lazyComponentCache = new Map<string, ComponentType<any>>();
+const lazyComponentCache = new Map<string, ScreenComponent>();
 
 /**
  * Get or create a cached lazy component for a screen name
@@ -60,7 +64,7 @@ const lazyComponentCache = new Map<string, ComponentType<any>>();
 function getLazyComponent(
   screenName: string,
   registry: ScreenRegistry
-): ComponentType<any> | null {
+): ScreenComponent | null {
   const cached = lazyComponentCache.get(screenName);
   if (cached) return cached;
 

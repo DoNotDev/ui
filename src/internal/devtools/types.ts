@@ -19,7 +19,7 @@ import type { BrowserInfo, FeatureSupport } from '@donotdev/core';
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
-export interface VirtualModuleResult<T = any> {
+export interface VirtualModuleResult<T = unknown> {
   success: boolean;
   data: T | null;
   error: string | null;
@@ -94,10 +94,10 @@ export interface GlobalData {
   discoveredClasses: string[];
   discoveredFrameworkVariables: string[];
   discoveredConsumerVariables: string[];
-  discoveredUtilities: Record<string, any>;
+  discoveredUtilities: Record<string, Record<string, string>>;
 
   // Helper functions
-  getAvailableThemes: (() => any[]) | null;
+  getAvailableThemes: (() => string[]) | null;
 }
 
 /**

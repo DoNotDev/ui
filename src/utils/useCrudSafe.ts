@@ -47,12 +47,12 @@ interface UseCrudSafeOptions<T> {
 }
 
 // Check if real hook exists (will be undefined if Vite aliased to empty module)
-const realUseCrud = crudModule?.useCrud as
+const realUseCrud:
   | (<T>(
       entityOrCollection: Entity | string,
       options?: UseCrudSafeOptions<T>
     ) => CrudAPI<T>)
-  | undefined;
+  | undefined = crudModule?.useCrud;
 
 /**
  * Stub that returns degraded CRUD values.

@@ -5,7 +5,7 @@
  * @fileoverview Next.js-specific navigation hooks
  * @description Navigation hooks for Next.js App Router
  *
- * @version 0.2.0
+ * @version 0.3.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
@@ -15,22 +15,30 @@ import { useRouter as useNextRouter } from 'next/navigation';
 import { isClient, useOverlayStore } from '@donotdev/core';
 
 import type { NavigateOptions } from './types';
+import { useLocalizedPath } from './useUrlLanguage.next';
 
 /**
  * Navigation hook. Auth is handled by AuthGuard (cold-load redirect).
  * Protected routes are hidden from unauthorized users via useAccessibleRoutes.
+ * App paths stay in the current URL's language (`/produits` → `/en/produits` on an
+ * English page); a path with an explicit language prefix keeps it.
+ *
+ * @version 0.3.0
+ * @since 0.0.1
  */
 export function useNavigate() {
   const router = useNextRouter();
   const closeAll = useOverlayStore((state) => state.closeAll);
+  const localize = useLocalizedPath();
 
-  return (to: string, options?: NavigateOptions) => {
-    if (to === 'back') {
+  return (path: string, options?: NavigateOptions) => {
+    if (path === 'back') {
       closeAll();
       return router.back();
     }
 
     closeAll();
+    const to = localize(path);
 
     if (options?.preserveScroll && isClient()) {
       const scrollY = window.scrollY;
@@ -62,5 +70,6 @@ export function useRefresh() {
 
 export function usePrefetch() {
   const router = useNextRouter();
-  return (to: string) => router.prefetch(to);
+  const localize = useLocalizedPath();
+  return (to: string) => router.prefetch(localize(to));
 }

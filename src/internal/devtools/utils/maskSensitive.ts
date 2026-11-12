@@ -45,7 +45,7 @@ export function maskSensitiveValue(value: string): string {
 /**
  * Mask sensitive values in an object based on key names
  */
-export function maskSensitiveData<T extends Record<string, any>>(
+export function maskSensitiveData<T extends Record<string, unknown>>(
   data: T
 ): Record<string, string> {
   const masked: Record<string, string> = {};

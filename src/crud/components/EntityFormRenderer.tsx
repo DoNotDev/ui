@@ -11,7 +11,14 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { FormProvider, useWatch } from 'react-hook-form';
 import type { Control, FieldValues } from 'react-hook-form';
 
@@ -42,6 +49,8 @@ import {
   useFormStore,
   useFieldConditions,
 } from '../crudImports';
+import { referencePrefillFromQuery } from './entityParent';
+import { useRecordBreadcrumb } from './useRecordBreadcrumb';
 
 export type { EntityFormRendererProps };
 
@@ -143,9 +152,10 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
   const isAdminOrSuper = viewerRole === 'admin' || viewerRole === 'super';
   const showVisibilityBadges = !hideVisibilityInfo && isAdminOrSuper;
 
-  // Preview dropdown (View As) is available for user/admin/super
+  // Preview dropdown (View As) is available for user/admin/super, hidden with the badges
   const canPreviewRole =
-    viewerRole === 'user' || viewerRole === 'admin' || viewerRole === 'super';
+    !hideVisibilityInfo &&
+    (viewerRole === 'user' || viewerRole === 'admin' || viewerRole === 'super');
 
   // Preview role state for View As toggle
   const [previewRole, setPreviewRole] = useState<
@@ -194,6 +204,14 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
     [previewRole, viewerRole]
   );
 
+  // Breadcrumb shows the edited record's name instead of its id
+  useRecordBreadcrumb(
+    entity,
+    operation === 'edit'
+      ? (defaultValues as Record<string, unknown> | undefined)
+      : undefined
+  );
+
   // useEntityForm handles all orchestration
   const form = useEntityForm(entity, {
     formId,
@@ -206,6 +224,7 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
 
   const {
     control,
+    setValue,
     handleSubmit,
     fields: rawFields,
     formStatus,
@@ -216,6 +235,23 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
   } = form;
 
   const isDirtyForBlocking = isDirty && hasUserInteracted;
+
+  // Create: prefill reference fields named in the URL (`?brandId=…`, from a nested
+  // EntityList's add button). After mount, client-only (no Suspense / hydration
+  // impact on SSR pages); runs after draft restore, so the URL parent wins.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (operation !== 'create' || prefilled.current) return;
+    prefilled.current = true;
+    const prefill = referencePrefillFromQuery(
+      entity,
+      new URLSearchParams(window.location.search),
+      viewerRole
+    );
+    for (const [field, value] of Object.entries(prefill)) {
+      setValue(field, value);
+    }
+  }, [operation, entity, viewerRole, setValue]);
 
   // Filter fields based on previewRole when visibility info is shown
   const renderableFields = useMemo(() => {
@@ -408,6 +444,7 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
                   key={name}
                   name={name}
                   config={effectiveConfig}
+                  // why: RHF Control<T> is invariant in T; FormDisplayField reads by string name, so it takes the erased Control<FieldValues>
                   control={control as unknown as Control<FieldValues>}
                   t={translate}
                 />

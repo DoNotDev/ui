@@ -21,3 +21,7 @@ export * from './useOAuthSafe';
 export * from './tList';
 export * from './sanitizeSvg';
 export * from './useSeo';
+// Entity-derived SEO lives in @donotdev/utils (server-safe: also used by the
+// generated llms.txt route); re-exported here for existing imports.
+export { buildProductJsonLd, deriveEntitySeo } from '@donotdev/core';
+export type { EntitySeo, EntitySeoRecord } from '@donotdev/core';

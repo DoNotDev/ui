@@ -100,11 +100,17 @@ const FormItemContext = createContext<{ id: string }>({} as { id: string });
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
-const FormItem = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => {
+const FormItem = ({
+  className,
+  children,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) => {
   const id = useId();
   return (
     <FormItemContext.Provider value={{ id }}>
-      <Stack className={className} {...(props as any)} />
+      <Stack className={className} {...props}>
+        {children}
+      </Stack>
     </FormItemContext.Provider>
   );
 };

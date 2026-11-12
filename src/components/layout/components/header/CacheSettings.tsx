@@ -24,6 +24,33 @@ import { useTranslation } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
 import { useRefresh } from '@donotdev/ui/routing/hooks';
 
+/** Deprecated WebSQL surface used to drop legacy tables (absent from lib.dom). */
+interface WebSqlResultSet {
+  rows: { length: number; item(index: number): { name: string } };
+}
+interface WebSqlTransaction {
+  executeSql(
+    sql: string,
+    args?: unknown[],
+    onSuccess?: (tx: WebSqlTransaction, results: WebSqlResultSet) => void
+  ): void;
+}
+interface WebSqlDatabase {
+  transaction?: (callback: (tx: WebSqlTransaction) => void) => void;
+}
+
+/** Non-standard globals: WebSQL `openDatabase` and V8 `gc` (exposed with --expose-gc). */
+type LegacyBrowserGlobals = typeof globalThis & {
+  openDatabase?: (
+    name: string,
+    version: string,
+    displayName: string,
+    estimatedSize: string | number
+  ) => WebSqlDatabase | null;
+  gc?: () => void;
+};
+const legacyGlobals: LegacyBrowserGlobals = globalThis;
+
 /**
  * CacheSettings - Cache settings component for clearing various caches
  *
@@ -108,16 +135,17 @@ function CacheSettings() {
       if (
         cacheOptions.webSQL &&
         typeof window !== 'undefined' &&
-        'openDatabase' in window
+        'openDatabase' in window &&
+        typeof legacyGlobals.openDatabase === 'function'
       ) {
         try {
-          const db = (globalThis as any).openDatabase('', '', '', '');
+          const db = legacyGlobals.openDatabase('', '', '', '');
           if (db && db.transaction) {
-            db.transaction((tx: any) => {
+            db.transaction((tx) => {
               tx.executeSql(
                 'SELECT name FROM sqlite_master WHERE type="table"',
                 [],
-                (tx: any, results: any) => {
+                (tx, results) => {
                   for (let i = 0; i < results.rows.length; i++) {
                     const tableName = results.rows.item(i).name;
                     if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
@@ -198,8 +226,8 @@ function CacheSettings() {
       if (cacheOptions.memoryCache) {
         try {
           // Force garbage collection if available (Chrome DevTools)
-          if ('gc' in window && typeof (globalThis as any).gc === 'function') {
-            (globalThis as any).gc();
+          if ('gc' in window && typeof legacyGlobals.gc === 'function') {
+            legacyGlobals.gc();
           }
           clearedItems.push('Memory Cache');
         } catch (err) {

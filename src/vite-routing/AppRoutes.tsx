@@ -54,10 +54,16 @@ import type { RouteObject } from 'react-router-dom';
 
 import { Spinner } from '@donotdev/components';
 import type { PageAuth, LayoutConfig, LayoutPreset } from '@donotdev/core';
-import { useLayout } from '@donotdev/core';
+import {
+  applyFirstVisitLanguage,
+  getLanguageRouting,
+  splitLanguagePath,
+  useLayout,
+} from '@donotdev/core';
 
 import { RootLayout } from './RootLayout';
 import { AuthGuard } from '../routing/AuthGuard';
+import { SignedInRedirect } from '../routing/SignedInRedirect';
 
 /** Lazy-loadable page component factory or Vite glob string reference */
 type PageComponentFactory =
@@ -133,7 +139,7 @@ const LazyRoute = ({
 /** Extract preset from route meta (meta is unknown at the interface level) */
 function getRoutePreset(meta: unknown): LayoutPreset | undefined {
   if (meta && typeof meta === 'object' && 'preset' in meta) {
-    const preset = (meta as { preset?: unknown }).preset;
+    const preset = meta.preset;
     return typeof preset === 'string' ? (preset as LayoutPreset) : undefined;
   }
   return undefined;
@@ -142,10 +148,26 @@ function getRoutePreset(meta: unknown): LayoutPreset | undefined {
 /** Extract hideBreadcrumbs from route meta */
 function getRouteHideBreadcrumbs(meta: unknown): boolean | undefined {
   if (meta && typeof meta === 'object' && 'hideBreadcrumbs' in meta) {
-    const hide = (meta as { hideBreadcrumbs?: unknown }).hideBreadcrumbs;
+    const hide = meta.hideBreadcrumbs;
     return typeof hide === 'boolean' ? hide : undefined;
   }
   return undefined;
+}
+
+/** Extract signedInRedirect (PageMeta) from route meta */
+function getRouteSignedInRedirect(meta: unknown): string | undefined {
+  if (meta && typeof meta === 'object' && 'signedInRedirect' in meta) {
+    const to = meta.signedInRedirect;
+    return typeof to === 'string' ? to : undefined;
+  }
+  return undefined;
+}
+
+/** Route page, inside SignedInRedirect when its PageMeta sets `signedInRedirect` */
+function routePage(route: RouteGroupEntry): ReactNode {
+  const page = <LazyRoute component={route.component} path={route.path} />;
+  const to = getRouteSignedInRedirect(route.meta);
+  return to ? <SignedInRedirect to={to}>{page}</SignedInRedirect> : page;
 }
 
 /**
@@ -286,6 +308,7 @@ interface CreateAppRouterOptions {
  */
 export function createAppRouter(options: CreateAppRouterOptions) {
   const { routeGroups, basename, layout } = options;
+  const routerBasename = languageBasename(basename);
 
   // Find HomePage route (path "/")
   const allRoutes = routeGroups.flatMap((group) => group.routes);
@@ -330,10 +353,7 @@ export function createAppRouter(options: CreateAppRouterOptions) {
                 preset={getRoutePreset(homePageRoute.meta)}
                 hideBreadcrumbs={getRouteHideBreadcrumbs(homePageRoute.meta)}
               >
-                <LazyRoute
-                  component={homePageRoute.component}
-                  path={homePageRoute.path}
-                />
+                {routePage(homePageRoute)}
               </LayoutRoute>
             );
           })(),
@@ -349,16 +369,14 @@ export function createAppRouter(options: CreateAppRouterOptions) {
                   preset={getRoutePreset(route.meta)}
                   hideBreadcrumbs={getRouteHideBreadcrumbs(route.meta)}
                 >
-                  <LazyRoute component={route.component} path={route.path} />
+                  {routePage(route)}
                 </LayoutRoute>
               ) : (
                 <LayoutRoute
                   preset={getRoutePreset(route.meta)}
                   hideBreadcrumbs={getRouteHideBreadcrumbs(route.meta)}
                 >
-                  <AuthGuard auth={route.parsedAuth}>
-                    <LazyRoute component={route.component} path={route.path} />
-                  </AuthGuard>
+                  <AuthGuard auth={route.parsedAuth}>{routePage(route)}</AuthGuard>
                 </LayoutRoute>
               ),
           })),
@@ -373,5 +391,25 @@ export function createAppRouter(options: CreateAppRouterOptions) {
   ];
 
   // Create and return router instance
-  return createBrowserRouter(routeConfig, { basename });
+  return createBrowserRouter(routeConfig, { basename: routerBasename });
+}
+
+/**
+ * Router basename for the URL's language: `/en` on `/en/…` (other languages live under
+ * their prefix, the default language at the root), so routes, links and useLocation
+ * work with app paths. A first visit to an unprefixed URL moves to the visitor's
+ * language first (same rule as the Next proxy). One language: the basename unchanged.
+ *
+ * @param basename - App basename, if the app is not served at the domain root
+ */
+function languageBasename(basename: string | undefined): string | undefined {
+  const routing = getLanguageRouting();
+  applyFirstVisitLanguage(routing.languages, routing.defaultLanguage);
+  const appBase = basename ?? '';
+  const { language, prefixed } = splitLanguagePath(
+    window.location.pathname.slice(appBase.length) || '/',
+    routing
+  );
+  if (!prefixed) return basename;
+  return `${appBase}/${language}`;
 }

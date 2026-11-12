@@ -38,12 +38,31 @@ const STORE_NAMES: Record<string, string> = {
   'error-store': 'Error',
 };
 
+/** Zustand bound stores expose `getState`; registry values are untyped (`Record<string, any>` in core globals). */
+function hasGetState(store: unknown): store is { getState: () => unknown } {
+  return (
+    (typeof store === 'function' || typeof store === 'object') &&
+    store !== null &&
+    'getState' in store &&
+    typeof store.getState === 'function'
+  );
+}
+
+/** Reads the `_error` marker that `refreshStores` writes for unreadable stores. */
+function readStoreError(state: unknown): string | undefined {
+  if (typeof state !== 'object' || state === null || !('_error' in state)) {
+    return undefined;
+  }
+  return typeof state._error === 'string' ? state._error : undefined;
+}
+
 export const StoresTab = () => {
-  const [storeStates, setStoreStates] = useState<Record<string, any>>({});
+  const [storeStates, setStoreStates] = useState<Record<string, unknown>>({});
   const [storeNames, setStoreNames] = useState<string[]>([]);
 
   const refreshStores = useCallback(() => {
-    const registry = (globalThis as any)._DNDEV_STORES_;
+    const registry: Record<string, unknown> | undefined =
+      globalThis._DNDEV_STORES_;
     if (!registry) {
       setStoreNames([]);
       setStoreStates({});
@@ -53,11 +72,11 @@ export const StoresTab = () => {
     const names = Object.keys(registry);
     setStoreNames(names);
 
-    const states: Record<string, any> = {};
+    const states: Record<string, unknown> = {};
     names.forEach((name) => {
       try {
         const store = registry[name];
-        if (store?.getState) {
+        if (hasGetState(store)) {
           states[name] = store.getState();
         } else {
           states[name] = { _error: 'No getState method' };
@@ -122,7 +141,7 @@ export const StoresTab = () => {
           collapsible
           items={storeNames.map((name) => {
             const state = storeStates[name];
-            const hasError = state?._error;
+            const storeError = readStoreError(state);
 
             return {
               value: name,
@@ -141,9 +160,9 @@ export const StoresTab = () => {
                   </Text>
                 </Stack>
               ),
-              content: hasError ? (
+              content: storeError ? (
                 <Text className="dndev-text-destructive dndev-text-sm">
-                  {state._error}
+                  {storeError}
                 </Text>
               ) : (
                 <ScrollArea className="dndev-max-h-64">

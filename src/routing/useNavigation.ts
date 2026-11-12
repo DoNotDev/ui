@@ -15,7 +15,7 @@ import type { NavigationRoute } from '@donotdev/core';
 import { useNavigationStore, useTranslation } from '@donotdev/core';
 import { USER_ROLES } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
-import { useLocation } from '@donotdev/ui/routing/hooks';
+import { useRoutePath } from '@donotdev/ui/routing/hooks';
 
 import { useAuthSafe } from '../utils/useAuthSafe';
 
@@ -51,7 +51,7 @@ export interface NavigationItem extends NavigationRoute {
  * ```
  */
 export function useNavigationItems(): NavigationItem[] {
-  const location = useLocation();
+  const pathname = useRoutePath();
 
   // Get auth state - hooks must be called at top level
   const user = useAuthSafe('user');
@@ -92,14 +92,14 @@ export function useNavigationItems(): NavigationItem[] {
       .map((route) => ({
         ...route,
         label: routeLabel(route, t),
-        isActive: isRouteActive(route.path, location.pathname),
+        isActive: isRouteActive(route.path, pathname),
         hasChildren: false,
         children: undefined,
       }))
       .sort((a, b) =>
         a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
       ); // Alphabetical sorting by label
-  }, [filteredRoutes, location.pathname, t]);
+  }, [filteredRoutes, pathname, t]);
 }
 
 /**

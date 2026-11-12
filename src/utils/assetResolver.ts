@@ -83,6 +83,7 @@ interface AssetManifest {
  * @author AMBROISE PARK Consulting
  */
 export class AssetResolver {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- why: value type flows into the public inferred return of getDebugInfo().cache; tightening it is an API change (see any-audit)
   private static cache = new Map<string, any>();
 
   /**
@@ -132,7 +133,7 @@ export class AssetResolver {
   /**
    * Recursively extract all string values from nested object/array structure
    */
-  private static extractStringValues(obj: any): string[] {
+  private static extractStringValues(obj: unknown): string[] {
     const values: string[] = [];
     if (obj === null || obj === undefined) return values;
 

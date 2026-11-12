@@ -30,6 +30,7 @@ import {
 } from '@donotdev/core';
 
 import CacheSettings from './CacheSettings';
+import { findLucideIcon } from '../../../common/lucideIconByName';
 import { AuthHeader } from '../../../auth/AuthHeader';
 
 /** Props for the SettingsMenu component. */
@@ -60,7 +61,7 @@ function SettingsMenu({
   ): ComponentType<{ className?: string }> => {
     if (!iconName) return LucideIcons.Palette;
     const cleanIconName = iconName.replace(/['"]/g, '');
-    return (LucideIcons as any)[cleanIconName] || LucideIcons.Palette;
+    return findLucideIcon(cleanIconName) || LucideIcons.Palette;
   };
 
   const themeItems: DropdownMenuItemData[] = availableThemes.map(

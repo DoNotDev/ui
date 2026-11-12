@@ -34,7 +34,7 @@ import { useLayout } from '@donotdev/core';
 import { useTranslation } from '@donotdev/core';
 import { useAppConfig } from '@donotdev/core';
 import { LAYOUT_PRESET, DENSITY } from '@donotdev/core';
-import { useLocation } from '@donotdev/ui/routing/hooks';
+import { useRoutePath } from '@donotdev/ui/routing/hooks';
 
 import Breadcrumbs from '../../components/layout/components/Breadcrumbs';
 import { GoToWrapper } from '../../routing';
@@ -111,8 +111,7 @@ export const DnDevLayout = ({
   const routeHideBreadcrumbs = useLayout('routeHideBreadcrumbs');
 
   // Route detection for animations
-  const location = useLocation();
-  const pathname = location.pathname;
+  const pathname = useRoutePath();
   const mainRef = useRef<HTMLElement>(null);
 
   // Platform content handling
@@ -138,6 +137,7 @@ export const DnDevLayout = ({
 
   // Get preset config (presets only override what's different, defaults fill the rest)
   const config = useMemo((): PresetConfig => {
+    // why: presetRegistry is Record<string, PresetConfig>; `landing` always exists but index access yields `| undefined`
     const presetConfig = (effectiveRegistry[effectivePreset] ??
       presetRegistry.landing) as PresetConfig;
     return {
@@ -166,9 +166,7 @@ export const DnDevLayout = ({
       );
     }
     if (typeof config.header === 'function') {
-      return (
-        <DnDevHeader>{(config.header as () => React.ReactNode)()}</DnDevHeader>
-      );
+      return <DnDevHeader>{config.header()}</DnDevHeader>;
     }
 
     // Determine effective header config (mobile overrides desktop when on mobile)
@@ -255,11 +253,7 @@ export const DnDevLayout = ({
       );
     }
     if (typeof config.sidebar === 'function') {
-      return (
-        <DnDevSidebar>
-          {(config.sidebar as () => React.ReactNode)()}
-        </DnDevSidebar>
-      );
+      return <DnDevSidebar>{config.sidebar()}</DnDevSidebar>;
     }
     if (layout?.sidebar && typeof layout.sidebar === 'object') {
       // If consumer provides a function (including () => null), use it; otherwise fall back
@@ -321,9 +315,7 @@ export const DnDevLayout = ({
       return null;
     }
     if (typeof config.footer === 'function') {
-      return (
-        <DnDevFooter>{(config.footer as () => React.ReactNode)()}</DnDevFooter>
-      );
+      return <DnDevFooter>{config.footer()}</DnDevFooter>;
     }
     return <DnDevFooter app={app} />;
   }, [layout?.footer, config.footer, app]);
@@ -439,29 +431,30 @@ export const DnDevLayout = ({
     : undefined;
 
   // Mirror the preset onto <html>. Client-only by nature (documentElement is not
-  // ours to render), so it lands after hydration — which is why the same
-  // attributes are rendered on the wrapper below. Kept because a handful of rules
-  // are scoped to :root[data-layout=...] rather than to a descendant.
+  // ours to render), so it lands after hydration — which is why the attributes
+  // are rendered on the wrapper below. Kept because a few app or framework rules
+  // are scoped to :root[data-layout=...]. Density is not mirrored: the density
+  // tokens are declared on <html> from the wrapper's attribute (variables.css),
+  // and a [data-density] on <html> would match the nested-density rules there.
   useLayoutEffect(() => {
     if (!isClient() || !effectivePreset) return;
 
     const updateDOM = () => {
-      const root = document.documentElement;
-      root.setAttribute('data-layout', effectivePreset);
-      if (effectiveDensity) root.setAttribute('data-density', effectiveDensity);
+      document.documentElement.setAttribute('data-layout', effectivePreset);
     };
 
     startTransition(updateDOM);
-  }, [effectivePreset, effectiveDensity]);
+  }, [effectivePreset]);
 
   return (
-    // data-layout / data-density are rendered here, not only pushed onto <html>
-    // by the effect above: a preset hides its chrome through CSS
-    // (`[data-layout='plain'] header[role='banner'] { display: none }`), and
-    // header, sidebar and footer are all descendants of this wrapper. Setting the
-    // attribute only from a client effect — deferred further by startTransition —
-    // meant the server shipped the full chrome with nothing to hide it, so every
-    // first paint flashed a header and a sidebar the preset had removed.
+    // data-layout / data-density are rendered here, in the server HTML, not only
+    // pushed onto <html> by the effect above (client-only, after hydration):
+    // - a preset hides its chrome through CSS scoped to the wrapper
+    //   (`[data-layout='plain'] header[role='banner'] { display: none }`);
+    // - the layout and density tokens are declared on <html> from these
+    //   attributes (`:root:has(.dndev-layout[data-density='standard'])`), never
+    //   on the wrapper itself, so the app's :root overrides in themes.css still
+    //   win. Both resolve on the first paint, with or without JavaScript.
     <div
       className={cn('dndev-layout', className)}
       data-layout={effectivePreset || undefined}

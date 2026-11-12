@@ -9,7 +9,7 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
 // Import virtual modules to populate globalThis._DNDEV_CONFIG_ before any components load
 import 'virtual:env';
@@ -18,8 +18,15 @@ import 'virtual:i18n-mapping';
 import 'virtual:routes';
 import 'virtual:assets';
 
-import { AppConfigProvider } from '@donotdev/core';
-import type { AppProvidersProps } from '@donotdev/core';
+import {
+  AppConfigProvider,
+  applyFirstVisitLanguage,
+  getI18nInstance,
+  getLanguageRouting,
+  getUrlLanguage,
+  LanguageNavigationProvider,
+} from '@donotdev/core';
+import type { AppProvidersProps, LanguageNavigate } from '@donotdev/core';
 
 import { ViteStoresInitializer } from '../internal/initializers/ViteStoresInitializer';
 import { NavigationProvider } from '../internal/providers/NavigationProvider';
@@ -45,6 +52,20 @@ const PerformanceHints = lazy(() =>
     default: m.default,
   }))
 );
+
+/** Language of the browser URL (prefix, else the default language). */
+function currentUrlLanguage(): string {
+  return getUrlLanguage(window.location.pathname);
+}
+
+/** Stop the history listener of a router replaced by a language switch. */
+function useDisposeReplacedRouter(router: ReturnType<typeof createAppRouter>) {
+  const previous = useRef(router);
+  useEffect(() => {
+    if (previous.current !== router) previous.current.dispose();
+    previous.current = router;
+  }, [router]);
+}
 
 /**
  * ViteAppProviders - Vite platform-specific app providers
@@ -92,10 +113,36 @@ export function ViteAppProviders(props: AppProvidersProps) {
   // Virtual modules are loaded at module level (lines 20-26), so routes are available
   // HomePage.tsx is automatically assigned path "/" by RouteDiscovery convention
   // Memoized so the router instance is stable across re-renders (Item 86)
+  // The router runs under the URL's language prefix (createAppRouter basename). A
+  // language switch moves the URL to the other language's prefix and recreates the
+  // router under it: client-side, no document reload.
+  const [urlLanguage, setUrlLanguage] = useState(currentUrlLanguage);
   const router = useMemo(
     () => createAppRouter({ routeGroups, layout }),
-    [routeGroups, layout]
+    // urlLanguage: a new router (new basename) per URL language
+    [routeGroups, layout, urlLanguage]
   );
+  useDisposeReplacedRouter(router);
+
+  // Back/forward across languages: the router of the other prefix takes over
+  useEffect(() => {
+    const onPopState = () => {
+      // Same rule as a first visit (and as the Next proxy) for an unprefixed URL
+      const routing = getLanguageRouting();
+      applyFirstVisitLanguage(routing.languages, routing.defaultLanguage);
+      const language = currentUrlLanguage();
+      void getI18nInstance().changeLanguage(language);
+      setUrlLanguage(language);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigateToLanguage: LanguageNavigate = (url, language) => {
+    window.history.pushState(null, '', url);
+    void getI18nInstance().changeLanguage(language);
+    setUrlLanguage(language);
+  };
 
   return (
     <AppConfigProvider config={config} platform="vite">
@@ -111,7 +158,9 @@ export function ViteAppProviders(props: AppProvidersProps) {
 
             {/* NavigationProvider uses RouterProvider with data router pattern */}
             {/* RootLayout (inside router config) provides QueryProviders, UIProviders, Layout, etc. */}
-            <NavigationProvider router={router} />
+            <LanguageNavigationProvider navigate={navigateToLanguage}>
+              <NavigationProvider router={router} />
+            </LanguageNavigationProvider>
           </HelmetProvider>
         </Suspense>
       </ViteStoresInitializer>

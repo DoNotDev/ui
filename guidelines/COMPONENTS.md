@@ -76,7 +76,8 @@
 - **useBack** - Navigate back in history.
 - **useRefresh** - Refresh current route.
 - **usePrefetch** - Prefetch route data.
-- **useLocation** - Get current location.
+- **useLocation** - Get current location (reads the query string).
+- **useRoutePath** - Current route path only (safe in cached Next pages).
 - **useParams** - Get route parameters.
 - **useSearchParams** - Get URL search parameters. Returns `URLSearchParams` directly (NOT a tuple). Use `.get('key')` to read values.
 - **useMatch** - Match current route pattern.

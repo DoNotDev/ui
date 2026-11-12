@@ -54,6 +54,7 @@ type FormStoreLike = typeof DEGRADED_FORM_STORE_STATE;
 
 // Extract useFormStore if available (undefined if package not installed/aliased)
 // Zustand stores have both the hook and getState method
+// why: public selector type is the degraded shape (FormStoreLike), not crud's FormStore state; retyping it changes the exported signature
 const realUseFormStore = crudModule?.useFormStore as unknown as
   | ((<T>(selector: (state: FormStoreLike) => T) => T) & {
       getState: () => FormStoreLike;

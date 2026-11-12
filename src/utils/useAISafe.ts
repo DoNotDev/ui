@@ -22,9 +22,9 @@ import { DEGRADED_AI_API } from '@donotdev/core';
 export type { AIAuthState } from '@donotdev/ai';
 
 // Check if real hook exists (will be undefined if Vite aliased to empty module)
-const realUseAI = aiModule?.useAI as
+const realUseAI:
   | (<K extends keyof AIAPI>(key: K, authState?: AIAuthState) => AIAPI[K])
-  | undefined;
+  | undefined = aiModule?.useAI;
 
 /**
  * Stub that returns degraded AI values.

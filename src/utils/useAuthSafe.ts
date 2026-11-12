@@ -42,9 +42,9 @@ import { DEGRADED_AUTH_API } from '@donotdev/core';
 // Decision made ONCE at module load time, never changes
 
 // Extract useAuth if available (undefined if package not installed/aliased)
-const realUseAuth = authModule?.useAuth as
+const realUseAuth:
   | (<K extends keyof AuthAPI>(key: K) => AuthAPI[K])
-  | undefined;
+  | undefined = authModule?.useAuth;
 
 /**
  * Stub that returns degraded auth values.

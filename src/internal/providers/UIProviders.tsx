@@ -12,11 +12,24 @@
 
 import type { ReactNode, ReactElement, ComponentProps } from 'react';
 
-import { TooltipProvider, Toaster, Dialog } from '@donotdev/components';
+import {
+  Dialog,
+  LinkRendererProvider,
+  Toaster,
+  TooltipProvider,
+} from '@donotdev/components';
+import type { LinkRendererProps } from '@donotdev/components';
 import { useOverlayStore } from '@donotdev/core';
+
+import { Link } from '../../routing/Link';
 
 import DnDevErrorBoundary from '../common/DnDevErrorBoundary';
 import GlobalErrorFallback from '../common/GlobalErrorFallback';
+
+/** Router link for components' `href` props (Card): Next Link or react-router Link. */
+function RouterLinkRenderer({ href, ...rest }: LinkRendererProps) {
+  return <Link path={href} {...rest} />;
+}
 
 function UIGlobalErrorFallback(
   props: ComponentProps<typeof GlobalErrorFallback>
@@ -38,11 +51,13 @@ interface UIProvidersProps {
 export function UIProviders({ children }: UIProvidersProps): ReactElement {
   return (
     <DnDevErrorBoundary level="app" fallback={UIGlobalErrorFallback}>
-      <TooltipProvider>
-        {children}
-        <Toaster />
-        <ModalDialog />
-      </TooltipProvider>
+      <LinkRendererProvider value={RouterLinkRenderer}>
+        <TooltipProvider>
+          {children}
+          <Toaster />
+          <ModalDialog />
+        </TooltipProvider>
+      </LinkRendererProvider>
     </DnDevErrorBoundary>
   );
 }

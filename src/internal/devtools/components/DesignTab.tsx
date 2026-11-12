@@ -45,6 +45,11 @@ interface TypographyResult {
   totalElements: number;
 }
 
+/** HTML, SVG and MathML elements all carry an inline `style`; narrows a generic Element to it. */
+function hasInlineStyle(el: Element): el is Element & ElementCSSInlineStyle {
+  return 'style' in el;
+}
+
 export const DesignTab = () => {
   const currentTheme = useTheme('currentTheme');
   const availableThemes = useTheme('availableThemes');
@@ -110,7 +115,7 @@ export const DesignTab = () => {
   const toggleHighlight = (size: string) => {
     // Clear previous highlights
     document.querySelectorAll('[data-dndev-highlight]').forEach((el) => {
-      (el as HTMLElement).style.outline = '';
+      if (hasInlineStyle(el)) el.style.outline = '';
       el.removeAttribute('data-dndev-highlight');
     });
 
@@ -133,7 +138,7 @@ export const DesignTab = () => {
 
       const style = getComputedStyle(el);
       if (normalizeFontSize(style.fontSize) === normalizedSize) {
-        (el as HTMLElement).style.outline = '2px solid var(--primary)';
+        if (hasInlineStyle(el)) el.style.outline = '2px solid var(--primary)';
         el.setAttribute('data-dndev-highlight', 'true');
         count++;
       }
@@ -149,7 +154,7 @@ export const DesignTab = () => {
     document
       .querySelectorAll(`[data-dndev-font-size-color="${size}"]`)
       .forEach((el) => {
-        (el as HTMLElement).style.color = '';
+        if (hasInlineStyle(el)) el.style.color = '';
         el.removeAttribute('data-dndev-font-size-color');
       });
 
@@ -176,7 +181,7 @@ export const DesignTab = () => {
 
       const style = getComputedStyle(el);
       if (normalizeFontSize(style.fontSize) === normalizedSize) {
-        (el as HTMLElement).style.color = color;
+        if (hasInlineStyle(el)) el.style.color = color;
         el.setAttribute('data-dndev-font-size-color', size);
         count++;
       }
@@ -190,11 +195,11 @@ export const DesignTab = () => {
   // Clear highlights on unmount or when dialog closes
   const clearHighlights = () => {
     document.querySelectorAll('[data-dndev-highlight]').forEach((el) => {
-      (el as HTMLElement).style.outline = '';
+      if (hasInlineStyle(el)) el.style.outline = '';
       el.removeAttribute('data-dndev-highlight');
     });
     document.querySelectorAll('[data-dndev-font-size-color]').forEach((el) => {
-      (el as HTMLElement).style.color = '';
+      if (hasInlineStyle(el)) el.style.color = '';
       el.removeAttribute('data-dndev-font-size-color');
     });
     setHighlightedSize(null);
@@ -270,7 +275,7 @@ export const DesignTab = () => {
         return;
 
       const style = getComputedStyle(el);
-      const rect = (el as HTMLElement).getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
 
       if (rect.width === 0 || rect.height === 0) return;
       if (style.display === 'none' || style.visibility === 'hidden') return;
@@ -322,7 +327,7 @@ export const DesignTab = () => {
 
       const style = getComputedStyle(el);
       const bg = style.backgroundColor;
-      const rect = (el as HTMLElement).getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
       const area = rect.width * rect.height;
 
       if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && area > 0) {
@@ -767,7 +772,7 @@ export const DesignTab = () => {
                     '[DesignTab]',
                     el.textContent?.trim().substring(0, 50)
                   );
-                  (el as HTMLElement).style.outline = '2px solid red';
+                  if (hasInlineStyle(el)) el.style.outline = '2px solid red';
                 });
                 console.log(
                   `[DesignTab] Found ${found.length} elements with ${f.size}`

@@ -10,6 +10,7 @@
  * @author AMBROISE PARK Consulting
  */
 
+import { useRouter } from 'next/navigation';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 // No react-helmet-async on Next: React 19 hoists <title>/<meta>/<link> to <head>
 // natively (see HeadTags). Rendering Helmet on the server throws (`document`),
@@ -22,16 +23,23 @@ import { ReactQueryStreamedHydration } from '@tanstack/react-query-next-experime
 import {
   AppConfigProvider,
   AuthSessionProvider,
+  getI18nInstance,
+  getLanguageRouting,
   getProvider,
   getRequestLanguage,
   hasProvider,
+  isMultilingual,
+  LanguageNavigationProvider,
   QueryProviders,
   RequestLanguageProvider,
 } from '@donotdev/core';
 import { useConsent } from '@donotdev/core';
-import type { AppProvidersProps } from '@donotdev/core';
+import type { AppProvidersProps, LanguageNavigate } from '@donotdev/core';
+// Platform-specific hooks via conditional exports
+import { useUrlLanguage } from '@donotdev/ui/routing/hooks';
 
 import { NextJsStoresInitializer } from '../internal/initializers/NextJsStoresInitializer';
+import { AutoMetaTags } from '../internal/layout/components/AutoMetaTags';
 import FaviconHead from '../internal/layout/components/FaviconHead';
 import PerformanceHints from '../internal/layout/components/PerformanceHints';
 import { DnDevLayout } from '../internal/layout/DnDevLayout';
@@ -85,13 +93,47 @@ function ConsentBanner() {
 }
 
 /**
+ * Language of the render. 2+ languages: the URL's (`/en/…`, the default language at
+ * the root; the generated proxy already moved a first visit to the visitor's
+ * language). One language: from the request headers (language cookie >
+ * Accept-Language > fallback). Same inputs on the server and in the hydration pass.
+ */
+function useRenderLanguage(
+  serverCookies: string | undefined,
+  acceptLanguage: string | null | undefined
+): string {
+  const urlLanguage = useUrlLanguage();
+  const multilingual = isMultilingual(getLanguageRouting().languages);
+  const requestLanguage = useMemo(
+    () => getRequestLanguage(serverCookies, acceptLanguage),
+    [serverCookies, acceptLanguage]
+  );
+  return multilingual ? urlLanguage : requestLanguage;
+}
+
+/**
+ * The live i18n instance follows the render language: a language switch navigates
+ * client-side to the other language's URL, and the page re-renders in it.
+ */
+function useFollowLanguage(language: string): void {
+  useEffect(() => {
+    const instance = getI18nInstance();
+    if (instance.language !== language) void instance.changeLanguage(language);
+  }, [language]);
+}
+
+/**
  * NextJsAppProviders - Next.js platform-specific app providers
  *
  * Clean provider hierarchy with configuration via context (no prop drilling).
  *
+ * Language: the URL's with 2+ languages (one URL per language), else the request's
+ * (`serverCookies` / `acceptLanguage`). Language switchers navigate client-side to the
+ * other language's URL (LanguageNavigationProvider, Next router).
+ *
  * Provider hierarchy:
  * 1. AppConfigProvider (configuration context)
- * 2. HelmetProvider (head management)
+ * 2. AutoMetaTags (SEO head, server-rendered; no Helmet on Next)
  * 3. NextJsStoresInitializer (store setup, SSR-safe)
  * 4. QueryProviders (React Query)
  * 5. UIProviders (design system)
@@ -136,12 +178,14 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
     acceptLanguage,
     customStores,
   } = props;
-  // Same header values on the server and in the hydration pass → same language and
-  // signed-in state on both, so the first paint is final (no keys, no auth swap).
-  const requestLanguage = useMemo(
-    () => getRequestLanguage(serverCookies, acceptLanguage),
-    [serverCookies, acceptLanguage]
-  );
+  // Same URL and header values on the server and in the hydration pass → same language
+  // and signed-in state on both, so the first paint is final (no keys, no auth swap).
+  const language = useRenderLanguage(serverCookies, acceptLanguage);
+  useFollowLanguage(language);
+  // Language switchers (core) open the other language's URL through the Next router
+  const router = useRouter();
+  const navigateToLanguage: LanguageNavigate = (url) =>
+    router.push(url, { scroll: false });
   const authSnapshot = useMemo(
     () => readAuthSnapshot(serverCookies),
     [serverCookies]
@@ -151,7 +195,7 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
   // opts OUT with appConfig.ssr === false, restoring the legacy client-only
   // render (the tree mounts after hydration). Hooks are still called
   // unconditionally to keep render order stable.
-  const ssr = (config as { ssr?: boolean }).ssr !== false;
+  const ssr = config.ssr !== false;
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -163,55 +207,59 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
   }
 
   return (
-    <RequestLanguageProvider language={requestLanguage}>
-      <AuthSessionProvider snapshot={authSnapshot}>
-        <AppConfigProvider config={config} platform="nextjs">
-          <SentryInitializer />
-          <NextJsStoresInitializer
-            serverCookies={serverCookies}
-            customStores={customStores}
-          >
-            {/* Favicon - uses useFaviconConfig() internally */}
-            <FaviconHead />
+    <RequestLanguageProvider language={language}>
+      <LanguageNavigationProvider navigate={navigateToLanguage}>
+        <AuthSessionProvider snapshot={authSnapshot}>
+          <AppConfigProvider config={config} platform="nextjs">
+            <SentryInitializer />
+            <NextJsStoresInitializer
+              serverCookies={serverCookies}
+              customStores={customStores}
+            >
+              {/* Favicon - uses useFaviconConfig() internally */}
+              <FaviconHead />
 
-            {/* Performance hints - preconnects for faster third-party loads */}
-            <PerformanceHints />
+              {/* Performance hints - preconnects for faster third-party loads */}
+              <PerformanceHints />
 
-            <QueryProviders>
-              {/* Queries read during the server render (CRUD lists) stream to the
+              <QueryProviders>
+                {/* Queries read during the server render (CRUD lists) stream to the
                   browser cache with the HTML, so the hydration pass reads the same data
                   as the server: no loading state, no layout swap on first paint. */}
-              <ReactQueryStreamedHydration>
-                <UIProviders>
-                  {/* SEO - Metadata is now generated server-side via generateMetadata() in page files */}
+                <ReactQueryStreamedHydration>
+                  <UIProviders>
+                    {/* SEO: same head as Vite (title, description, canonical, og, JSON-LD), in the
+                      server HTML. On dynamic routes the page's <Seo> owns the page identity. */}
+                    <AutoMetaTags />
 
-                  {/* Layout - uses config hooks internally */}
-                  <DnDevLayout layout={layout}>{children}</DnDevLayout>
+                    {/* Layout - uses config hooks internally */}
+                    <DnDevLayout layout={layout}>{children}</DnDevLayout>
 
-                  {/* Cookie consent */}
-                  <ConsentBanner />
+                    {/* Cookie consent */}
+                    <ConsentBanner />
 
-                  {/* Auth return-to after OAuth redirect */}
-                  <AuthReturnTo />
+                    {/* Auth return-to after OAuth redirect */}
+                    <AuthReturnTo />
 
-                  {/* Password reset overlay - auto-detects from URL hash / store */}
-                  <PasswordResetCallback />
+                    {/* Password reset overlay - auto-detects from URL hash / store */}
+                    <PasswordResetCallback />
 
-                  {/* PWA update notification - auto-injected when PWA enabled */}
-                  <Suspense fallback={null}>
-                    <PWAUpdateNotification />
-                  </Suspense>
+                    {/* PWA update notification - auto-injected when PWA enabled */}
+                    <Suspense fallback={null}>
+                      <PWAUpdateNotification />
+                    </Suspense>
 
-                  {/* Redirect overlay - auto-shown by billing/auth hooks */}
-                  <Suspense fallback={null}>
-                    <RedirectOverlay />
-                  </Suspense>
-                </UIProviders>
-              </ReactQueryStreamedHydration>
-            </QueryProviders>
-          </NextJsStoresInitializer>
-        </AppConfigProvider>
-      </AuthSessionProvider>
+                    {/* Redirect overlay - auto-shown by billing/auth hooks */}
+                    <Suspense fallback={null}>
+                      <RedirectOverlay />
+                    </Suspense>
+                  </UIProviders>
+                </ReactQueryStreamedHydration>
+              </QueryProviders>
+            </NextJsStoresInitializer>
+          </AppConfigProvider>
+        </AuthSessionProvider>
+      </LanguageNavigationProvider>
     </RequestLanguageProvider>
   );
 }

@@ -1,10 +1,16 @@
 'use client';
 // packages/ui/src/routing/hooks/useMatch.next.ts
 
-import { usePathname } from 'next/navigation';
+import { useRoutePath } from './useRoutePath.next';
 
+/**
+ * Match the current route path (language prefix stripped) against a pattern.
+ *
+ * @version 0.2.0
+ * @since 0.0.1
+ */
 export function useMatch(pattern: string) {
-  const pathname = usePathname();
+  const pathname = useRoutePath();
 
   // Simple pattern matching for Next.js
   const regexPattern = pattern

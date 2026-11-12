@@ -16,10 +16,12 @@ import type { ComponentType, ReactNode } from 'react';
 
 import { cn } from '@donotdev/components';
 
+import { findLucideIcon } from './lucideIconByName';
+
 function getLucideIcon(name: string | undefined): ComponentType<LucideProps> {
   if (!name) return LucideIcons.Palette;
   const cleanIconName = name.replace(/['"]/g, '');
-  return (LucideIcons as any)[cleanIconName] || LucideIcons.Palette;
+  return findLucideIcon(cleanIconName) || LucideIcons.Palette;
 }
 
 /** Props for the Icon component. */

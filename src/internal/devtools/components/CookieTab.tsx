@@ -25,13 +25,38 @@ import {
   Text,
   Stack,
 } from '@donotdev/components';
+import type { DescriptionItem } from '@donotdev/components';
 import { useConsent, useConsentReady } from '@donotdev/core';
 import { CONSENT_CATEGORY } from '@donotdev/core';
 import { getCookie, deleteCookie } from '@donotdev/core';
 
 const CONSENT_COOKIE_NAME = 'dndev-cookie-consent';
 
-const formatJSON = (data: any) => {
+/** DOM snapshot collected by `refreshData` for the overlay debug panel. */
+interface DomInfo {
+  cookieBanner: {
+    exists: boolean;
+    visible: boolean;
+    zIndex: string | null;
+    position: string | null;
+    classes: string | null;
+  };
+  dialogs: {
+    count: number;
+    open: number;
+    elements: { state: string | null; zIndex: string }[];
+  };
+  overlays: { count: number; visible: number; zIndices: string[] };
+  portals: { count: number; elements: { zIndex: string; children: number }[] };
+}
+
+/** z-index snapshot collected by `refreshData`. */
+interface ZIndexInfo {
+  cssVariables: Record<string, string>;
+  computed: Record<string, string | number>;
+}
+
+const formatJSON = (data: unknown) => {
   try {
     return JSON.stringify(data, null, 2);
   } catch (error) {
@@ -48,8 +73,8 @@ export const CookieTab = () => {
   const showCookieBanner = useConsent('showCookieBanner');
   const isReady = useConsentReady();
   const [cookieValue, setCookieValue] = useState<string | null>(null);
-  const [domInfo, setDomInfo] = useState<any>({});
-  const [zIndexInfo, setZIndexInfo] = useState<any>({});
+  const [domInfo, setDomInfo] = useState<Partial<DomInfo>>({});
+  const [zIndexInfo, setZIndexInfo] = useState<Partial<ZIndexInfo>>({});
 
   const refreshData = () => {
     const cookie = getCookie(CONSENT_COOKIE_NAME);
@@ -65,15 +90,15 @@ export const CookieTab = () => {
       cookieBanner: {
         exists: !!cookieBanner,
         visible: cookieBanner
-          ? window.getComputedStyle(cookieBanner as Element).display !== 'none'
+          ? window.getComputedStyle(cookieBanner).display !== 'none'
           : false,
         zIndex: cookieBanner
-          ? window.getComputedStyle(cookieBanner as Element).zIndex
+          ? window.getComputedStyle(cookieBanner).zIndex
           : null,
         position: cookieBanner
-          ? window.getComputedStyle(cookieBanner as Element).position
+          ? window.getComputedStyle(cookieBanner).position
           : null,
-        classes: cookieBanner ? (cookieBanner as Element).className : null,
+        classes: cookieBanner ? cookieBanner.className : null,
       },
       dialogs: {
         count: dialogs.length,
@@ -113,7 +138,7 @@ export const CookieTab = () => {
       },
       computed: {
         cookieBanner: cookieBanner
-          ? window.getComputedStyle(cookieBanner as Element).zIndex
+          ? window.getComputedStyle(cookieBanner).zIndex
           : 'N/A',
         highestDialog:
           dialogs.length > 0
@@ -195,16 +220,8 @@ export const CookieTab = () => {
         </Text>
       ),
       value: (
-        <Badge
-          variant={
-            categories[value as keyof typeof categories]
-              ? 'default'
-              : 'destructive'
-          }
-        >
-          {categories[value as keyof typeof categories]
-            ? '✅ Enabled'
-            : '❌ Disabled'}
+        <Badge variant={categories[value] ? 'default' : 'destructive'}>
+          {categories[value] ? '✅ Enabled' : '❌ Disabled'}
         </Badge>
       ),
     })
@@ -258,7 +275,7 @@ export const CookieTab = () => {
               </Stack>
             }
           >
-            <DescriptionList items={consentStateItems as any} />
+            <DescriptionList items={consentStateItems} />
           </Card>
 
           <Card
@@ -278,7 +295,10 @@ export const CookieTab = () => {
               </Stack>
             }
           >
-            <DescriptionList items={categoryItems as any} />
+            {/* why: DescriptionItem.label is typed `string` but rendered as ReactNode in <dt>; JSX labels need the public type widened (listed in any-audit) */}
+            <DescriptionList
+              items={categoryItems as unknown as DescriptionItem[]}
+            />
           </Card>
 
           <Card

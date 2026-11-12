@@ -39,9 +39,9 @@ import { DEGRADED_OAUTH_API } from '@donotdev/core';
 import * as oauthModule from '@donotdev/oauth';
 
 // Check if real hook exists (will be undefined if Vite aliased to empty module)
-const realUseOAuth = oauthModule?.useOAuth as
+const realUseOAuth:
   | (<K extends keyof OAuthAPI>(key: K) => OAuthAPI[K])
-  | undefined;
+  | undefined = oauthModule?.useOAuth;
 
 /**
  * Stub that returns degraded OAuth values.

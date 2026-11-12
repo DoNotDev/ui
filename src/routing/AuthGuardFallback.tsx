@@ -16,7 +16,7 @@ import { Card, Button, Separator, Stack, cn } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
 import { useBreakpoint } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
-import { useLocation, useBack } from '@donotdev/ui/routing/hooks';
+import { useBack } from '@donotdev/ui/routing/hooks';
 
 import { PageContainer } from '../components/layout/PageContainer';
 
@@ -59,7 +59,6 @@ export function AuthGuardFallback({
   className = '',
 }: AuthGuardFallbackProps) {
   const { t } = useTranslation(['auth', 'common']);
-  const location = useLocation();
   const back = useBack();
 
   const handleBack = () => {

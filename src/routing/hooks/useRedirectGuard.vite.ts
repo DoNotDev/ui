@@ -13,7 +13,7 @@
 import { useMemo } from 'react';
 
 import { isClient, FEATURE_STATUS } from '@donotdev/core';
-import { useAuthConfig } from '@donotdev/core';
+import { useAppConfig, useAuthConfig } from '@donotdev/core';
 import type { PageAuth, FeatureStatus } from '@donotdev/core';
 
 import { useLocation } from './useLocation.vite';
@@ -26,6 +26,7 @@ export interface RedirectGuardOptions {
   /** Custom redirect target (overrides auth config defaults) */
   redirectTo?: string | null;
   /** Custom condition function to check if redirect should happen */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- why: exported signature; narrowing it is a breaking change for importers (deferred to a major, any-audit 2026-11-11)
   condition?: (user: any, status: FeatureStatus) => boolean;
 }
 
@@ -56,6 +57,7 @@ export function useRedirectGuard(
   // Hooks must be called unconditionally (Rules of Hooks)
   const location = useLocation();
   const authConfig = useAuthConfig();
+  const authDisabled = useAppConfig().auth === false;
   const user = useAuthSafe('user');
   const can = useAuthSafe('can');
   const status = useAuthSafe('status');
@@ -92,6 +94,12 @@ export function useRedirectGuard(
 
       // Check if user can navigate to this route
       if (!can.navigate(auth)) {
+        // Redirect targets come from AppConfig.auth: none exist when auth is disabled
+        if (authDisabled && !customRedirectTo) {
+          throw new Error(
+            "[dndev] This route declares auth requirements but AppConfig.auth is false, so there is no auth route to redirect to. Enable auth in AppConfig or remove the route's auth requirement."
+          );
+        }
         let targetRoute: string | null = null;
 
         // Authentication failure (not logged in) → always redirect
@@ -140,6 +148,7 @@ export function useRedirectGuard(
     condition,
     customRedirectTo,
     location.search,
+    authDisabled,
     authConfig.authRoute,
     authConfig.roleRoute,
     authConfig.tierRoute,

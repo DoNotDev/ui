@@ -39,8 +39,16 @@
 
 import type { ReactElement } from 'react';
 
-import { useAppConfig } from '@donotdev/core';
-import type { SeoMeta } from '@donotdev/core';
+import {
+  buildProductJsonLd,
+  deriveEntitySeo,
+  getPlatformEnvVar,
+  useAppConfig,
+  useTranslation,
+} from '@donotdev/core';
+import type { AnyEntity, EntitySeoRecord, SeoMeta } from '@donotdev/core';
+// Platform-specific hooks via conditional exports
+import { useLocalizedPath, useRoutePath } from '@donotdev/ui/routing/hooks';
 
 import { HeadTags } from '../internal/layout/components/HeadTags';
 
@@ -66,6 +74,21 @@ export interface SeoProps extends SeoMeta {
    * @description For article pages, sets article:modified_time
    */
   modifiedDate?: string;
+
+  /**
+   * Entity of the record this page renders. With `data`, title, description, image
+   * and (for `type="product"`) Product JSON-LD are derived from the entity's fields
+   * (see deriveEntitySeo). Explicit props win over derived values.
+   */
+  entity?: AnyEntity;
+
+  /** The record (e.g. from useCrudDoc). Ignored without `entity`; null renders site defaults. */
+  data?: EntitySeoRecord | null;
+}
+
+/** Root-relative URLs → absolute (link-preview crawlers and JSON-LD need absolute URLs). */
+function absoluteUrl(url: string, baseUrl: string): string {
+  return url.startsWith('/') && baseUrl ? `${baseUrl}${url}` : url;
 }
 
 /**
@@ -120,41 +143,81 @@ export function Seo({
   canonicalUrl,
   publishDate,
   modifiedDate,
+  entity,
+  data,
 }: SeoProps): ReactElement | null {
   const siteName = useAppConfig('name') || '';
+  const pathname = useRoutePath();
+  const localize = useLocalizedPath();
+  const baseUrl = getPlatformEnvVar('APP_URL') || '';
+
+  // Entity-derived identity (card text, entity namespace then crud); explicit props win
+  const { t, language } = useTranslation(
+    entity ? [entity.namespace, 'crud'] : undefined
+  );
+  const derived =
+    entity && data ? deriveEntitySeo(entity, data, { t, locale: language }) : null;
+  const pageTitle = title ?? derived?.title;
+  const pageDescription = description ?? derived?.description;
+  const pageImage = image ?? derived?.image;
+  const absoluteImage = pageImage ? absoluteUrl(pageImage, baseUrl) : undefined;
+  // This page in this language (`/en/x`; `/x` for the default language)
+  const pageUrl = canonicalUrl ?? `${baseUrl}${localize(pathname)}`;
 
   // Resolve final title
   const resolvedTitle = fullTitle
     ? fullTitle
-    : title
-      ? `${title} | ${siteName}`
+    : pageTitle
+      ? `${pageTitle} | ${siteName}`
       : siteName;
+
+  const productJsonLd =
+    type === 'product'
+      ? buildProductJsonLd(
+          {
+            title: pageTitle ?? undefined,
+            description: pageDescription ?? undefined,
+            image: absoluteImage,
+            images: absoluteImage
+              ? [
+                  absoluteImage,
+                  ...(derived?.images ?? [])
+                    .map((url) => absoluteUrl(url, baseUrl))
+                    .filter((url) => url !== absoluteImage),
+                ]
+              : [],
+            price: derived?.price,
+            availability: derived?.availability,
+          },
+          pageUrl
+        )
+      : null;
 
   // Build meta tags array for cleaner rendering
   const metaTags: ReactElement[] = [];
 
   // Description
-  if (description) {
+  if (pageDescription) {
     metaTags.push(
-      <meta key="description" name="description" content={description} />,
+      <meta key="description" name="description" content={pageDescription} />,
       <meta
         key="og:description"
         property="og:description"
-        content={description}
+        content={pageDescription}
       />,
       <meta
         key="twitter:description"
         name="twitter:description"
-        content={description}
+        content={pageDescription}
       />
     );
   }
 
   // Image
-  if (image) {
+  if (absoluteImage) {
     metaTags.push(
-      <meta key="og:image" property="og:image" content={image} />,
-      <meta key="twitter:image" name="twitter:image" content={image} />,
+      <meta key="og:image" property="og:image" content={absoluteImage} />,
+      <meta key="twitter:image" name="twitter:image" content={absoluteImage} />,
       <meta
         key="twitter:card"
         name="twitter:card"
@@ -218,6 +281,11 @@ export function Seo({
       <title>{resolvedTitle}</title>
       {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
       {metaTags}
+      {productJsonLd && (
+        <script type="application/ld+json">
+          {JSON.stringify(productJsonLd)}
+        </script>
+      )}
     </HeadTags>
   );
 }

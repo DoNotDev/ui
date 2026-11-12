@@ -18,12 +18,14 @@ export {
   usePrefetch,
 } from './useNavigate.vite';
 export { useLocation } from './useLocation.vite';
+export { useRoutePath } from './useRoutePath.vite';
 export { useParams } from './useParams.vite';
 export { useRouteParam } from './useRouteParam.vite';
 export { useSearchParams } from './useSearchParams.vite';
 export { useMatch } from './useMatch.vite';
 export { useQueryParams } from './useQueryParams.vite';
 export { useRedirectGuard } from './useRedirectGuard.vite';
+export { useLocalizedPath, useUrlLanguage } from './useUrlLanguage.vite';
 export type { NavigateOptions } from './types';
 export type {
   RedirectGuardOptions,

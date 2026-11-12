@@ -33,6 +33,16 @@ export interface GoToProps {
  * Simple button: Search icon + "Go to" label + keyboard shortcut.
  * Opens command dialog on click.
  */
+/** `navigator.userAgentData` (User-Agent Client Hints) is not in lib.dom yet. */
+type NavigatorWithUAData = Navigator & {
+  userAgentData?: { platform?: string };
+};
+
+/** Reads the UA-CH platform when the browser exposes it. */
+function readUserAgentPlatform(nav: NavigatorWithUAData): string | undefined {
+  return nav.userAgentData?.platform;
+}
+
 export const GoTo = ({
   display = DISPLAY.AUTO,
   className,
@@ -46,8 +56,7 @@ export const GoTo = ({
   const isMac =
     typeof navigator !== 'undefined' &&
     /Mac|iPhone|iPad/.test(
-      (navigator as Navigator & { userAgentData?: { platform?: string } })
-        .userAgentData?.platform ?? navigator.platform
+      readUserAgentPlatform(navigator) ?? navigator.platform
     );
   const shortcut = isMac ? '⌘K' : 'Ctrl+K';
 

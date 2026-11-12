@@ -90,8 +90,15 @@ export const meta: PageMeta = {
     required: true,
     validate: (role, tier) => role === 'admin' && tier === 'pro'
   },                                       // Custom validation
+
+  // Signed-in visitors go elsewhere (e.g. landing → catalogue)
+  signedInRedirect: '/catalogue',          // Next + Supabase cookie: proxy redirects (verified session) before render; else client replace
 };
 ```
+
+**`signedInRedirect`** sends signed-in visitors of the page to an app path. With a server-readable session (Next + Supabase `createBrowserClient`) the generated proxy verifies (and refreshes) the session, then redirects before render, so the page never flashes; an expired session whose refresh fails counts as signed out (see AUTH guideline, generated proxy); every app also wraps the page in `SignedInRedirect`, which navigates once the user is known (sign-in on the page, unreadable cookie). A pending return-to (`?returnTo=` or the saved `dndev.auth.returnTo`) skips it. The path must start with `/` and differ from the page's own path (build error otherwise).
+
+**Route `auth` needs auth enabled.** With `AppConfig.auth: false` there are no auth routes to redirect to: a route whose `auth` check fails throws a config error in the redirect guard instead of redirecting. Enable `auth` in `AppConfig`, or remove the route's `auth`.
 
 **Reference implementation:** The demo app (`packages/cli/templates/app-demo/`) shows all these patterns working together - landing, admin, docs presets, auth, showcase, CRUD, legal pages.
 

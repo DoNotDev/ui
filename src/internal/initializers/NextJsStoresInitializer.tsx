@@ -83,7 +83,7 @@ export function NextJsStoresInitializer({
             return;
           }
           // Validate theme exists in available themes (build-time config is available synchronously)
-          if (themeData.some((t: any) => t.name === theme)) {
+          if (themeData.some((t) => t.name === theme)) {
             useThemeStore.setState({ currentTheme: theme });
           }
         }

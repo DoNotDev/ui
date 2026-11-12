@@ -44,3 +44,5 @@ export const CrudCard = crudModule?.CrudCard;
 // --- Utils ---
 export const translateFieldLabel = crudModule?.translateFieldLabel;
 export const formatValue = crudModule?.formatValue;
+export const translateLabel = crudModule?.translateLabel;
+export const isFieldEditable = crudModule?.isFieldEditable;

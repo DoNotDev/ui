@@ -3,25 +3,24 @@
 
 /**
  * @fileoverview UI CrudCard wrapper
- * @description Thin wrapper around @donotdev/crud CrudCard that adds Link routing.
- * CrudCard (crud) is platform-agnostic; this wrapper adds web navigation via Link.
- *
- * @version 0.1.0
+ * @description Thin wrapper around @donotdev/crud CrudCard for web navigation.
+ * detailHref becomes the card's `href`: a real `<a href>` rendered through the app
+ * router's link (registered by UIProviders), with controls kept outside the link.
+ * @version 0.2.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
 
 import type { CrudCardProps } from '@donotdev/core';
 
-import { Link } from '../../routing';
 import {
   isCrudModuleAvailable,
   CrudCard as BaseCrudCard,
 } from '../crudImports';
 
 /**
- * CrudCard with Link wrapping for web navigation.
- * When detailHref is provided, wraps the card in a Link for a11y/SEO.
+ * CrudCard with link navigation.
+ * When detailHref is provided, the card links to it (crawlable, client-side navigation).
  */
 export function CrudCard({
   detailHref,
@@ -32,23 +31,11 @@ export function CrudCard({
 
   if (!isCrudModuleAvailable) return null;
 
-  // When detailHref is set, Link handles navigation — don't pass onClick to inner card
-  const card = (
-    <BaseCrudCard {...rest} onClick={detailHref ? undefined : onClick} />
+  return detailHref ? (
+    <BaseCrudCard {...rest} href={detailHref} />
+  ) : (
+    <BaseCrudCard {...rest} onClick={onClick} />
   );
-
-  if (detailHref) {
-    return (
-      <Link
-        path={detailHref}
-        aria-label={rest.item?.id ? `View ${rest.item.id}` : undefined}
-      >
-        {card}
-      </Link>
-    );
-  }
-
-  return card;
 }
 
 export default CrudCard;

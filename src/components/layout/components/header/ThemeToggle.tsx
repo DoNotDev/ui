@@ -24,6 +24,8 @@ import { useTranslation } from '@donotdev/core';
 import { useTheme } from '@donotdev/core';
 import type { ThemeInfo } from '@donotdev/core';
 
+import { findLucideIcon } from '../../../common/lucideIconByName';
+
 interface ThemeToggleProps {
   /**
    * Display mode for theme toggle
@@ -41,7 +43,7 @@ const getIcon = (
 ): ComponentType<{ className?: string }> => {
   if (!iconName) return LucideIcons.Palette;
   const cleanIconName = iconName.replace(/['"]/g, '');
-  return (LucideIcons as any)[cleanIconName] || LucideIcons.Palette;
+  return findLucideIcon(cleanIconName) || LucideIcons.Palette;
 };
 
 /**

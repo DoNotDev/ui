@@ -17,6 +17,8 @@ export * from './Link';
 export * from './AuthGuard';
 export * from './AuthGuardFallback';
 export { AuthReturnTo } from './AuthReturnTo';
+export { SignedInRedirect } from './SignedInRedirect';
+export type { SignedInRedirectProps } from './SignedInRedirect';
 export * from './GoTo';
 export { default as GoToWrapper } from './GoToWrapper';
 export { default as GoToInput } from './GoToInput';
@@ -35,12 +37,15 @@ export {
   useRefresh,
   usePrefetch,
   useLocation,
+  useRoutePath,
   useParams,
   useRouteParam,
   useSearchParams,
   useMatch,
   useQueryParams,
   useRedirectGuard,
+  useLocalizedPath,
+  useUrlLanguage,
 } from '@donotdev/ui/routing/hooks';
 export type {
   NavigateOptions,

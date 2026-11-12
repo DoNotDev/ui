@@ -24,6 +24,7 @@ import {
   useCrudDoc,
   DisplayFieldRenderer,
 } from '../crudImports';
+import { useRecordBreadcrumb } from './useRecordBreadcrumb';
 
 export type { EntityDisplayRendererProps };
 
@@ -78,6 +79,11 @@ export function EntityDisplayRenderer<T extends EntityRecord = EntityRecord>({
 
   // Preview: design-time showcase data, no read
   const displayData = isPreview ? (preview as T) : fetchedData;
+  // Breadcrumb shows the record's name instead of its id
+  useRecordBreadcrumb(
+    entity,
+    isPreview ? null : (displayData as Record<string, unknown> | null)
+  );
   const displayError = isPreview ? null : error;
   const isLoading = isPreview ? false : loading || !id;
 
@@ -176,7 +182,7 @@ export function EntityDisplayRenderer<T extends EntityRecord = EntityRecord>({
           <h3 style={{ color: 'var(--muted-foreground)' }}>
             {notFoundMessage ||
               tCrud('errors.notFound', {
-                defaultValue: `${entity.name} not found`,
+                entity: tDual('name', { defaultValue: entity.name }),
               })}
           </h3>
           {displayError && (

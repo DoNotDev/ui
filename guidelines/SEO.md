@@ -30,6 +30,19 @@
 
 ---
 
+## Languages: One URL Each
+
+With 2+ languages every page has one URL per language (default language at the root, others
+under `/<lang>`, see core `I18N.md`). Automatic:
+
+- **Canonical / `og:url` / JSON-LD `url`:** the page in its own language (`/en/x` on the English page).
+- **`hreflang`:** one `<link rel="alternate">` per language plus `x-default` (the root URL).
+- **Sitemap (Next `src/app/sitemap.xml/route.next.ts`):** every language's URL of each page, each entry with `alternates.languages`.
+
+One language: unprefixed URLs, no `hreflang`.
+
+---
+
 ## Vite: Prerendering
 
 **Enabled by default** in `vite.config.ts`:
@@ -198,6 +211,45 @@ export default function ApartmentPage() {
 ```
 
 **Works in SSR/prerender** - meta tags are in initial HTML.
+
+### Entity-derived: `<Seo entity data>`
+
+```tsx
+<Seo entity={apartmentEntity} data={apartment} type="product" />
+```
+
+`deriveEntitySeo` (`@donotdev/core`) builds the identity; explicit props win.
+
+- **title:** `listCardFields.title` texts, formatted exactly like the CRUD card (`formatFieldText`: select labels, numbers in the locale, `displayKey`, `displayValue`), joined with `titleSeparator`; empty fields dropped. No slot layout: first `text` field.
+- **description:** first long-text field with a value (textarea/richtext, HTML stripped), else the card subtitle texts then content texts (joined ` · `). Max 160 chars.
+- **JSON-LD (`type="product"`):** `offers` when a price/currency field is positive; `offers.availability` from the record `status`: `available` → `https://schema.org/InStock`, other statuses only when mapped (unmapped → no `availability`). Needs `status` in the record the page renders, so a guest-visible `status` field: the base `status` field is `visibility: 'admin'`, so guests (crawlers) get no `availability` unless the entity declares its own `status` with `visibility: 'guest'`. Availability that depends on private data (e.g. stock shown to professionals only) is not emitted: leave it unmapped.
+- **Overrides:** entity `seo` option.
+
+```ts
+defineEntity({
+  // ...
+  seo: {
+    title: (item, t) => t('seo.title', { size: item.size }), // null → no title
+    description: (item, t) => null,                          // null → no description
+    availability: { promoted: 'InStock', reserved: 'SoldOut', signed: 'SoldOut' },
+  },
+});
+```
+
+`t` is the entity namespace, then `crud`, in the page language (llms.txt: app default language). Custom field types (`registerFieldType`) are not known to core: their text is the raw value (also on the server, where the CRUD registry is not loaded). Use the field's `options.displayValue` (shared by card and SEO) or `seo.title`.
+
+---
+
+## Sitemap & llms.txt: One URL Set
+
+Both list the same pages, generated from `src/pages` - no app code:
+
+- **In:** public static routes, plus one URL per public record (`status` not in `HIDDEN_STATUSES`: any status except `draft`/`deleted`) of each single-param route's entity (`/produits/:slug` → `meta.entity` collection). Never a `:param` template.
+- **Out:** `auth.required` routes and `seo: { noindex: true }` routes.
+- **URLs:** absolute, from `seo.baseUrl` or `NEXT_PUBLIC_APP_URL` / `VITE_APP_URL`. A production build with a localhost URL fails.
+- **llms.txt labels (app default language):** page = namespace `title` → `seo.title` → namespace `meta.fullTitle` → `seo.fullTitle` (a static page with none fails the build); entity record = `deriveEntitySeo` title/description (same as `<Seo entity data>`); entity section = `namePlural` of its `entity-*` translations.
+- **Next:** `src/app/sitemap.xml/route.next.ts` and `src/app/llms.txt/route.next.ts`, revalidated hourly. Entity definitions come from the app's `entities` package.
+- **Vite:** written at build; static pages only (same as the Vite sitemap).
 
 ---
 

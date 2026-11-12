@@ -18,12 +18,14 @@ export {
   usePrefetch,
 } from './useNavigate.next';
 export { useLocation } from './useLocation.next';
+export { useRoutePath } from './useRoutePath.next';
 export { useParams } from './useParams.next';
 export { useRouteParam } from './useRouteParam.next';
 export { useSearchParams } from './useSearchParams.next';
 export { useMatch } from './useMatch.next';
 export { useQueryParams } from './useQueryParams.next';
 export { useRedirectGuard } from './useRedirectGuard.next';
+export { useLocalizedPath, useUrlLanguage } from './useUrlLanguage.next';
 export type { NavigateOptions } from './types';
 export type {
   RedirectGuardOptions,

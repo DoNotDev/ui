@@ -147,7 +147,7 @@ const GoToDialogContent: ComponentType = () => {
             ? t('globalGoTo.noResults', 'No results found.')
             : t('globalGoTo.empty', 'No pages available.')
         }
-        groups={commandGroups as any}
+        groups={commandGroups}
       />
       <div className="dndev-command-footer">
         <div className="dndev-command-footer-shortcuts">

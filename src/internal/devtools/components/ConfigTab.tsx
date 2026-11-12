@@ -18,6 +18,7 @@ import {
   BADGE_VARIANT,
   Stack,
 } from '@donotdev/components';
+import type { DescriptionItem } from '@donotdev/components';
 import { getDndevConfig, getConfigSource } from '@donotdev/core';
 
 import { MaskedValue } from './MaskedValue';
@@ -97,7 +98,7 @@ export const ConfigTab = () => {
         </Text>
       ),
     },
-  ].filter(Boolean);
+  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   const envItems = Object.entries(envVars).map(([key, value]) => ({
     label: <Text className="dndev-font-mono dndev-text-xs">{key}</Text>,
@@ -112,13 +113,14 @@ export const ConfigTab = () => {
 
       {summaryItems.length > 0 && (
         <Card title="Discovery">
-          <DescriptionList items={summaryItems as any} />
+          <DescriptionList items={summaryItems} />
         </Card>
       )}
 
       {envItems.length > 0 && (
         <Card title="Environment" subtitle={`${envItems.length} variables`}>
-          <DescriptionList items={envItems as any} />
+          {/* why: DescriptionItem.label is typed `string` but rendered as ReactNode in <dt>; JSX labels need the public type widened (listed in any-audit) */}
+          <DescriptionList items={envItems as unknown as DescriptionItem[]} />
         </Card>
       )}
     </Stack>

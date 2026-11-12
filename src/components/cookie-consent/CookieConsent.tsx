@@ -75,7 +75,7 @@ function CookieConsent({
   }, [storeShowBanner]);
 
   // Get categories actually required by the app's features
-  const requiredCategories = Object.keys(categories) as string[];
+  const requiredCategories = Object.keys(categories);
 
   const categoryDefs = [
     {

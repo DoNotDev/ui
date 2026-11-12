@@ -51,12 +51,15 @@ import { Link, DnDevNavigationMenu } from '@donotdev/ui';
 import {
   useNavigate,
   useLocation,
+  useRoutePath,
   useParams,
   useRouteParam,
   useSearchParams,
   useNavigationItems,
 } from '@donotdev/ui';
 ```
+
+**Path only? `useRoutePath()`.** It returns the route path (no language prefix) without reading the query string. On Next, pages are cached (static): reading the query (`useSearchParams`, `useLocation().search`) renders that page in the browser instead of the cached HTML. Read the query only where it is needed, ideally in a small component inside its own `<Suspense>`.
 
 ---
 
@@ -454,6 +457,7 @@ import {
   Link,
   useNavigate,
   useLocation,
+  useRoutePath,
   useParams,
   useRouteParam,
   useSearchParams,

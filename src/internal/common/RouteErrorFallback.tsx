@@ -31,7 +31,7 @@ import {
   Stack,
 } from '@donotdev/components';
 import { handleError, useTranslation } from '@donotdev/core';
-import { useLocation, useBack } from '@donotdev/ui/routing/hooks';
+import { useBack, useRoutePath } from '@donotdev/ui/routing/hooks';
 
 // Platform-specific hooks via conditional exports
 import { Link } from '../../routing/Link';
@@ -62,10 +62,7 @@ export const RouteErrorFallback: ComponentType<RouteErrorFallbackProps> = ({
   const { t } = useTranslation('dndev');
   const [copiedStack, setCopiedStack] = useState(false);
   const back = useBack();
-  const location = useLocation();
-  const pathname =
-    location?.pathname ||
-    (typeof window !== 'undefined' ? window.location.pathname : '/');
+  const pathname = useRoutePath();
 
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
   const errorStack = error instanceof Error ? error.stack : undefined;

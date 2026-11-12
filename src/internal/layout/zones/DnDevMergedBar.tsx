@@ -26,7 +26,7 @@ import {
   SEPARATOR_VARIANT,
 } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
-import { useLocation } from '@donotdev/ui/routing/hooks';
+import { useRoutePath } from '@donotdev/ui/routing/hooks';
 
 export interface DnDevMergedBarProps {
   /** Bar position */
@@ -72,12 +72,12 @@ function DnDevMergedBarComponent({
   // For RTL apps, this would need Sheet to support 'start'/'end' sides — tracked separately.
   const sheetSide = position === 'top' ? 'left' : position;
   const [open, setOpen] = useState(false);
-  const location = useLocation();
+  const pathname = useRoutePath();
 
   // Close sheet when route changes
   useEffect(() => {
     setOpen(false);
-  }, [location.pathname]);
+  }, [pathname]);
 
   // Build sheet content
   const sheetNode = (

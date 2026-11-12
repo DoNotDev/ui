@@ -54,7 +54,7 @@ export type { EntityCardListProps };
 function resolveSkeletonSlots(entity: EntityCardListProps['entity']) {
   const l = entity.listCardFields;
   if (l && !Array.isArray(l)) {
-    const layout = l as ListCardLayout;
+    const layout = l;
     return {
       titleFields: layout.title ?? [],
       subtitleFields: layout.subtitle ?? [],
@@ -99,9 +99,7 @@ function CardListSkeleton({
   const slots = resolveSkeletonSlots(entity);
   const bp = useBreakpoint('current');
   const currentCols =
-    (Array.isArray(cols)
-      ? cols[BREAKPOINT_INDEX[bp] ?? 3]
-      : (cols as number)) ?? 1;
+    (Array.isArray(cols) ? cols[BREAKPOINT_INDEX[bp] ?? 3] : cols) ?? 1;
   const count = currentCols * 3;
   const isImage = (name: string) => {
     const type = entity.fields[name]?.type;
@@ -328,9 +326,7 @@ export function EntityCardList({
             style={{ padding: 'var(--gap-3xl)', textAlign: 'center' }}
           >
             <Text level="h3" style={{ color: 'var(--destructive)' }}>
-              {tCrud('errors.fetchFailed', {
-                defaultValue: `Failed to load ${entity.name.toLowerCase()}`,
-              })}
+              {tCrud('errors.fetchFailed', { entity: entityName })}
             </Text>
             <Text level="small" style={{ color: 'var(--destructive)' }}>
               {fetchError instanceof Error
@@ -345,14 +341,10 @@ export function EntityCardList({
             style={{ padding: 'var(--gap-3xl)', textAlign: 'center' }}
           >
             <Text level="h3" style={{ color: 'var(--muted-foreground)' }}>
-              {tCrud('emptyState.title', {
-                defaultValue: `No ${entity.name.toLowerCase()} found`,
-              })}
+              {tCrud('emptyState.title')}
             </Text>
             <Text style={{ color: 'var(--muted-foreground)' }}>
-              {tCrud('emptyState.description', {
-                defaultValue: `No ${entity.name.toLowerCase()} available at this time.`,
-              })}
+              {tCrud('emptyState.description')}
             </Text>
           </Stack>
         ) : (

@@ -22,9 +22,9 @@ import { useMemo } from 'react';
 import type { ComponentType } from 'react';
 
 import { cn } from '@donotdev/components';
-import { useTranslation } from '@donotdev/core';
+import { useLayout, useTranslation } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
-import { useLocation } from '@donotdev/ui/routing/hooks';
+import { useRoutePath } from '@donotdev/ui/routing/hooks';
 
 import { Link } from '../../../routing/Link';
 import { useAllRoutes } from '../../../routing/useRouteDiscovery';
@@ -70,8 +70,10 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
   className,
 }) => {
   const { t } = useTranslation('dndev');
-  const location = useLocation();
+  const pathname = useRoutePath();
   const allRoutes = useAllRoutes();
+  // Record shown by the page (set by EntityFormRenderer / EntityDisplayRenderer)
+  const recordLabel = useLayout('routeRecordLabel');
 
   // Build set of valid route paths for existence checking
   const validRoutes = useMemo(() => {
@@ -82,15 +84,19 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
   const breadcrumbItems: BreadcrumbItem[] = items
     ? items
     : (() => {
-        const pathSegments = location.pathname.split('/').filter(Boolean);
+        const pathSegments = pathname.split('/').filter(Boolean);
         const breadcrumbs: BreadcrumbItem[] = [];
         let currentPath = '';
         pathSegments.forEach((segment: string) => {
           currentPath += `/${segment}`;
-          const label = segment
-            .split('-')
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
+          // A record id segment shows the record's name, not the raw id
+          const label =
+            recordLabel && decodeURIComponent(segment) === recordLabel.id
+              ? recordLabel.label
+              : segment
+                  .split('-')
+                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ');
           // Only add href if route actually exists
           const href = validRoutes.has(currentPath) ? currentPath : undefined;
           breadcrumbs.push({ label, href });
@@ -108,7 +114,7 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
 
   // Smart variant: Hide breadcrumbs on simple pages (root or single segment)
   if (variant === 'smart') {
-    const segments = location.pathname.split('/').filter(Boolean);
+    const segments = pathname.split('/').filter(Boolean);
     if (segments.length < 2) {
       return null; // Don't render breadcrumbs on simple pages
     }

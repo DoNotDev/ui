@@ -24,6 +24,11 @@ import { useNavigate } from '@donotdev/ui/routing/hooks';
 
 import { useAuthSafe } from '../utils/useAuthSafe';
 
+/** A path on this site (`/x`), never `//host` or `https://…` (no open redirect). */
+function isSameOriginPath(value: string): boolean {
+  return value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\');
+}
+
 /**
  * AuthReturnTo - Restores navigation after OAuth redirect.
  *
@@ -53,10 +58,16 @@ export function AuthReturnTo() {
     );
   }, []);
 
-  // Return-to after sign-in
+  // Return-to after sign-in: saved by AuthGuard (sessionStorage) or passed as
+  // `?returnTo=` by the generated proxy's server redirect. Same-origin paths only.
   useEffect(() => {
     if (!user || !isClient()) return;
-    const returnTo = safeSessionStorage.getItem('dndev.auth.returnTo');
+    const fromQuery = new URLSearchParams(window.location.search).get(
+      'returnTo'
+    );
+    const returnTo =
+      safeSessionStorage.getItem('dndev.auth.returnTo') ??
+      (fromQuery && isSameOriginPath(fromQuery) ? fromQuery : null);
     if (!returnTo) return;
     safeSessionStorage.removeItem('dndev.auth.returnTo');
     if (returnTo !== window.location.pathname) {

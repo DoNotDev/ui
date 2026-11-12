@@ -21,7 +21,7 @@ import type {
 import { cn } from '@donotdev/components';
 import { useConsent } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
-import { useNavigate } from '@donotdev/ui/routing/hooks';
+import { useLocalizedPath, useNavigate } from '@donotdev/ui/routing/hooks';
 
 import { Icon } from '../components/common/icon';
 
@@ -48,9 +48,11 @@ export interface LinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
 }
 
 /**
- * Link component
+ * Link component. Internal paths are app paths (`/produits`): the rendered `href` and
+ * the navigation use the current language's URL (`/en/produits` on an English page,
+ * unchanged in the default language or a one-language app).
  *
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
@@ -71,6 +73,7 @@ export const Link: ComponentType<LinkProps> = ({
   ...rest
 }) => {
   const navigate = useNavigate();
+  const localize = useLocalizedPath();
   const showCookieBanner = useConsent('showCookieBanner');
 
   // Special framework trigger: #cookie-settings
@@ -190,10 +193,10 @@ export const Link: ComponentType<LinkProps> = ({
     );
   }
 
-  // Internal links: use framework Link
+  // Internal links: the URL in the current language (`/en/…`), same as navigate()
   return (
     <a
-      href={path}
+      href={localize(path)}
       onClick={handleClick}
       className={className}
       style={{

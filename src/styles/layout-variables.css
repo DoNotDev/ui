@@ -3,9 +3,17 @@
 /* ===========================
    DEFAULT VALUES (Landing Preset)
    All presets inherit these - only override what's different
+
+   Layout tokens are declared on <html>, never on .dndev-layout: every element of
+   the app sits under the wrapper, so a declaration there would shadow the app's
+   :root overrides (themes.css). Presets read the wrapper's data-layout (in the
+   server HTML) through :has, so they resolve on the first paint. All token rules
+   carry zero specificity (:where): an app :root override wins whatever the
+   stylesheet order. Preset display rules (hide header, sidebar…) stay scoped to
+   [data-layout], which matches the wrapper.
      =========================== */
 
-:root {
+:where(:root) {
   /* Layout structure dimensions */
   /* Height values include borders (box-sizing: border-box) */
   /* Content heights are multiples of 12px, then add 2px border */
@@ -207,9 +215,15 @@ main[role='main'][data-routing-animation='none'] {
 }
 
 /* Header content width adjustments for sidebar layouts */
-[data-layout='moolti'],
-[data-layout='docs'],
-[data-layout='blog'] {
+:where(
+  :root:has(
+      .dndev-layout:is(
+          [data-layout='moolti'],
+          [data-layout='docs'],
+          [data-layout='blog']
+        )
+    )
+) {
   --header-content-width: calc(100% - var(--sidebar-width));
 }
 
@@ -418,7 +432,8 @@ aside[role='navigation'].sidebar {
   }
 
   /* Moolti: Sidebar spans full height (no header/footer on desktop) */
-  :root[data-layout='moolti'] & {
+  :root[data-layout='moolti'] &,
+  .dndev-layout[data-layout='moolti'] & {
     grid-row: 1 / -1;
   }
 }
@@ -803,7 +818,7 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
  * Perfect for: Admin panels, dashboards, management interfaces
  * Overrides: Adds sidebar (240px), constrains width (1480px), tighter spacing
  */
-[data-layout='admin'] {
+:where(:root:has(.dndev-layout[data-layout='admin'])) {
   /* Desktop/Wide (>=1024px) - only overrides */
   --sidebar-width: var(--custom-sidebar-width, 240px);
 
@@ -819,19 +834,11 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
  * Perfect for: SaaS applications, productivity tools, focused workflows
  * Overrides: No header/footer (sidebar only), sidebar (256px), balanced spacing
  */
-[data-layout='moolti'] {
+:where(:root:has(.dndev-layout[data-layout='moolti'])) {
   /* Desktop/Wide (>=1024px) - only overrides */
   --header-height: 0px;
   --sidebar-width: var(--custom-sidebar-width, 256px);
   --footer-height: 0px;
-
-  header[role='banner'] {
-    display: none;
-  }
-
-  footer[role='contentinfo'] {
-    display: none;
-  }
 
   /* Moolti: Mobile/Tablet (<1024px) - only overrides */
   @media (width <=1023px) {
@@ -840,25 +847,37 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
   }
 }
 
+[data-layout='moolti'] {
+  header[role='banner'] {
+    display: none;
+  }
+
+  footer[role='contentinfo'] {
+    display: none;
+  }
+}
+
 /**
  * DOCS PRESET
  * Perfect for: Documentation sites, knowledge bases, content platforms
  * Overrides: No header, sidebar (300px), comfortable reading spacing
  */
-[data-layout='docs'] {
+:where(:root:has(.dndev-layout[data-layout='docs'])) {
   /* Desktop/Wide (>=1024px) - only overrides */
   --header-height: 0px;
   /* Override: no header - maximizes reading space */
   --sidebar-width: var(--custom-sidebar-width, 300px);
 
-  header[role='banner'] {
-    display: none;
-  }
-
   /* Docs: Mobile/Tablet (<1024px) - only overrides */
   @media (width <=1023px) {
     --sidebar-width: 0px;
     /* Override: hide sidebar on mobile */
+  }
+}
+
+[data-layout='docs'] {
+  header[role='banner'] {
+    display: none;
   }
 }
 
@@ -873,14 +892,18 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
  * Perfect for: Blogs, news sites, content management
  * Overrides: Sidebar (280px), constrains width (1480px), content-focused spacing
  */
-[data-layout='blog'] {
+:where(:root:has(.dndev-layout[data-layout='blog'])) {
   --sidebar-width: var(--custom-sidebar-width, 280px);
 
   /* Blog: Mobile/Tablet (<1024px) - only overrides */
   @media (width <=1023px) {
     --header-height: 0px;
     --sidebar-width: 0px;
+  }
+}
 
+[data-layout='blog'] {
+  @media (width <=1023px) {
     header[role='banner'] {
       display: none;
     }
@@ -892,11 +915,13 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
  * Perfect for: Full-screen apps, embedded widgets, clean content
  * Overrides: No header/footer/sidebar, minimal spacing
  */
-[data-layout='plain'] {
+:where(:root:has(.dndev-layout[data-layout='plain'])) {
   --header-height: 0px;
   --sidebar-width: 0px;
   --footer-height: 0px;
+}
 
+[data-layout='plain'] {
   header[role='banner'] {
     display: none;
   }
@@ -917,13 +942,17 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
  * Perfect for: Mobile gaming apps, full-screen experiences, touch interfaces
  * Overrides: Minimal spacing for maximum screen real estate
  */
-[data-layout='game'] {
+:where(:root:has(.dndev-layout[data-layout='game'])) {
   --header-height: 92px;
 
   /* Game: Mobile/Tablet (<1024px) - only overrides */
   @media (width <=1023px) {
     --footer-height: 0px;
+  }
+}
 
+[data-layout='game'] {
+  @media (width <=1023px) {
     footer[role='contentinfo'] {
       display: none;
     }
