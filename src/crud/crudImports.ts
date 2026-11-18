@@ -23,6 +23,10 @@ export const isCrudModuleAvailable = typeof crudModule?.useCrud === 'function';
 // --- Hooks ---
 export const useEntityForm = crudModule?.useEntityForm;
 export const useFormStore = crudModule?.useFormStore;
+/** Router placeholder for useEntityForm's leave-on-save (filled by UIProviders). */
+export const FormNavigationProvider = crudModule?.FormNavigationProvider;
+/** Subscribe to the existing submission error without duplicating form state. */
+export const useFormError = crudModule?.useFormError;
 export const useFieldConditions = crudModule?.useFieldConditions;
 export const useCrud = crudModule?.useCrud;
 export const useCrudList = crudModule?.useCrudList;
@@ -33,6 +37,10 @@ export const useCrudFilters = crudModule?.useCrudFilters;
 export const useCrudPageSize = crudModule?.useCrudPageSize;
 export const useEntityWorkflow = crudModule?.useEntityWorkflow;
 export const useReferenceResolver = crudModule?.useReferenceResolver;
+/** Child rows of a record, joined to the form open on it (EntityList with `parent`). */
+export const useChildRows = crudModule?.useChildRows;
+/** The edit form open on a parent record that its child rows join, or null. */
+export const useJoinedForm = crudModule?.useJoinedForm;
 
 // --- Components ---
 export const DisplayFieldRenderer = crudModule?.DisplayFieldRenderer;
@@ -45,4 +53,5 @@ export const CrudCard = crudModule?.CrudCard;
 export const translateFieldLabel = crudModule?.translateFieldLabel;
 export const formatValue = crudModule?.formatValue;
 export const translateLabel = crudModule?.translateLabel;
-export const isFieldEditable = crudModule?.isFieldEditable;
+export const applyFilters = crudModule?.applyFilters;
+export const applySearch = crudModule?.applySearch;

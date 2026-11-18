@@ -520,11 +520,14 @@ export const AutoMetaTags: ComponentType = () => {
               name: siteName,
               logo: {
                 '@type': 'ImageObject',
-                url: AssetResolver.assetExists('/icon-512x512.png')
-                  ? '/icon-512x512.png'
-                  : AssetResolver.assetExists('/icon-192x192.png')
-                    ? '/icon-192x192.png'
-                    : '/logo.svg',
+                // Absolute: schema.org consumers (Google) ignore a relative logo URL
+                url: `${baseUrl}${
+                  AssetResolver.assetExists('/icon-512x512.png')
+                    ? '/icon-512x512.png'
+                    : AssetResolver.assetExists('/icon-192x192.png')
+                      ? '/icon-192x192.png'
+                      : '/logo.svg'
+                }`,
               },
             },
           })}

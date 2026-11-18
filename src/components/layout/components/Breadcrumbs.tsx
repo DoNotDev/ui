@@ -27,6 +27,7 @@ import { useLayout, useTranslation } from '@donotdev/core';
 import { useRoutePath } from '@donotdev/ui/routing/hooks';
 
 import { Link } from '../../../routing/Link';
+import { getPathPrefixes } from '../../../routing/parentRoute';
 import { useAllRoutes } from '../../../routing/useRouteDiscovery';
 
 /** Single breadcrumb navigation item. */
@@ -85,10 +86,10 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
     ? items
     : (() => {
         const pathSegments = pathname.split('/').filter(Boolean);
+        const prefixes = getPathPrefixes(pathname);
         const breadcrumbs: BreadcrumbItem[] = [];
-        let currentPath = '';
-        pathSegments.forEach((segment: string) => {
-          currentPath += `/${segment}`;
+        pathSegments.forEach((segment: string, index: number) => {
+          const currentPath = prefixes[index] ?? '';
           // A record id segment shows the record's name, not the raw id
           const label =
             recordLabel && decodeURIComponent(segment) === recordLabel.id

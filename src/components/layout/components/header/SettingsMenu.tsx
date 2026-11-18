@@ -80,7 +80,7 @@ function SettingsMenu({
   const languageItems: DropdownMenuItemData[] = languages.map((language) => {
     const isActive = language.id === currentLanguage;
     return {
-      label: language.name,
+      label: language.nativeName,
       onClick: () => changeLanguage(language.id),
       disabled: isLoading,
       checked: isActive,
@@ -90,9 +90,9 @@ function SettingsMenu({
         <Stack direction="row" align="center" gap="tight">
           <Flag
             code={language.flagCode || language.id}
-            title={`${language.name} flag`}
+            title={language.nativeName}
           />
-          <span>{language.name}</span>
+          <span>{language.nativeName}</span>
           {isLoading && isActive && (
             <div style={{ marginInlineStart: 'auto' }}>
               <div

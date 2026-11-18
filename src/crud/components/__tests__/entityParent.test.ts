@@ -1,43 +1,15 @@
 // packages/ui/src/crud/components/__tests__/entityParent.test.ts
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
-import { defineEntity } from '@donotdev/core';
-
-vi.mock('../../crudImports', () => ({
-  // 'admin-only' fields are not settable by a 'user' viewer
-  isFieldEditable: (editable: unknown, role: string) =>
-    editable !== 'admin' || role === 'admin',
-}));
 
 import {
   assertEntityParent,
   childCreatePath,
   referencePrefillFromQuery,
 } from '../entityParent';
+import { apartmentEntity, parentReferenceEntity as entity } from '@dndev/test-entities';
 
-const entity = defineEntity({
-  name: 'Product',
-  collection: 'products',
-  fields: {
-    name: { name: 'name', label: 'name', type: 'text', visibility: 'admin' },
-    brandId: {
-      name: 'brandId',
-      label: 'brandId',
-      type: 'reference',
-      visibility: 'admin',
-      validation: { reference: 'brands' },
-    },
-    ownerId: {
-      name: 'ownerId',
-      label: 'ownerId',
-      type: 'reference',
-      visibility: 'admin',
-      editable: 'admin',
-      validation: { reference: 'users' },
-    },
-  },
-});
 
 describe('entityParent', () => {
   it('accepts only a reference field with an id-shaped value', () => {
@@ -64,5 +36,15 @@ describe('entityParent', () => {
     expect(
       referencePrefillFromQuery(entity, new URLSearchParams('brandId=<script>'), 'admin')
     ).toEqual({});
+  });
+
+  // Regression (design B10): the reference predicate is the descriptor's
+  // (`value.kind === 'ref'`), so a custom type with `validation.reference` is one.
+  it('treats a custom type with validation.reference as a reference field', () => {
+    const custom = apartmentEntity;
+    expect(() => assertEntityParent(custom, { field: 'owner_ref', value: 'o1' })).not.toThrow();
+    expect(referencePrefillFromQuery(custom, new URLSearchParams('owner_ref=o1'), 'admin')).toEqual({
+      owner_ref: 'o1',
+    });
   });
 });

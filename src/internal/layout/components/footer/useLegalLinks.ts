@@ -15,15 +15,16 @@ const DEFAULT_LINKS: FooterLegalLink[] = [
 
 /**
  * Returns the configured legal links for the footer.
- * Handles the logic: null = hide, undefined = defaults, array = custom
+ * Handles the logic: `footer: null` or `legalLinks: null` = hide, undefined = defaults,
+ * array = custom
  *
  * @remarks Not a hook — no React state or effects. Named with `get` prefix.
  */
 export const getLegalLinks = (
   footerConfig: AppMetadata['footer']
 ): FooterLegalLink[] => {
-  // If explicitly null, return empty array (hidden)
-  if (footerConfig?.legalLinks === null) {
+  // No footer at all, or links explicitly null: hidden (also in presets that show them in the sidebar)
+  if (footerConfig === null || footerConfig?.legalLinks === null) {
     return [];
   }
 

@@ -3,7 +3,9 @@
 /* 1. Complete UI system (base design system + layout variables) */
 @import './styles/index.css';
 
-/* 2. Fonts from @fontsource (bundled; no external fetch, no public/fonts required) */
+/* 2. Font catalogue from @fontsource (self-hosted, never Google Fonts). Must match
+   FONT_WEIGHTS in packages/core/config/constants.js (a test guards it). The Vite build
+   keeps only the families the app's theme renders text in (FontPreloadPlugin). */
 @import '@fontsource/inter/300.css';
 @import '@fontsource/inter/400.css';
 @import '@fontsource/inter/600.css';

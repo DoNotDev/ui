@@ -13,16 +13,16 @@
 
 import {
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { FormProvider, useWatch } from 'react-hook-form';
-import type { Control, FieldValues } from 'react-hook-form';
+import type { Control, FieldValues, Path, PathValue } from 'react-hook-form';
 
 import {
+  Alert,
   Badge,
   Button,
   DropdownMenu,
@@ -32,11 +32,13 @@ import {
 } from '@donotdev/components';
 import { hasRoleAccess, useTranslation } from '@donotdev/core';
 import type {
+  AnyEntity,
   EntityFormRendererProps,
-  EntityRecord,
+  FieldOperation,
+  FormValues,
   Visibility,
 } from '@donotdev/core';
-import type { InferEntityData } from '@donotdev/crud';
+import type { EntityFormState } from '@donotdev/crud';
 
 import { useNavigate } from '../../routing';
 import { useAuthSafe } from '../../utils/useAuthSafe';
@@ -47,15 +49,30 @@ import {
   UploadProvider,
   useEntityForm,
   useFormStore,
+  useFormError,
   useFieldConditions,
+  translateFieldLabel,
 } from '../crudImports';
 import { referencePrefillFromQuery } from './entityParent';
 import { useRecordBreadcrumb } from './useRecordBreadcrumb';
 
 export type { EntityFormRendererProps };
 
+const errorSummaryStyle = { gridColumn: '1 / -1', width: '100%' };
+
+// RHF root errors may be a single message or named server errors.
+function rootErrorMessages(error: unknown): string[] {
+  if (!error || typeof error !== 'object') return [];
+  return Object.entries(error).flatMap(([key, value]) => {
+    if (key === 'message' && typeof value === 'string') return [value];
+    if (key === 'ref' || key === 'types') return [];
+    return rootErrorMessages(value);
+  });
+}
+
 /**
- * Read-only field inside a form.
+ * Read-only field the form writes (`editable: 'computed'`, or an input disabled
+ * by a condition).
  *
  * Subscribes to the field's live form value rather than reading the initial
  * `defaultValues`, so fields written during the session — a computed value set
@@ -64,7 +81,10 @@ export type { EntityFormRendererProps };
  *
  * Mirrors FormFieldRenderer's contract: takes `control`, subscribes itself.
  */
-function FormDisplayField({
+function FormDisplayField<
+  TFieldValues extends FieldValues,
+  TTransformedValues,
+>({
   name,
   config,
   control,
@@ -72,13 +92,27 @@ function FormDisplayField({
 }: {
   name: string;
   config: Parameters<typeof DisplayFieldRenderer>[0]['config'];
-  control: Control<FieldValues>;
+  control: Control<TFieldValues, unknown, TTransformedValues>;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const value = useWatch({ control, name });
+  // why: renderable field names are the entity's own field names
+  const value = useWatch({ control, name: name as Path<TFieldValues> });
   return (
     <DisplayFieldRenderer name={name} config={config} value={value} t={t} />
   );
+}
+
+/**
+ * Value of a field in the stored row (`form.record`): an extension field
+ * (`offer.price`) reads the extension row under its key.
+ */
+function recordValue(record: Record<string, unknown> | undefined, name: string): unknown {
+  const dot = name.indexOf('.');
+  if (dot === -1) return record?.[name];
+  const nested = record?.[name.slice(0, dot)];
+  return typeof nested === 'object' && nested !== null
+    ? (nested as Record<string, unknown>)[name.slice(dot + 1)]
+    : undefined;
 }
 
 /**
@@ -89,6 +123,8 @@ function FormDisplayField({
  * - Generates formId
  * - Renders fields
  * - Renders submit button with status from useEntityForm
+ * - Submits through `onSubmit`, or, without it, useEntityForm's default writer
+ *   (the record plus the child rows joined to the form, one `bulkAcross`)
  *
  * @version 0.1.0
  * @since 0.0.1
@@ -99,14 +135,18 @@ function FormDisplayField({
  * Applies instanceKey as React key on the inner component for clean state isolation
  * when navigating between entities on the same route (e.g. /cars/:id).
  */
-export function EntityFormRenderer<T extends EntityRecord = EntityRecord>(
-  props: EntityFormRendererProps<T>
-) {
+export function EntityFormRenderer<
+  E extends AnyEntity,
+  Op extends FieldOperation = FieldOperation,
+>(props: EntityFormRendererProps<E, Op>) {
   const { instanceKey, ...rest } = props;
-  return <EntityFormRendererCore<T> key={instanceKey} {...rest} />;
+  return <EntityFormRendererCore<E, Op> key={instanceKey} {...rest} />;
 }
 
-function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
+function EntityFormRendererCore<
+  E extends AnyEntity,
+  Op extends FieldOperation = FieldOperation,
+>({
   entity,
   onSubmit,
   t,
@@ -119,18 +159,28 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
   secondaryButtonVariant = 'outline',
   onSecondarySubmit,
   viewerRole: viewerRoleProp,
-  operation = defaultValues ? 'edit' : 'create',
+  operation: operationProp,
   formId: externalFormId,
   cancelText,
   cancelPath,
   successPath,
   onCancel,
   hideVisibilityInfo = false,
-}: Omit<EntityFormRendererProps<T>, 'instanceKey'>) {
+}: Omit<EntityFormRendererProps<E, Op>, 'instanceKey'>) {
   // Safe guard: isCrudModuleAvailable is a module-level constant (immutable after load).
   // Hooks below are either ALL called or NONE — no Rules-of-Hooks violation at runtime.
 
   if (!isCrudModuleAvailable) return null;
+
+  // why: without the prop, Op is FieldOperation (both operations), so the runtime
+  // default ('edit' with defaultValues, else 'create') is an Op
+  const operation = (operationProp ?? (defaultValues ? 'edit' : 'create')) as Op;
+
+  // What the form submits: the fields it writes (the resolver's output), the
+  // type onSubmit / onSecondarySubmit receive
+  type EntityData = FormValues<E, Op>;
+  // Form state (React Hook Form's field values): both operations
+  type EntityState = EntityFormState<E>;
 
   const navigate = useNavigate();
 
@@ -138,10 +188,9 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
   const authRole = useAuthSafe('userRole');
   const viewerRole = viewerRoleProp ?? authRole;
 
-  // Generate stable form ID
-  const generatedFormId = useId();
-  const formId =
-    externalFormId ?? `entity-form-${entity.name}-${generatedFormId}`;
+  // Deterministic form ID: it also keys the auto-saved draft, so it must survive reloads.
+  // Several forms of the same entity on one page pass their own formId.
+  const formId = externalFormId ?? `entity-form-${entity.name}`;
 
   // Entity + crud namespaces so translateLabel can resolve crud:status.* etc.
   const { t: translationFn } = useTranslation([entity.namespace, 'crud']);
@@ -220,6 +269,7 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
     viewerRole,
     t: translate,
     loading,
+    successPath,
   });
 
   const {
@@ -233,6 +283,73 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
     hasUserInteracted,
     resetForm,
   } = form;
+
+  const submissionError = useFormError(formId);
+  const { errors, submitCount } = form.formState;
+  const formRef = useRef<HTMLFormElement>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
+  // RHF keeps only the fields that have an error (cleared ones are unset)
+  const errorFields = Object.keys(errors).filter((name) => name !== 'root');
+  const rootMessages = rootErrorMessages(errors.root);
+  const hasErrors =
+    errorFields.length > 0 || rootMessages.length > 0 || !!submissionError;
+
+  const previousFeedback = useRef({ submitCount: 0, rootKey: '', submissionError: null as string | null });
+  const rootKey = JSON.stringify(rootMessages);
+  useEffect(() => {
+    const previous = previousFeedback.current;
+    previousFeedback.current = { submitCount, rootKey, submissionError };
+    // Blur/condition revalidation may update errors while the user is editing.
+    // Announce them inline, but move focus only for a submit or a new root failure.
+    const submitted = submitCount > previous.submitCount;
+    const rootFailure =
+      (rootKey !== previous.rootKey && rootKey !== '[]') ||
+      (!!submissionError && submissionError !== previous.submissionError);
+    if (!submitted && !rootFailure) return;
+
+    const summary = summaryRef.current;
+    const formElement = formRef.current;
+    if (!summary || !formElement) return;
+
+    // The orchestrator owns actionable field focus. Only focus the summary when
+    // there is no mounted, focusable invalid control in THIS form (e.g. a hidden
+    // field or a server/root error), including inside a Sheet's scroll container.
+    const invalidNames = Object.keys(errors).filter((name) => name !== 'root');
+    const hasActionableError = Array.from(
+      formElement.querySelectorAll<HTMLElement>(
+        'input, textarea, select, button, [tabindex]'
+      )
+    ).some((control) => {
+      const name = control.getAttribute('name');
+      const invalid =
+        control.getAttribute('aria-invalid') === 'true' ||
+        (name !== null &&
+          invalidNames.some(
+            (field) => name === field || name.startsWith(`${field}.`)
+          ));
+      if (
+        !invalid ||
+        control.matches(':disabled, input[type="hidden"]') ||
+        control.closest('[hidden], [inert], [aria-hidden="true"]') ||
+        control.getClientRects().length === 0
+      ) {
+        return false;
+      }
+      for (
+        let element: HTMLElement | null = control;
+        element;
+        element = element.parentElement
+      ) {
+        const style = getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        if (element === formElement) break;
+      }
+      return true;
+    });
+    if (hasActionableError) return;
+    summary.focus({ preventScroll: true });
+    summary.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [errors, submitCount, submissionError, rootKey]);
 
   const isDirtyForBlocking = isDirty && hasUserInteracted;
 
@@ -249,7 +366,12 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
       viewerRole
     );
     for (const [field, value] of Object.entries(prefill)) {
-      setValue(field, value);
+      // why: prefill keys are reference fields the form writes on create
+      // (referencePrefillFromQuery), values record ids
+      setValue(
+        field as Path<EntityState>,
+        value as PathValue<EntityState, Path<EntityState>>
+      );
     }
   }, [operation, entity, viewerRole, setValue]);
 
@@ -294,31 +416,24 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
     }
   };
 
-  // Infer the actual entity data type from the entity definition
-  type EntityData = InferEntityData<typeof entity>;
-
-  // Wrap onSubmit to await the result before navigating
-  // handleSubmit from react-hook-form expects: (data: EntityData) => void | Promise<void>
-  // Our onSubmit prop is (data: T) => void | Promise<void>, where T extends EntityRecord
-  // EntityData should be compatible with T, so we can safely pass it
+  // onSubmit receives the written fields (FormValues), not the whole row
   // No try/catch here — errors MUST propagate to useEntityForm's orchestrator
   // which properly calls setError() and does NOT clearDraft/reset.
-  const handleFormSubmit = async (data: EntityData) => {
-    await onSubmit(data as T);
-
-    // Navigate only when successPath is explicitly provided.
-    // Edit: stay on page (most common UX). Create: consumer navigates
-    // in onSubmit (knows the new ID) or provides successPath.
-    if (successPath) {
-      navigate(successPath);
-    }
-  };
+  // Leaving on save (successPath) is useEntityForm's job: it leaves before the
+  // write and returns on rejection.
+  // Without onSubmit, useEntityForm's default writer saves the record and the
+  // child rows joined to this form (nested EntityList on this record).
+  const handleFormSubmit = onSubmit
+    ? async (data: EntityData) => {
+        await onSubmit(data);
+      }
+    : undefined;
 
   // Determine if cancel button should show
   // Show by default, hide only if cancelText is explicitly null
   const showCancelButton = cancelText !== null;
   const cancelButtonText =
-    cancelText ?? tCrud('form.cancel', { defaultValue: 'Cancel' });
+    cancelText ?? tCrud('form.cancel');
 
   // Common button container style (sticky footer)
   const buttonContainerStyle = {
@@ -345,38 +460,33 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
           uploadProgress < 100
             ? tCrud('form.uploading', {
                 progress: Math.round(uploadProgress),
-                defaultValue: `Uploading ${Math.round(uploadProgress)}%...`,
               })
-            : tCrud('form.processing', { defaultValue: 'Processing...' }),
+            : tCrud('form.processing'),
         progress: uploadProgress,
       };
     }
     if (formStatus === 'validating') {
       return {
         loading: true,
-        loadingText: tCrud('form.validating', {
-          defaultValue: 'Validating...',
-        }),
+        loadingText: tCrud('form.validating'),
       };
     }
     if (formStatus === 'submitting') {
       return {
         loading: true,
-        loadingText: tCrud('form.saving', { defaultValue: 'Saving...' }),
+        loadingText: tCrud('form.saving'),
       };
     }
     if (formStatus === 'success') {
       return {
         loading: false,
-        successText: tCrud('form.saved', { defaultValue: 'Saved' }),
+        successText: tCrud('form.saved'),
       };
     }
     if (formStatus === 'error') {
       return {
         loading: false,
-        errorText: tCrud('form.error', {
-          defaultValue: 'Error — try again',
-        }),
+        errorText: tCrud('form.error'),
       };
     }
     return { loading: false };
@@ -395,32 +505,61 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
         >
           {isLoading && <Spinner overlay />}
           <form
+            ref={formRef}
+            id={formId}
             onSubmit={(e) => {
-              console.log('[EntityFormRenderer] native form onSubmit event', {
-                defaultPrevented: e.defaultPrevented,
-              });
-              return handleSubmit(handleFormSubmit)(e);
+              // The orchestrator records failure and preserves the draft before
+              // rethrowing. Consume only the final DOM event promise, never the
+              // consumer callback's rejection (which must remain a failure).
+              void handleSubmit(handleFormSubmit)(e).catch(() => {});
             }}
             noValidate
             className={className}
             style={{ width: '100%', gridColumn: '1 / -1', display: 'contents' }}
           >
+            {hasErrors && (
+              <div
+                ref={summaryRef}
+                tabIndex={-1}
+                aria-label={tCrud('form.error')}
+                style={errorSummaryStyle}
+              >
+                <Alert
+                  variant="error"
+                  title={tCrud(
+                    errorFields.length > 0 ? 'form.validationFailed' : 'form.error'
+                  )}
+                >
+                  {errorFields.length > 0 && (
+                    <p>
+                      {tCrud('form.fixFields', {
+                        fields: errorFields
+                          .map((name) =>
+                            translateFieldLabel(name, entity.fields[name], translate)
+                          )
+                          .join(', '),
+                      })}
+                    </p>
+                  )}
+                  {rootMessages.map((message, index) => (
+                    <p key={index}>{translate(message)}</p>
+                  ))}
+                  {submissionError && <p>{translate(submissionError)}</p>}
+                </Alert>
+              </div>
+            )}
             {/* Render fields */}
-            {renderableFields.map(({ name, config, editable }) => {
+            {renderableFields.map(({ name, config, editable, written }) => {
               // Evaluate dynamic conditions for this field
               const cond = fieldConditions[name];
               if (cond && !cond.visible) return null;
 
               // Apply condition overrides to field config
-              const effectiveConfig = cond
+              const effectiveConfig = cond && config.conditions?.required !== undefined
                 ? {
                     ...config,
-                    // Merge dynamic required into validation (condition overrides static)
-                    ...(cond.required && config.validation
-                      ? { validation: { ...config.validation, required: true } }
-                      : cond.required
-                        ? { validation: { required: true } }
-                        : {}),
+                    // An explicit condition overrides static required in BOTH directions.
+                    validation: { ...config.validation, required: cond.required },
                   }
                 : config;
 
@@ -438,16 +577,27 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
               const badgeLabel =
                 roleLabels[config.visibility as keyof typeof roleLabels] ??
                 config.visibility;
-              // Wrap field with visibility badge when enabled
+              // Read-only: a field the form writes from form state (computed, or an
+              // input disabled by a condition), any other from the stored row
+              // (technical, editable: false, role-denied: never in form state).
               const fieldElement = !effectiveEditable ? (
-                <FormDisplayField
-                  key={name}
-                  name={name}
-                  config={effectiveConfig}
-                  // why: RHF Control<T> is invariant in T; FormDisplayField reads by string name, so it takes the erased Control<FieldValues>
-                  control={control as unknown as Control<FieldValues>}
-                  t={translate}
-                />
+                written ? (
+                  <FormDisplayField
+                    key={name}
+                    name={name}
+                    config={effectiveConfig}
+                    control={control}
+                    t={translate}
+                  />
+                ) : (
+                  <DisplayFieldRenderer
+                    key={name}
+                    name={name}
+                    config={effectiveConfig}
+                    value={recordValue(form.record, name)}
+                    t={translate}
+                  />
+                )
               ) : (
                 <FormFieldRenderer
                   key={name}
@@ -493,6 +643,7 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
                   <Button
                     key="cancel"
                     type="button"
+                    intent="cancel"
                     onClick={handleCancel}
                     disabled={buttonState.loading}
                     variant="outline"
@@ -513,13 +664,12 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
                     trigger={
                       <Button
                         type="button"
+                        intent="preview"
                         variant={previewVariant}
                         disabled={buttonState.loading}
                         className="dndev-w-full"
                       >
-                        {tCrud('visibility.preview', {
-                          defaultValue: 'Preview',
-                        })}
+                        {tCrud('visibility.preview')}
                         : {roleLabels[previewRole]}
                       </Button>
                     }
@@ -536,8 +686,11 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
                     type="button"
                     onClick={() => {
                       if (onSecondarySubmit) {
+                        // why: form state is typed for both operations (EntityFormState); at
+                        // runtime it is the projection for this form's Op (the fields it
+                        // writes), the shape onSubmit receives, not validated.
                         const currentValues = form.getValues() as EntityData;
-                        onSecondarySubmit(currentValues as T);
+                        onSecondarySubmit(currentValues);
                       }
                     }}
                     loading={buttonState.loading}
@@ -556,6 +709,7 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
                 <Button
                   key="submit"
                   type="submit"
+                  intent="save"
                   loading={buttonState.loading}
                   loadingText={buttonState.loadingText}
                   progress={buttonState.progress}
@@ -572,7 +726,7 @@ function EntityFormRendererCore<T extends EntityRecord = EntityRecord>({
                   {buttonState.successText ||
                     buttonState.errorText ||
                     submitText ||
-                    tCrud('form.submit', { defaultValue: 'Submit' })}
+                    tCrud('form.submit')}
                 </Button>
               );
 

@@ -30,6 +30,7 @@ import type { ReactNode } from 'react';
 
 import {
   useNavigationStore,
+  filterNavigationRoutes,
   getRoutes,
   getRouteManifest,
 } from '@donotdev/core';
@@ -203,8 +204,8 @@ export function useAccessibleRoutes(): RouteGroup[] {
  * navigation data with authentication filtering.
  *
  * Features:
- * - Store-level caching by auth state
- * - Automatic updates when auth changes
+ * - Memoized filtering of snapshot-owned routes
+ * - Automatic updates when routes or auth change
  * - Consistent filtering logic with AuthGuard
  * - Optimized for multiple component usage
  *
@@ -224,8 +225,9 @@ export function useAccessibleRoutes(): RouteGroup[] {
  */
 export function useAccessibleNavigationRoutes(): NavigationRoute[] {
   const user = useAuthSafe('user');
+  const allRoutes = useNavigationStore((state) => state.cache.allRoutes);
   return useMemo(() => {
-    const filteredRoutes = useNavigationStore.getState().getFilteredRoutes({
+    const filteredRoutes = filterNavigationRoutes(allRoutes, {
       authenticated: !!user,
       role: user?.role || 'user',
     });
@@ -235,7 +237,7 @@ export function useAccessibleNavigationRoutes(): NavigationRoute[] {
       icon: route.icon,
       meta: route.meta,
     }));
-  }, [user]);
+  }, [allRoutes, user]);
 }
 
 /**

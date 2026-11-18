@@ -4,29 +4,42 @@
  * @fileoverview Parent / child records (nested lists)
  * @description An `EntityList` with `parent` lists one parent's children and its
  * add button opens `basePath/new?<field>=<id>`. `EntityFormRenderer` (create)
- * prefills that reference field from the URL. URL input is untrusted: only
+ * prefills that reference field from the URL. `parent.value: null` (parent not
+ * created yet) shows the create-first message instead. URL input is untrusted: only
  * reference fields of the entity the viewer may set on create, with an id-shaped
- * value, are taken.
+ * value, are taken. Reference fields and editability come from the entity
+ * descriptor (`describeEntity`).
  *
  * @version 0.1.0
  * @since 0.2.3
  * @author AMBROISE PARK Consulting
  */
 
+import { describeEntity } from '@donotdev/core';
 import type { AnyEntity, EntityListParent } from '@donotdev/core';
-
-import { isFieldEditable } from '../crudImports';
 
 /** Record id shape accepted from a URL (Firestore ids, UUIDs, slugs). */
 const RECORD_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
-/** True when `field` is a reference field of `entity`. */
-const isReferenceField = (entity: AnyEntity, field: string): boolean =>
-  entity.fields[field]?.type === 'reference' &&
-  typeof entity.fields[field]?.validation?.reference === 'string';
+/**
+ * True when `field` is a reference field of `entity`: descriptor
+ * `value.kind === 'ref'` (any field type with `validation.reference`, custom ones included).
+ */
+const isReferenceField = (entity: AnyEntity, field: string): boolean => {
+  const value = Object.hasOwn(entity.fields, field)
+    ? describeEntity(entity).fields[field]?.value
+    : undefined;
+  return value?.kind === 'ref' && value.ref !== undefined;
+};
+
+/** A nested list's parent once created (its id known). */
+export interface SavedEntityParent extends EntityListParent {
+  value: string;
+}
 
 /**
- * Throws when `parent.field` is not a reference field of the listed entity.
+ * Throws when `parent.field` is not a reference field of the listed entity, or
+ * `parent.value` is neither a record id nor `null` (parent not created yet).
  * A wrong parent would silently list nothing.
  *
  * @param entity - The listed (child) entity
@@ -41,7 +54,7 @@ export function assertEntityParent(
       `EntityList: parent.field "${parent.field}" is not a reference field of entity "${entity.name}".`
     );
   }
-  if (!RECORD_ID.test(parent.value)) {
+  if (parent.value !== null && !RECORD_ID.test(parent.value)) {
     throw new Error(
       `EntityList: parent.value "${parent.value}" is not a record id.`
     );
@@ -52,12 +65,12 @@ export function assertEntityParent(
  * Create path of a child record with its parent prefilled.
  *
  * @param basePath - The list's base path
- * @param parent - The nested list's parent
+ * @param parent - The nested list's parent (created)
  * @returns `${basePath}/new?<field>=<id>`
  */
 export function childCreatePath(
   basePath: string,
-  parent: EntityListParent
+  parent: SavedEntityParent
 ): string {
   const query = new URLSearchParams({ [parent.field]: parent.value });
   return `${basePath}/new?${query.toString()}`;
@@ -83,7 +96,7 @@ export function referencePrefillFromQuery(
       Object.hasOwn(entity.fields, key) &&
       isReferenceField(entity, key) &&
       RECORD_ID.test(value) &&
-      isFieldEditable(entity.fields[key]!.editable, viewerRole, 'create')
+      describeEntity(entity).fields[key]?.editableFor(viewerRole, 'create') === true
     ) {
       prefill[key] = value;
     }

@@ -16,7 +16,6 @@ import { isClient, FEATURE_STATUS } from '@donotdev/core';
 import { useAppConfig, useAuthConfig } from '@donotdev/core';
 import type { PageAuth, FeatureStatus } from '@donotdev/core';
 
-import { useLocation } from './useLocation.next';
 import { useAuthSafe } from '../../utils/useAuthSafe';
 
 /** Configuration options for the redirect guard hook. */
@@ -44,7 +43,9 @@ export interface RedirectGuardResult {
  * Hook that checks if redirect should happen before render
  *
  * Prevents content flash by determining redirect state synchronously.
- * Returns safe defaults on server (SSR-safe).
+ * Returns safe defaults on server (SSR-safe). Reads the query string from
+ * `window.location` when it redirects, not through `useSearchParams`: a cached
+ * (static) page using it keeps its server-rendered HTML.
  *
  * @param options - Redirect guard configuration
  * @returns Redirect guard state
@@ -54,8 +55,8 @@ export function useRedirectGuard(
 ): RedirectGuardResult {
   const { auth, redirectTo: customRedirectTo, condition } = options;
 
-  // Hooks must be called unconditionally (Rules of Hooks)
-  const location = useLocation();
+  // Hooks must be called unconditionally (Rules of Hooks). No useLocation(): reading
+  // the query string through a hook would move a cached (static) page to the browser.
   const authConfig = useAuthConfig();
   const authDisabled = useAppConfig().auth === false;
   const user = useAuthSafe('user');
@@ -105,14 +106,16 @@ export function useRedirectGuard(
         // Authentication failure (not logged in) → always redirect
         if (typeof auth === 'object' && auth.required && !user) {
           // Check if we have OAuth parameters that need to be preserved
+          // (client only, see isClient() above: read at decision time)
+          const search = window.location.search;
           const hasOAuthParams =
-            location.search?.includes('code=') ||
-            location.search?.includes('state=') ||
-            location.search?.includes('error=');
+            search.includes('code=') ||
+            search.includes('state=') ||
+            search.includes('error=');
 
           const authRoute = authConfig.authRoute!;
           if (hasOAuthParams) {
-            targetRoute = `${authRoute}${location.search}`;
+            targetRoute = `${authRoute}${search}`;
           } else {
             targetRoute = authRoute;
           }
@@ -147,7 +150,6 @@ export function useRedirectGuard(
     can,
     condition,
     customRedirectTo,
-    location.search,
     authDisabled,
     authConfig.authRoute,
     authConfig.roleRoute,

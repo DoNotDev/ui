@@ -79,4 +79,11 @@ describe('AutoMetaTags: one URL per language', () => {
     expect(html).not.toContain('hrefLang');
     expect(linkHref(html, 'rel="canonical"')).toBe('https://shop.example/produits');
   });
+
+  it('publisher logo in JSON-LD is an absolute URL', () => {
+    const html = renderToStaticMarkup(<AutoMetaTags />);
+    expect(html).toContain(
+      '"logo":{"@type":"ImageObject","url":"https://shop.example/logo.svg"}'
+    );
+  });
 });

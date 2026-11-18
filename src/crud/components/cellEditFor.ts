@@ -3,17 +3,19 @@
 /**
  * @fileoverview Cell editor of an entity field
  * @description Maps an entity field to the DataTable cell editor used by an
- * `editable` EntityList.
+ * `editable` EntityList. Editability and references come from the entity
+ * descriptor (`describeEntity`), the same rules as forms.
  *
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.2.3
  * @author AMBROISE PARK Consulting
  */
 
 import type { TableCellEdit } from '@donotdev/components';
-import type { EntityField } from '@donotdev/core';
+import { describeEntity } from '@donotdev/core';
+import type { AnyEntity } from '@donotdev/core';
 
-import { isFieldEditable, translateLabel } from '../crudImports';
+import { translateLabel } from '../crudImports';
 
 /** Field types edited as free text in an editable list. */
 const TEXT_TYPES = new Set(['text', 'email', 'url', 'tel', 'textarea']);
@@ -25,24 +27,55 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 /**
  * Cell editor of a list field, or `undefined` when the field is not edited in
  * the table (type without a cell editor, or not editable by the viewer).
- * References list the referenced records by their resolved label
- * (`useReferenceResolver`); a reference whose collection is not resolved yet
- * stays read-only.
+ * Editability is the form's (`editableFor(viewerRole, 'edit')`): generated,
+ * computed, `editable: false`, create-only, role-denied and technical fields stay
+ * read-only. References (any field type with `validation.reference`, descriptor
+ * `value.kind === 'ref'`) list the referenced records by their resolved label
+ * (`useReferenceResolver`); a reference whose collection is not resolved yet stays
+ * read-only.
+ *
+ * @param entity - Entity owning the field (the extension entity for an extension column)
+ * @param name - Field name in `entity.fields` (unprefixed)
+ * @param viewerRole - Viewer's role
+ * @param referenceData - Resolved reference labels by collection
+ * @param t - Translator for option labels
+ * @returns The cell editor, or `undefined`
+ * @throws When `entity` has no field `name`
  *
  * @example
  * ```ts
- * cellEditFor({ name: 'price', type: 'number', visibility: 'user' }, 'admin', {}, t);
+ * cellEditFor(productEntity, 'price', 'admin', {}, t);
  * // { type: 'number' }
  * ```
+ *
+ * @version 0.2.0
+ * @since 0.2.3
  */
 export function cellEditFor(
-  field: EntityField,
+  entity: AnyEntity,
+  name: string,
   viewerRole: string,
   referenceData: Record<string, Record<string, string>>,
   t: Translate
 ): TableCellEdit | undefined {
-  if (!isFieldEditable(field.editable, viewerRole, 'edit')) return undefined;
-  const type = field.type || 'text';
+  const field = entity.fields[name];
+  const descriptor = describeEntity(entity).fields[name];
+  if (!field || !descriptor) {
+    throw new Error(`cellEditFor: entity "${entity.name}" has no field "${name}".`);
+  }
+  if (!descriptor.editableFor(viewerRole, 'edit')) return undefined;
+  const { value } = descriptor;
+  if (value.kind === 'ref' && value.ref !== undefined) {
+    const labels = referenceData[value.ref];
+    if (!labels) return undefined;
+    return {
+      type: 'select',
+      options: Object.entries(labels)
+        .map(([id, label]) => ({ value: id, label }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    };
+  }
+  const { type } = field;
   if (TEXT_TYPES.has(type)) return { type: 'text' };
   if (type === 'number') return { type: 'number' };
   if (OPTION_TYPES.has(type)) {
@@ -55,18 +88,6 @@ export function cellEditFor(
         value: String(o.value),
         label: translateLabel(o.label, t),
       })),
-    };
-  }
-  if (type === 'reference') {
-    const collection = field.validation?.reference;
-    const labels =
-      typeof collection === 'string' ? referenceData[collection] : undefined;
-    if (!labels) return undefined;
-    return {
-      type: 'select',
-      options: Object.entries(labels)
-        .map(([value, label]) => ({ value, label }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
     };
   }
   return undefined;

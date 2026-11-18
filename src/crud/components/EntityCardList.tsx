@@ -44,6 +44,7 @@ import {
 } from '../crudImports';
 import { CrudCard } from './CrudCardLink';
 import { useNavigate } from '../../routing';
+import { useAuthSafe } from '../../utils/useAuthSafe';
 
 export type { EntityCardListProps };
 
@@ -184,6 +185,7 @@ export function EntityCardList({
   const isPreview = !!preview;
 
   const navigate = useNavigate();
+  const viewerRole = useAuthSafe('userRole');
   const base = basePath ?? `/${entity.collection}`;
 
   // useCrudCardList -> handles fetching + client-side filter/search/sort via `processed`
@@ -262,7 +264,6 @@ export function EntityCardList({
         <Section
           title={tCrud('filters.title', {
             entity: entityName,
-            defaultValue: `Browse ${entityName} - Filters`,
           })}
           collapsible={collapsible}
           defaultOpen={defaultOpen}
@@ -280,10 +281,8 @@ export function EntityCardList({
                 disabled={isPreview}
               >
                 {showFavoritesOnly
-                  ? tCrud('favorites.showAll', { defaultValue: 'Show All' })
-                  : tCrud('favorites.showFavorites', {
-                      defaultValue: 'Show Favorites',
-                    })}
+                  ? tCrud('favorites.showAll')
+                  : tCrud('favorites.showFavorites')}
               </Button>
 
               {!isPreview && (
@@ -291,6 +290,7 @@ export function EntityCardList({
                   entity={entity}
                   data={rawData}
                   fieldsToFilter={fieldsToFilter}
+                  viewerRole={viewerRole}
                 />
               )}
             </Stack>
@@ -302,15 +302,11 @@ export function EntityCardList({
       <Section
         title={
           loading
-            ? tCrud('results.title.fetching', { defaultValue: 'Fetching...' })
+            ? tCrud('results.title.fetching')
             : resultLabel
               ? resultLabel(data.length)
               : tCrud('results.title.count', {
                   count: data.length,
-                  defaultValue:
-                    data.length === 1
-                      ? 'Found 1 occurrence'
-                      : `Found ${data.length} occurrences`,
                 })
         }
         collapsible={collapsible}
@@ -323,7 +319,7 @@ export function EntityCardList({
           <Stack
             align="center"
             justify="center"
-            style={{ padding: 'var(--gap-3xl)', textAlign: 'center' }}
+            style={{ padding: 'var(--gap-lg)', textAlign: 'center' }}
           >
             <Text level="h3" style={{ color: 'var(--destructive)' }}>
               {tCrud('errors.fetchFailed', { entity: entityName })}
@@ -338,7 +334,7 @@ export function EntityCardList({
           <Stack
             align="center"
             justify="center"
-            style={{ padding: 'var(--gap-3xl)', textAlign: 'center' }}
+            style={{ padding: 'var(--gap-lg)', textAlign: 'center' }}
           >
             <Text level="h3" style={{ color: 'var(--muted-foreground)' }}>
               {tCrud('emptyState.title')}
@@ -389,12 +385,8 @@ export function EntityCardList({
                       }}
                       aria-label={
                         itemIsFavorite
-                          ? tCrud('favorites.remove', {
-                              defaultValue: 'Remove from favorites',
-                            })
-                          : tCrud('favorites.add', {
-                              defaultValue: 'Add to favorites',
-                            })
+                          ? tCrud('favorites.remove')
+                          : tCrud('favorites.add')
                       }
                     />
                   }

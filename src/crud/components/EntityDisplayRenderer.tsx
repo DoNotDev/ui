@@ -156,7 +156,7 @@ export function EntityDisplayRenderer<T extends EntityRecord = EntityRecord>({
           overlay
           aria-label={
             loadingMessage ||
-            tCrud('form.loading', { defaultValue: 'Loading...' })
+            tCrud('form.loading')
           }
         />
       </div>
@@ -173,7 +173,7 @@ export function EntityDisplayRenderer<T extends EntityRecord = EntityRecord>({
         align="center"
         justify="center"
         style={{
-          padding: 'var(--gap-3xl)',
+          padding: 'var(--gap-lg)',
           textAlign: 'center',
         }}
         className={className}

@@ -41,7 +41,6 @@ import { useUrlLanguage } from '@donotdev/ui/routing/hooks';
 import { NextJsStoresInitializer } from '../internal/initializers/NextJsStoresInitializer';
 import { AutoMetaTags } from '../internal/layout/components/AutoMetaTags';
 import FaviconHead from '../internal/layout/components/FaviconHead';
-import PerformanceHints from '../internal/layout/components/PerformanceHints';
 import { DnDevLayout } from '../internal/layout/DnDevLayout';
 import { SentryInitializer } from '../internal/providers/SentryInitializer';
 import { UIProviders } from '../internal/providers/UIProviders';
@@ -218,9 +217,6 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
             >
               {/* Favicon - uses useFaviconConfig() internally */}
               <FaviconHead />
-
-              {/* Performance hints - preconnects for faster third-party loads */}
-              <PerformanceHints />
 
               <QueryProviders>
                 {/* Queries read during the server render (CRUD lists) stream to the

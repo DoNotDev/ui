@@ -134,15 +134,17 @@ export function EntityWorkflow({
           onSubmit={async (data) => {
             await wf.goNext(data as Record<string, unknown>);
           }}
+          // Steps advance in place; the caller's onComplete decides where to go.
+          successPath={null}
           submitText={
             isLast
-              ? t('workflow.submit', { defaultValue: 'Submit' })
-              : t('workflow.next', { defaultValue: 'Next' })
+              ? t('workflow.submit')
+              : t('workflow.next')
           }
           cancelText={
             isFirst
               ? null
-              : t('workflow.previous', { defaultValue: 'Previous' })
+              : t('workflow.previous')
           }
           onCancel={isFirst ? undefined : wf.goPrevious}
           loading={isSubmitting}
@@ -153,7 +155,7 @@ export function EntityWorkflow({
       {/* Skip button (only if step allows it) */}
       {currentStep.allowSkip && !isLast && (
         <Button variant="ghost" onClick={wf.skipStep} className="dndev-w-full">
-          {t('workflow.skip', { defaultValue: 'Skip this step' })}
+          {t('workflow.skip')}
         </Button>
       )}
     </Stack>

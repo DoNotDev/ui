@@ -86,7 +86,7 @@ export function EntityRecommendations({
 
   const resolvedBasePath = basePath ?? `/${entity.collection}`;
   const resolvedTitle =
-    title ?? t('recommendations.title', { defaultValue: 'You may also like' });
+    title ?? t('recommendations.title');
   const bpIndex: Record<string, number> = {
     mobile: 0,
     tablet: 1,

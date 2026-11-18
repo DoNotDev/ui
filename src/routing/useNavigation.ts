@@ -12,7 +12,11 @@
 import { useMemo } from 'react';
 
 import type { NavigationRoute } from '@donotdev/core';
-import { useNavigationStore, useTranslation } from '@donotdev/core';
+import {
+  filterNavigationRoutes,
+  useNavigationStore,
+  useTranslation,
+} from '@donotdev/core';
 import { USER_ROLES } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
 import { useRoutePath } from '@donotdev/ui/routing/hooks';
@@ -59,36 +63,11 @@ export function useNavigationItems(): NavigationItem[] {
   const { t } = useTranslation();
   const role = user?.role || USER_ROLES.GUEST;
 
-  // Use Zustand selector for proper caching - only re-runs when auth state changes
-  const filteredRoutes = useNavigationStore((state) => {
-    // Guard against undefined state during initialization
-    if (!state || typeof state.getFilteredRoutes !== 'function') {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(
-          '[useNavigationItems] Navigation store not initialized, returning empty routes'
-        );
-      }
-      return [];
-    }
-    return state.getFilteredRoutes({
-      authenticated,
-      role,
-    });
-  });
+  // Select snapshot-owned data; store getters close over live state during hydration.
+  const allRoutes = useNavigationStore((state) => state.cache.allRoutes);
 
   return useMemo(() => {
-    // Ensure filteredRoutes is always an array
-    if (!Array.isArray(filteredRoutes)) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(
-          '[useNavigationItems] filteredRoutes is not an array:',
-          filteredRoutes
-        );
-      }
-      return [];
-    }
-
-    return filteredRoutes
+    return filterNavigationRoutes(allRoutes, { authenticated, role })
       .map((route) => ({
         ...route,
         label: routeLabel(route, t),
@@ -99,7 +78,7 @@ export function useNavigationItems(): NavigationItem[] {
       .sort((a, b) =>
         a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
       ); // Alphabetical sorting by label
-  }, [filteredRoutes, pathname, t]);
+  }, [allRoutes, authenticated, role, pathname, t]);
 }
 
 /**

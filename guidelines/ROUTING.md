@@ -59,7 +59,30 @@ import {
 } from '@donotdev/ui';
 ```
 
-**Path only? `useRoutePath()`.** It returns the route path (no language prefix) without reading the query string. On Next, pages are cached (static): reading the query (`useSearchParams`, `useLocation().search`) renders that page in the browser instead of the cached HTML. Read the query only where it is needed, ideally in a small component inside its own `<Suspense>`.
+**Path only? `useRoutePath()`.** It returns the route path (no language prefix) without reading the query string. On Next, pages are cached (static): reading the query (`useSearchParams`, `useLocation().search`) renders that page in the browser instead of the cached HTML. Read the query only where it is needed, in a small component inside its own `<Suspense>`: generated Next pages have no page-wide boundary (it would delay the whole page past the first paint), and `next build` fails on a query read with no boundary around it.
+
+---
+
+## NotFoundPage: static fallback and translation compatibility
+
+`<NotFoundPage />` still displays the current route path by default. Set
+`showRequestedPath={false}` for a cached/shared fallback: its build-time pathname
+is not the URL of a later request. Framework-generated Next not-found and global
+not-found wrappers opt into this generic, badge-free content. This prop hides only
+the path badge; translated labels, route suggestions and Home/Back actions remain
+server-renderable. It does not disable SSR or defer navigation until mount.
+
+The canonical translation text is `dndev:messages.notFound.*`. Framework eager
+locales expose `errors.notFound.{title,description,suggestions,navigateTo,goHome,goBack}`
+as explicit i18next `$t(messages.notFound.<key>)` compatibility references, not
+copies. The component keeps its legacy `errors.notFound.*` lookups so existing
+consumer overrides continue to work. Consumer locale resources are deep-merged
+over framework resources: a legacy override wins for that field; otherwise its
+reference resolves the canonical value, including a consumer canonical override.
+If both families override the same field, the legacy override wins. Prefer
+`messages.notFound.*` for new overrides; remove an old field override when migrating
+it to canonical. `navigateTo` interpolates `{{label}}`. Existing English component
+defaults remain for missing resources; there is no runtime key-family fallback chain.
 
 ---
 
@@ -174,6 +197,8 @@ function CustomSidebar() {
   );
 }
 ```
+
+**SSR snapshot ownership:** `useNavigationItems()` and `useAccessibleNavigationRoutes()` subscribe to route data and update when either routes or auth change. For lower-level render derivation, select `state.cache.allRoutes` and call the pure `filterNavigationRoutes(routes, authState)` exported by `@donotdev/core` outside the store selector. Do not invoke `state.getFilteredRoutes()` inside a render selector: imperative getters read live state rather than the hydration snapshot. Existing imperative getters remain supported for event-time reads.
 
 **DON'T manually build navigation:**
 ```tsx

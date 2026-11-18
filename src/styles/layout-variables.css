@@ -280,10 +280,20 @@ main[role='main'][data-routing-animation='none'] {
   grid-template-rows: var(--header-height) 1fr auto;
 }
 
-/* Footer inside main: spacing + sizing (slotted mode only) */
+/* No footer rendered (app.footer: null): no footer row, main takes the space */
+.dndev-layout:not(:has(> footer)) {
+  grid-template-areas:
+    'header header'
+    'sidebar main';
+  grid-template-rows: var(--header-height) 1fr;
+}
+
+/* Footer inside main: spacing + sizing (slotted mode only). The gap sits on the page
+   above it: the footer's own block-start margin is `auto` (pinned to the bottom). */
+main[role='main'] > :has(+ footer[role='contentinfo']:not([data-custom])) {
+  margin-block-end: var(--gap-lg);
+}
 main[role='main'] > footer[role='contentinfo']:not([data-custom]) {
-  margin-top: var(--gap-lg);
-  flex-shrink: 0;
   height: auto;
 }
 main[role='main'] > footer[role='contentinfo']:not([data-custom]) > * {
@@ -664,10 +674,20 @@ main[role='main'] {
   padding: 0;
   contain: layout style;
 
-  /* First child after breadcrumbs grows to fill space, never shrinks (scroll container owns overflow) */
-  & > *:not(.breadcrumbs-container):first-of-type,
-  & > .breadcrumbs-container + * {
+  /* The page (first child, or the one after breadcrumbs) grows to fill the space and never
+     shrinks (the scroll container owns overflow). Only the page: a footer rendered inside
+     main keeps its own height. */
+  & > :first-child:not(.breadcrumbs-container, footer),
+  & > .breadcrumbs-container + :not(footer) {
     flex: 1 0 auto;
+  }
+
+  /* Footer inside main: always at the bottom, even while the page is not there yet
+     (a Suspense boundary streaming in leaves only a hidden placeholder): main stays
+     empty above it, nothing shifts when the page arrives. */
+  & > footer {
+    flex: 0 0 auto;
+    margin-block-start: auto;
   }
 }
 

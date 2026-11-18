@@ -159,6 +159,8 @@ const customPresets: Record<string, PresetConfig> = {
 };
 ```
 
+**No footer, no reserved space.** When no `<footer>` is rendered (preset `footer: null`, or `app.footer: null` in AppConfig), the layout drops the footer row: the main area runs to the bottom of the screen. `app.footer: null` also hides the copyright and legal links where a preset shows them elsewhere (the `moolti` sidebar).
+
 ### CSS variables for custom presets
 
 **Add CSS variables in `src/themes.css`:**
@@ -245,6 +247,8 @@ footerMode: 'fixed',
 // Scroll on all breakpoints (footer scrolls with content):
 footerMode: 'scroll',
 ```
+
+A footer inside `main` (`scroll`, or a `<footer>` rendered after the page) keeps its own height and sits at the bottom of the screen on a short page: only the page grows (the first child of `main`, or the one after the breadcrumbs). While a page inside a `<Suspense>` streams in, `main` stays empty above the footer, so nothing moves when it arrives.
 
 Set `footerMode` in your preset config or in the `layout` prop:
 ```tsx

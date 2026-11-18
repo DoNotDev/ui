@@ -42,14 +42,23 @@ export const meta: PageMeta = {
  * - Full-viewport centered design for professional appearance
  * - Translation system integration (i18n)
  * - Dynamic route suggestions from discovered routes
+ * - Optional requested-path badge (shown by default for existing consumers)
  * - Accessible design with proper semantic HTML
  * - Responsive across all viewports
+ *
+ * Legacy errors.notFound keys are compatibility references to the canonical
+ * messages.notFound resources. Keep lookups here so legacy app overrides win.
  *
  * @version 0.1.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
-export default function NotFoundPage() {
+export default function NotFoundPage({
+  showRequestedPath = true,
+}: {
+  /** Display the current route path. Disable for shared, statically generated fallbacks. */
+  showRequestedPath?: boolean;
+} = {}) {
   const { t } = useTranslation('dndev');
   const pathname = useRoutePath();
   const navigate = useNavigate();
@@ -121,8 +130,8 @@ export default function NotFoundPage() {
             )}
           </Text>
 
-          {/* Show requested URL if available */}
-          {pathname && (
+          {/* Static fallbacks cannot know the eventual requested URL. */}
+          {showRequestedPath && pathname && (
             <code
               style={{
                 padding: 'var(--gap-sm) var(--gap-md)',

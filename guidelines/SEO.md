@@ -248,7 +248,7 @@ Both list the same pages, generated from `src/pages` - no app code:
 - **Out:** `auth.required` routes and `seo: { noindex: true }` routes.
 - **URLs:** absolute, from `seo.baseUrl` or `NEXT_PUBLIC_APP_URL` / `VITE_APP_URL`. A production build with a localhost URL fails.
 - **llms.txt labels (app default language):** page = namespace `title` → `seo.title` → namespace `meta.fullTitle` → `seo.fullTitle` (a static page with none fails the build); entity record = `deriveEntitySeo` title/description (same as `<Seo entity data>`); entity section = `namePlural` of its `entity-*` translations.
-- **Next:** `src/app/sitemap.xml/route.next.ts` and `src/app/llms.txt/route.next.ts`, revalidated hourly. Entity definitions come from the app's `entities` package.
+- **Next:** `src/app/sitemap.xml/route.next.ts` and `src/app/llms.txt/route.next.ts`, revalidated hourly (`appConfig.revalidate`: other lifetime in seconds, or `false` until the next deploy). Entity definitions come from the app's `entities` package.
 - **Vite:** written at build; static pages only (same as the Vite sitemap).
 
 ---

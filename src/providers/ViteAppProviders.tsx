@@ -47,11 +47,6 @@ const FaviconHead = lazy(() =>
     default: m.default,
   }))
 );
-const PerformanceHints = lazy(() =>
-  import('../internal/layout/components/PerformanceHints').then((m) => ({
-    default: m.default,
-  }))
-);
 
 /** Language of the browser URL (prefix, else the default language). */
 function currentUrlLanguage(): string {
@@ -152,9 +147,6 @@ export function ViteAppProviders(props: AppProvidersProps) {
           <HelmetProvider>
             {/* Favicon - uses useFaviconConfig() internally */}
             <FaviconHead />
-
-            {/* Performance hints - preconnects for faster third-party loads */}
-            <PerformanceHints />
 
             {/* NavigationProvider uses RouterProvider with data router pattern */}
             {/* RootLayout (inside router config) provides QueryProviders, UIProviders, Layout, etc. */}

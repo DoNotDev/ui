@@ -28,6 +28,8 @@ export interface FooterCopyrightProps {
  *
  * Uses useTranslation internally, so it re-renders when language changes.
  * If appName not provided, reads from app config automatically.
+ * Renders nothing when the app has no footer (`app.footer: null`), as DnDevFooter,
+ * including in presets that show it in the sidebar.
  *
  * @version 0.1.0
  * @since 0.0.1
@@ -41,6 +43,8 @@ export const FooterCopyright: React.ComponentType<FooterCopyrightProps> = ({
   const { t } = useTranslation('dndev');
   const app = useAppConfig('app');
   const resolvedAppName = appName || app?.name || 'App';
+
+  if (app?.footer === null) return null;
 
   return (
     <span

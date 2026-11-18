@@ -6,6 +6,8 @@ Common mistakes related to routing, styling, layouts, and UI components.
 
 ## Routing [Phase 1, 3]
 
+**GOTCHA: PageMeta must be plain text — no DRY variables.** Export `meta` as a self-contained object literal, with configuration values inline (`namespace: 'brands'`, `route: '/marques'`, `auth: { required: true, role: 'admin' }`). Never replace them with imported/shared constants such as `auth: ADMIN_ONLY`, object spreads or helper calls. Discovery parses source text without resolving imports: an unresolved reference silently drops the entire metadata object, losing custom routes AND auth guards. JSX icons are explicitly supported. See PAGES for the complete rule and examples.
+
 **Never import from `react-router-dom` - use framework routing.**
 
 ```tsx

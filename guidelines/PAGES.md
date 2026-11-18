@@ -12,6 +12,26 @@ Files must be named `*Page.tsx` (e.g., `HomePage.tsx`, `AboutPage.tsx`, `BlogPos
 
 ---
 
+## PageMeta: Plain Text, No DRY Variables
+
+**`export const meta: PageMeta = { ... };` must be a self-contained object literal.** Discovery reads source text; it does not import or execute the page module. Keep strings, booleans, arrays and nested objects inline. Do not extract metadata into shared constants, imported objects, spreads, helper calls or computed values. This includes `namespace`, `route` and `auth`: intentional duplication is required here. JSX navigation icons such as `icon: <Tags />` are explicitly supported.
+
+```tsx
+// WRONG: discovery cannot resolve the imported/shared object.
+export const meta: PageMeta = { route: '/marques', auth: ADMIN_ONLY };
+
+// CORRECT: all configuration is readable directly in the source.
+export const meta: PageMeta = {
+  namespace: 'brands',
+  route: '/marques',
+  auth: { required: true, role: 'admin' },
+};
+```
+
+**An unresolved variable can discard the entire metadata object**, not just that field: custom URLs disappear, filename-derived routes replace them, and route auth defaults to public. A successful TypeScript check does not verify build-time metadata extraction.
+
+---
+
 ## Standard Use
 
 **Pattern:** `src/pages/**/*Page.tsx` - routes
@@ -24,7 +44,7 @@ import { PageContainer } from '@donotdev/ui';
 export const NAMESPACE = 'about';
 
 export const meta: PageMeta = {
-  namespace: NAMESPACE,
+  namespace: 'about',
 };
 
 export default function AboutPage() {
@@ -62,8 +82,8 @@ export default function HomePage() {
 
 ```tsx
 export const meta: PageMeta = {
-  // Translation/SEO namespace
-  namespace: NAMESPACE,
+  // Translation/SEO namespace (inline literal, not a shared constant)
+  namespace: 'about',
 
   // Route configuration
   route: '/custom-url',                    // Override auto-generated path

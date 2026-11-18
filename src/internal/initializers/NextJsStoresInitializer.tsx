@@ -10,10 +10,16 @@
  * @author AMBROISE PARK Consulting
  */
 
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 
-import { isTest, isClient, getDndevConfig } from '@donotdev/core';
+import {
+  isTest,
+  isClient,
+  getDndevConfig,
+  onQueryCacheIdentityChange,
+} from '@donotdev/core';
 import { useThemeStore } from '@donotdev/core';
 import type { CustomStoreConfig } from '@donotdev/core';
 
@@ -40,6 +46,9 @@ function createNextJsHandlers(): StoreHandlers {
  *
  * Wraps BaseStoresInitializer with Next.js-specific handlers and SSR cookie hydration.
  * Hydrates theme store from cookies before render to prevent FOUC (Flash of Unstyled Content).
+ * Refreshes the Next router when the signed-in identity changes (onQueryCacheIdentityChange):
+ * the client router cache holds payloads and proxy redirects of the previous session
+ * (e.g. `/` → signedInRedirect target), replayed on the next navigation otherwise.
  * Automatically skips initialization in test environments.
  *
  * @version 0.1.0
@@ -54,6 +63,10 @@ export function NextJsStoresInitializer({
 }: NextJsStoresInitializerProps) {
   const skip = skipStoreInit ?? isTest();
   const handlers = createNextJsHandlers();
+  const router = useRouter();
+
+  // Synchronous on the identity reset: refreshed before the caller's next navigation
+  useEffect(() => onQueryCacheIdentityChange(() => router.refresh()), [router]);
 
   // Next.js SSR: Hydrate theme store from cookies before render
   // Flow: 1) Next.js layout reads cookie and applies theme class (SSR)

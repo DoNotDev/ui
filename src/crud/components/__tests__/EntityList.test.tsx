@@ -4,7 +4,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { defineEntity } from '@donotdev/core';
 
 // Admin list UX: open-link icon | bulk-select checkbox | fields edited in their
 // cells; nested list of a parent's children; bulk delete of checked rows.
@@ -46,13 +45,14 @@ vi.mock('../../crudImports', () => ({
   isCrudModuleAvailable: true,
   translateFieldLabel: (name: string) => name,
   translateLabel: (label: string) => label,
-  isFieldEditable: () => true,
   formatValue: (value: unknown) => String(value ?? ''),
   useReferenceResolver: () => ({
     brands: { b1: 'Findive', b2: 'Cerolabs' },
     categories: { c1: 'Toners', c2: 'Creams' },
   }),
   useCrud: () => ({ bulk: bulkSpy }),
+  // No edit form open on a parent record: the list is standalone.
+  useJoinedForm: () => null,
   useCrudFilters: () => ({ filters: {} }),
   useCrudPageSize: () => ({ pageSize: 12, setPageSize: vi.fn() }),
   useCrudList: (_entity: unknown, options: unknown) => {
@@ -66,36 +66,22 @@ vi.mock('../../crudImports', () => ({
       effectiveMode: 'client',
     };
   },
-  EntityFilters: ({ fieldsToFilter }: { fieldsToFilter: string[] }) => (
-    <div data-testid="filters">{fieldsToFilter.join(',')}</div>
+  EntityFilters: ({
+    fieldsToFilter,
+    viewerRole,
+  }: {
+    fieldsToFilter: string[];
+    viewerRole?: string;
+  }) => (
+    <div data-testid="filters" data-viewer-role={viewerRole}>
+      {fieldsToFilter.join(',')}
+    </div>
   ),
 }));
 
 import { EntityList } from '../EntityList';
+import { listedProductEntity as productEntity } from '@dndev/test-entities';
 
-const productEntity = defineEntity({
-  name: 'Product',
-  collection: 'products',
-  namespace: 'entity-product',
-  listFields: ['name', 'brandId', 'categoryId'],
-  fields: {
-    name: { name: 'name', label: 'name', type: 'text', visibility: 'admin' },
-    brandId: {
-      name: 'brandId',
-      label: 'brandId',
-      type: 'reference',
-      visibility: 'admin',
-      validation: { reference: 'brands' },
-    },
-    categoryId: {
-      name: 'categoryId',
-      label: 'categoryId',
-      type: 'reference',
-      visibility: 'admin',
-      validation: { reference: 'categories' },
-    },
-  },
-});
 
 const headers = () =>
   screen.getAllByRole('columnheader').map((th) => th.textContent);
@@ -119,6 +105,18 @@ describe('EntityList rows', () => {
     expect(
       [...(brandCell as HTMLSelectElement).options].map((o) => o.textContent)
     ).toContain('Cerolabs');
+  });
+
+  it('filters with the viewer role (admin-only fields stay filterable)', () => {
+    const { container } = render(
+      <EntityList entity={productEntity} basePath="/produits" />
+    );
+    fireEvent.click(
+      container.querySelector('.dndev-section-title-trigger') as HTMLElement
+    );
+    expect(screen.getByTestId('filters').getAttribute('data-viewer-role')).toBe(
+      'admin'
+    );
   });
 
   it('deletes the checked rows in one bulk call', async () => {
