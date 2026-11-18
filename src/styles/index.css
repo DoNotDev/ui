@@ -21,6 +21,9 @@
 /* GameContainer - Content + CTA grid for game screens */
 @import '../components/layout/GameContainer.css';
 
+/* HeaderMenu - controls inline from laptop up, hamburger below */
+@import '../components/layout/components/header/HeaderMenu.css';
+
 /* AppIcon - header icon styling */
 .app-icon-header {
   display: inline-flex;

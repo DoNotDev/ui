@@ -23,7 +23,7 @@
 - **Breadcrumbs** - Breadcrumb navigation component.
 - **HeaderNavigation** - Header navigation menu component.
 - **DropdownNavigation** - Dropdown navigation menu.
-- **HeaderMenu** - Header menu component.
+- **HeaderMenu** - Header controls inline from 1024px up, behind a hamburger below (CSS switch, no hydration swap). Popups inside it (DropdownMenu, Dialog) work from the burger panel.
 - **SettingsMenu** - Settings menu component.
 - **ThemeToggle** - Theme toggle button component.
 - **CacheSettings** - Cache settings component.

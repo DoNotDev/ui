@@ -1,0 +1,30 @@
+/* packages/ui/src/components/layout/components/header/HeaderMenu.css */
+
+/* HeaderMenu: controls inline from laptop up, hamburger below.
+   1024px = BREAKPOINT_THRESHOLDS.laptop, the useBreakpoint('isMobileOrTablet') split
+   (CSS variables don't work in @media). Both are in the server HTML: no hydration swap. */
+
+/* Inline controls join the parent row (its gap and alignment) */
+.dndev-header-menu-inline {
+  display: contents;
+}
+
+.dndev-header-menu-burger {
+  display: none;
+}
+
+/* Burger panel: above the header it drops from, below the dialogs (--z-modal) and
+   menus (--z-tooltip) its controls open */
+.dndev-header-menu-panel {
+  z-index: calc(var(--z-header) + 1);
+}
+
+@media (width < 1024px) {
+  .dndev-header-menu-inline {
+    display: none;
+  }
+
+  .dndev-header-menu-burger {
+    display: contents;
+  }
+}

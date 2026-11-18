@@ -1,6 +1,6 @@
 {
   "name": "@donotdev/ui",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "private": false,
   "license": "MIT",
@@ -60,7 +60,7 @@
     "@donotdev/ai": "^0.3.0",
     "@donotdev/auth": "^0.3.0",
     "@donotdev/billing": "^0.3.0",
-    "@donotdev/components": "^0.3.0",
+    "@donotdev/components": "^0.3.1",
     "@donotdev/core": "^0.3.0",
     "@donotdev/crud": "^0.3.0",
     "@donotdev/oauth": "^0.3.0",
