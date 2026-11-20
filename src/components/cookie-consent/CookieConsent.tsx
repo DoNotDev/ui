@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/components/cookie-consent/CookieConsent.tsx
 
 import { Cookie, Settings, Shield, BarChart3, Target } from 'lucide-react';

@@ -25,6 +25,7 @@ export { default as GoToInput } from './GoToInput';
 // GoToDialog intentionally NOT exported - lazy loaded by GoToWrapper
 export * from './DnDevNavigationMenu';
 export { default as NotFoundPage } from './404';
+export { NotFoundDocument, useIsNotFoundDocument } from './NotFoundDocument';
 
 // Hooks - platform-specific via conditional exports
 // '@donotdev/ui/routing/hooks' resolves to:

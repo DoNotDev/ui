@@ -10,8 +10,8 @@
  * @author AMBROISE PARK Consulting
  */
 
-import * as LucideIcons from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
+import { Palette } from 'lucide-react';
+import type { ComponentType } from 'react';
 
 import {
   Button,
@@ -24,7 +24,7 @@ import { useTranslation } from '@donotdev/core';
 import { useTheme } from '@donotdev/core';
 import type { ThemeInfo } from '@donotdev/core';
 
-import { findLucideIcon } from '../../../common/lucideIconByName';
+import { iconByName } from '../../../common/iconByName';
 
 interface ThemeToggleProps {
   /**
@@ -41,9 +41,8 @@ interface ThemeToggleProps {
 const getIcon = (
   iconName: string | undefined
 ): ComponentType<{ className?: string }> => {
-  if (!iconName) return LucideIcons.Palette;
-  const cleanIconName = iconName.replace(/['"]/g, '');
-  return findLucideIcon(cleanIconName) || LucideIcons.Palette;
+  if (!iconName) return Palette;
+  return iconByName(iconName, Palette);
 };
 
 /**

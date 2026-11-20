@@ -39,6 +39,12 @@ import { Link, DnDevNavigationMenu } from '@donotdev/ui';
 <Link path="/users/:id" replace prefetch={false}>User Details</Link>
 ```
 
+Internal paths render a real `<a href>` on both platforms (via `@donotdev/ui/routing/link`, resolved like `routing/hooks`):
+- **Next.js:** `next/link`. `prefetch` (default `true`): guests get next/link's default prefetch (production only: static routes fully, dynamic routes up to the nearest `loading.js`); signed-in visitors (`useAuth('isAuthenticated')`, cookie snapshot until the provider is ready) get `prefetch={true}`, the full route of each visible link, because their pages render per request (session tree) and the default skips them. `prefetch={false}` disables it for everyone. An `onClick` calling `preventDefault()` cancels the navigation.
+- **Vite:** `<a href>` navigated by react-router; `prefetch` has no effect.
+- Modifier / middle clicks keep the browser default (new tab). External URLs (`http(s)`, `mailto:`, `tel:`) are plain `<a target="_blank">`. Cards (`href`) and Tables render links through `Link`, so they get the same behaviour.
+- String `icon` names (`"Package"`) load per icon (own chunk); prefer an imported component (`icon={Package}`) for server-rendered icons.
+
 **DnDevNavigationMenu (Sidebar/Header):**
 ```tsx
 // Auto-fetches routes, handles auth filtering
@@ -71,6 +77,15 @@ is not the URL of a later request. Framework-generated Next not-found and global
 not-found wrappers opt into this generic, badge-free content. This prop hides only
 the path badge; translated labels, route suggestions and Home/Back actions remain
 server-renderable. It does not disable SSR or defer navigation until mount.
+
+The badge is not the only URL-derived output. The static Next 404 is built once (at
+`/_not-found`) and served for every unknown URL, so anything computed from the
+pathname differs between its HTML and the browser's render (React #418). The
+generated not-found and global not-found pages wrap their tree in
+`<NotFoundDocument>` (`@donotdev/ui`): inside it, `AutoMetaTags` emits no canonical
+link and no URL-derived JSON-LD, and `Breadcrumbs` renders nothing. A hand-written
+shared 404 must do the same. Apps that set `breadcrumbs: 'never'` in their layout
+still need it for the head tags.
 
 The canonical translation text is `dndev:messages.notFound.*`. Framework eager
 locales expose `errors.notFound.{title,description,suggestions,navigateTo,goHome,goBack}`

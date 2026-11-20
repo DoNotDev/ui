@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/components/layout/components/header/AppTitle.tsx
 
 /**

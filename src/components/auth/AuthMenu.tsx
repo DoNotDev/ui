@@ -96,7 +96,7 @@ import type {
 import { useNavigationItems } from '../../routing';
 import { useAuthSafe, useAuthVisibility } from '../../utils';
 import { useDeleteAccountSafe } from '../../utils/useDeleteAccountSafe';
-import { findLucideIcon } from '../common/lucideIconByName';
+import { iconByName } from '../common/iconByName';
 
 const NullComponent = () => null;
 
@@ -187,7 +187,7 @@ export interface AuthMenuProps {
  * Resolves Lucide icon component from string name or component reference
  *
  * Supports:
- * - String names (e.g., 'Settings', 'CreditCard') - resolved dynamically from lucide-react
+ * - String names (e.g., 'Settings', 'CreditCard') - loaded per icon (own chunk); unknown names show Settings
  * - React component references - returned as-is
  * - Undefined/null - returns Settings as fallback
  *
@@ -199,14 +199,7 @@ const getIcon = (
 ): ComponentType<{ className?: string }> => {
   if (!iconName) return Settings;
   if (typeof iconName === 'function') return iconName;
-  const cleanIconName = iconName.replace(/['"]/g, '');
-  const resolved = findLucideIcon(cleanIconName);
-  if (!resolved && process.env.NODE_ENV === 'development') {
-    console.warn(
-      `[AuthMenu] Icon name "${cleanIconName}" not found in Lucide icons, falling back to Settings.`
-    );
-  }
-  return resolved || Settings;
+  return iconByName(iconName, Settings);
 };
 
 export const AuthMenu = ({

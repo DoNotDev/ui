@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/routing/AuthGuardFallback.tsx
 
 /**

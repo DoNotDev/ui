@@ -25,6 +25,8 @@ vi.mock('../../../../core/i18n/src/utils/config', () => ({
 vi.mock('@donotdev/core', async () => ({
   ...await import('../../../../core/i18n/src/hooks/useTranslation'),
   useConsent: () => vi.fn(),
+  useAppConfig: () => ({}),
+  isCookieNoticeRequired: () => false,
 }));
 vi.mock('@donotdev/ui/routing/hooks', () => ({
   useRoutePath: () => state.pathname,

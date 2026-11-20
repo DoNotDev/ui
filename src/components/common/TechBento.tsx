@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/components/common/TechBento.tsx
 
 import { useState } from 'react';

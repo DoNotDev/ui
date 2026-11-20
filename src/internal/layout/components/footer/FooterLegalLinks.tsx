@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/internal/layout/components/footer/FooterLegalLinks.tsx
 
 /**
@@ -15,6 +16,7 @@ import type { AppMetadata } from '@donotdev/core';
 
 import { FooterBranding } from './FooterBranding';
 import { getLegalLinks, type FooterLegalLink } from './useLegalLinks';
+import { useCookieNoticeRequired } from '../../../../components/cookie-consent/useCookieNoticeRequired';
 import { Link } from '../../../../routing/Link';
 
 export interface FooterLegalLinksProps {
@@ -48,7 +50,8 @@ export const FooterLegalLinks: React.ComponentType<FooterLegalLinksProps> = ({
   const { t } = useTranslation('dndev');
   const appConfig = useAppConfig('app');
   const resolvedApp = app || appConfig || {};
-  const links = getLegalLinks(resolvedApp.footer);
+  const cookieNoticeRequired = useCookieNoticeRequired();
+  const links = getLegalLinks(resolvedApp.footer, cookieNoticeRequired);
 
   const linkStyle = {
     transition: 'color var(--dur-fast) ease-out',

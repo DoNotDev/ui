@@ -1,6 +1,6 @@
 {
   "name": "@donotdev/ui",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "private": false,
   "license": "MIT",
@@ -12,6 +12,10 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./rsc": {
+      "types": "./src/rsc.ts",
+      "react-server": "./src/rsc.ts"
     },
     "./vite": {
       "types": "./src/vite.ts",
@@ -28,6 +32,12 @@
       "vite-app": "./src/routing/hooks/hooks.vite.ts",
       "import": "./src/routing/hooks/hooks.next.ts",
       "default": "./src/routing/hooks/hooks.next.ts"
+    },
+    "./routing/link": {
+      "types": "./src/routing/link/link.next.ts",
+      "vite-app": "./src/routing/link/link.vite.ts",
+      "import": "./src/routing/link/link.next.ts",
+      "default": "./src/routing/link/link.next.ts"
     },
     "./dndev.css": "./src/dndev.css",
     "./dndev-next.css": "./src/dndev-next.css"
@@ -57,13 +67,13 @@
     "@tanstack/react-query-next-experimental": "5.107.1"
   },
   "peerDependencies": {
-    "@donotdev/ai": "^0.3.0",
-    "@donotdev/auth": "^0.3.0",
-    "@donotdev/billing": "^0.3.0",
-    "@donotdev/components": "^0.3.1",
-    "@donotdev/core": "^0.3.0",
-    "@donotdev/crud": "^0.3.0",
-    "@donotdev/oauth": "^0.3.0",
+    "@donotdev/ai": "^0.3.1",
+    "@donotdev/auth": "^0.3.1",
+    "@donotdev/billing": "^0.3.1",
+    "@donotdev/components": "^0.3.2",
+    "@donotdev/core": "^0.3.1",
+    "@donotdev/crud": "^0.3.1",
+    "@donotdev/oauth": "^0.3.1",
     "@hookform/resolvers": "^5.9.2",
     "lucide-react": "^0.575.0",
     "react": "^19.3.1",

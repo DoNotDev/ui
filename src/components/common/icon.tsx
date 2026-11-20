@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/components/common/icon.tsx
 
 /**
@@ -9,20 +10,14 @@
  * @author AMBROISE PARK Consulting
  */
 
-import * as LucideIcons from 'lucide-react';
+import { Palette } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { isValidElement } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 
 import { cn } from '@donotdev/components';
 
-import { findLucideIcon } from './lucideIconByName';
-
-function getLucideIcon(name: string | undefined): ComponentType<LucideProps> {
-  if (!name) return LucideIcons.Palette;
-  const cleanIconName = name.replace(/['"]/g, '');
-  return findLucideIcon(cleanIconName) || LucideIcons.Palette;
-}
+import { iconByName } from './iconByName';
 
 /** Props for the Icon component. */
 export interface IconProps {
@@ -32,7 +27,7 @@ export interface IconProps {
    * **SUPPORTS ALL FORMATS:**
    * - ✅ Lucide components: `<Rocket />` (function)
    * - ✅ Emoji strings: `"🚀"`
-   * - ✅ Lucide icon name strings: `"Rocket"` (resolved from lucide-react)
+   * - ✅ Lucide icon name strings: `"Rocket"` (theme icons render statically; any other name loads as its own chunk, with a same-size placeholder meanwhile and none in server HTML; unknown names show `Palette`)
    * - ✅ Custom ReactNode: Any custom component or element
    *
    * **NOTE:** This is the flexible runtime Icon component. For PageMeta.icon, only lucide-react JSX components are supported (see PageMeta type).
@@ -115,7 +110,7 @@ const Icon: ComponentType<IconProps> = ({
       );
     }
 
-    const LucideIcon = getLucideIcon(iconToRender);
+    const LucideIcon = iconByName(iconToRender, Palette);
     return (
       <LucideIcon
         className={cn(sizeClass, className)}

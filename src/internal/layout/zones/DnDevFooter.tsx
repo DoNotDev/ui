@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/internal/layout/zones/DnDevFooter.tsx
 
 /**
@@ -20,6 +21,7 @@ import { Stack } from '@donotdev/components';
 import type { AppMetadata } from '@donotdev/core';
 import { useBreakpoint, useTranslation, maybeTranslate } from '@donotdev/core';
 
+import { useCookieNoticeRequired } from '../../../components/cookie-consent/useCookieNoticeRequired';
 import { Link } from '../../../routing/Link';
 import { FooterBranding } from '../components/footer/FooterBranding';
 import {
@@ -64,7 +66,8 @@ function DnDevFooterComponent({
   const isLaptopOrDesktop = useBreakpoint('isLaptopOrDesktop');
 
   // Get legal links (defaults or custom) — must be called before any return
-  const links = getLegalLinks(app?.footer);
+  const cookieNoticeRequired = useCookieNoticeRequired();
+  const links = getLegalLinks(app?.footer, cookieNoticeRequired);
 
   // Custom mode: consumer owns zone visuals, structural wrapper only
   if (children !== undefined) {

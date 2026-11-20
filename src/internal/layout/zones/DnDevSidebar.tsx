@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/internal/layout/zones/DnDevSidebar.tsx
 
 /**

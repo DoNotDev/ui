@@ -180,7 +180,10 @@ import { useCrud } from '@donotdev/crud';
 
 **Sub-path exceptions** (server, config, and provider-specific):
 - **Server:** `@donotdev/core/server`, `@donotdev/firebase/server`, `@donotdev/security/server`
+- **Server components (Next only):** `@donotdev/core/rsc` (`useTranslation`, `setRequestLanguage`; see core `I18N.md`), `@donotdev/components/rsc`, `@donotdev/ui/rsc`. They resolve only in React Server Components (`react-server` condition); importing them anywhere else fails the build.
 - **Config:** `@donotdev/core/vite`, `@donotdev/core/next`, `@donotdev/core/functions`
+
+**`@donotdev/components/rsc` / `@donotdev/ui/rsc`** export the same names as the package root. Presentational components (Stack, Text, Grid, Button…) render on the server. Interactive ones (hooks, Radix, context, event handlers, browser APIs: Card, Dialog, PageContainer…) carry their own `'use client'` and render as client islands. Calling one of their hooks or helpers from a server component throws. The package roots (`@donotdev/components`, `@donotdev/ui`) are unchanged: client barrels everywhere, including server files. Nothing imports the `/rsc` entries yet, so apps render exactly as before until a later phase adopts them. Vite never uses them.
 - **Functions:** `@donotdev/functions/firebase`, `@donotdev/functions/vercel`, `@donotdev/functions/supabase`
 
 ---

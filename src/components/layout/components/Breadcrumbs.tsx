@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/components/layout/components/Breadcrumbs.tsx
 
 /**
@@ -27,6 +28,7 @@ import { useLayout, useTranslation } from '@donotdev/core';
 import { useRoutePath } from '@donotdev/ui/routing/hooks';
 
 import { Link } from '../../../routing/Link';
+import { useIsNotFoundDocument } from '../../../routing/NotFoundDocument';
 import { getPathPrefixes } from '../../../routing/parentRoute';
 import { useAllRoutes } from '../../../routing/useRouteDiscovery';
 
@@ -60,7 +62,8 @@ export interface BreadcrumbsProps {
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  *
- * Automatically generates breadcrumbs from current route or accepts custom items
+ * Automatically generates breadcrumbs from current route or accepts custom items.
+ * Renders no generated trail inside a NotFoundDocument (the 404, served for any URL).
  */
 const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
   items,
@@ -80,6 +83,11 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
   const validRoutes = useMemo(() => {
     return new Set(allRoutes.map((route) => route.path));
   }, [allRoutes]);
+
+  // The 404 document is served for any unknown URL (Next: rendered once at build, at
+  // `/_not-found`): no trail derived from the URL, or server and browser differ (React #418)
+  const notFoundDocument = useIsNotFoundDocument();
+  if (notFoundDocument && !items) return null;
 
   // Auto-generate breadcrumbs from current path if not provided
   const breadcrumbItems: BreadcrumbItem[] = items

@@ -48,7 +48,7 @@
 ## Common Components
 
 - **FeatureDisabled** - Component shown when features are disabled.
-- **Icon** - Icon component wrapper.
+- **Icon** - Icon component wrapper. `icon`: Lucide component (`{Rocket}`, static), emoji, ReactNode, or Lucide name string (`"Rocket"`): theme icons (`--theme-icon`) render statically from the build-time registry, any other name loads as its own chunk (same-size placeholder meanwhile, none in server HTML; unknown names show `Palette`). Prefer components for server-rendered icons.
 - **ProgressBar** - Progress bar component.
 - **Skeleton** - Skeleton loading component (consumer use, not used internally).
 - **FeatureCard** - Feature showcase card component.
@@ -58,7 +58,7 @@
 
 ## Routing Components
 
-- **Link** - Platform-agnostic link component (works in Vite + Next.js).
+- **Link** - Platform-agnostic link component (works in Vite + Next.js). Internal paths render `next/link` on Next.js (route prefetch by default, in full for signed-in visitors; `prefetch={false}` disables it) and a react-router `<a href>` on Vite. See ROUTING.md.
 - **AuthGuard** - Route guard component for protected routes.
 - **AuthGuardFallback** - Fallback component for auth-guarded routes.
 - **GoTo** - Programmatic navigation component.
@@ -92,7 +92,7 @@
 ## Cookie Consent
 
 - **CookieConsent** - Cookie consent management component.
-- **ConsentBanner** - Cookie consent banner component.
+- **ConsentBanner** - Cookie consent banner component. Renders nothing when the app sets only strictly necessary cookies (`features.requiredCookies` has no `functional`/`analytics`/`marketing`); the `#cookie-settings` footer link is then hidden too.
 
 ---
 

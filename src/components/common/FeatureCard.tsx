@@ -209,7 +209,6 @@ const FeatureCard = ({
           textDecoration: 'none',
           height: '100%',
         }}
-        aria-label={title ? `Learn more about ${title}` : undefined}
       >
         {card}
       </Link>

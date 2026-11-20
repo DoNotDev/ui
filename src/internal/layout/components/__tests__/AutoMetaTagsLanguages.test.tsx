@@ -7,6 +7,7 @@ const page = vi.hoisted(() => ({
   pathname: '/produits',
   language: 'en',
   routing: { languages: ['fr', 'en'], defaultLanguage: 'fr' },
+  hasBlogFeed: false,
 }));
 
 vi.mock('@donotdev/core', async () => {
@@ -18,14 +19,16 @@ vi.mock('@donotdev/core', async () => {
     getLanguageRouting: () => page.routing,
     isNextJs: () => true,
     useTranslation: () => ({ t: () => '' }),
-    getDndevConfig: () => ({ routes: { mapping: [] } }),
+    getDndevConfig: () => ({
+      routes: { mapping: [], manifest: { hasBlogFeed: page.hasBlogFeed } },
+    }),
     useSeoConfig: () => ({ siteName: 'Shop' }),
     useAppConfig: () => ({ name: 'Shop' }),
     getPlatformEnvVar: () => 'https://shop.example',
     translateArray: () => [],
   };
 });
-vi.mock('@donotdev/ui', () => ({
+vi.mock('../../../../utils/assetResolver', () => ({
   AssetResolver: { assetExists: () => false },
 }));
 vi.mock('@donotdev/ui/routing/hooks', () => ({
@@ -46,6 +49,7 @@ describe('AutoMetaTags: one URL per language', () => {
     page.pathname = '/produits';
     page.language = 'en';
     page.routing = { languages: ['fr', 'en'], defaultLanguage: 'fr' };
+    page.hasBlogFeed = false;
   });
 
   it('canonical is the page in its own language', () => {
@@ -85,5 +89,17 @@ describe('AutoMetaTags: one URL per language', () => {
     expect(html).toContain(
       '"logo":{"@type":"ImageObject","url":"https://shop.example/logo.svg"}'
     );
+  });
+
+  it('no RSS link when the app has no blog feed', () => {
+    const html = renderToStaticMarkup(<AutoMetaTags />);
+    expect(html).not.toContain('application/rss+xml');
+  });
+
+  it('RSS link when the app has a blog feed', () => {
+    page.hasBlogFeed = true;
+    const html = renderToStaticMarkup(<AutoMetaTags />);
+    expect(html).toContain('type="application/rss+xml"');
+    expect(html).toContain('href="https://shop.example/rss.xml"');
   });
 });

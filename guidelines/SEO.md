@@ -245,9 +245,12 @@ defineEntity({
 Both list the same pages, generated from `src/pages` - no app code:
 
 - **In:** public static routes, plus one URL per public record (`status` not in `HIDDEN_STATUSES`: any status except `draft`/`deleted`) of each single-param route's entity (`/produits/:slug` → `meta.entity` collection). Never a `:param` template.
-- **Out:** `auth.required` routes and `seo: { noindex: true }` routes.
+- **Out:** `auth.required` routes, `seo: { noindex: true }` routes and error routes (`/404`, `/not-found`, `/500`, `/error`).
+- **RSS:** `<link rel="alternate" type="application/rss+xml">` to `/rss.xml` is in the head only when the app has blog posts (`src/content/blog/*_en.md`), the condition under which the feed is generated (`routes.manifest.hasBlogFeed`).
 - **URLs:** absolute, from `seo.baseUrl` or `NEXT_PUBLIC_APP_URL` / `VITE_APP_URL`. A production build with a localhost URL fails.
 - **llms.txt labels (app default language):** page = namespace `title` → `seo.title` → namespace `meta.fullTitle` → `seo.fullTitle` (a static page with none fails the build); entity record = `deriveEntitySeo` title/description (same as `<Seo entity data>`); entity section = `namePlural` of its `entity-*` translations.
+- **Prerendered pages (Next):** the same records fill each entity page's `generateStaticParams` (`listStaticParams`, one route → collection decision `publicCollection`): every URL of the sitemap's dynamic routes is built at build time (`appConfig.prerenderRecords: false` to opt out).
+- **Reader (Next):** records are read on the server as a signed-out visitor, from the app's public env, never a privileged key: `@donotdev/supabase` (RLS decides) or `@donotdev/firebase` (`@donotdev/firebase/public`, Firestore Security Rules decide; they must allow the whole `status not-in` query). Any other provider fails the build when a route lists records.
 - **Next:** `src/app/sitemap.xml/route.next.ts` and `src/app/llms.txt/route.next.ts`, revalidated hourly (`appConfig.revalidate`: other lifetime in seconds, or `false` until the next deploy). Entity definitions come from the app's `entities` package.
 - **Vite:** written at build; static pages only (same as the Vite sitemap).
 

@@ -1,3 +1,4 @@
+'use client';
 // packages/ui/src/components/layout/components/header/SettingsMenu.tsx
 
 /**
@@ -9,8 +10,7 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { Settings, Check } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { Settings, Check, Palette } from 'lucide-react';
 import type { ComponentType } from 'react';
 
 import {
@@ -30,7 +30,7 @@ import {
 } from '@donotdev/core';
 
 import CacheSettings from './CacheSettings';
-import { findLucideIcon } from '../../../common/lucideIconByName';
+import { iconByName } from '../../../common/iconByName';
 import { AuthHeader } from '../../../auth/AuthHeader';
 
 /** Props for the SettingsMenu component. */
@@ -59,9 +59,8 @@ function SettingsMenu({
   const getIcon = (
     iconName: string | undefined
   ): ComponentType<{ className?: string }> => {
-    if (!iconName) return LucideIcons.Palette;
-    const cleanIconName = iconName.replace(/['"]/g, '');
-    return findLucideIcon(cleanIconName) || LucideIcons.Palette;
+    if (!iconName) return Palette;
+    return iconByName(iconName, Palette);
   };
 
   const themeItems: DropdownMenuItemData[] = availableThemes.map(

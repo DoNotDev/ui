@@ -34,10 +34,11 @@ import {
 import { getDndevConfig } from '@donotdev/core';
 import { useSeoConfig, useAppConfig, getPlatformEnvVar } from '@donotdev/core';
 import type { SeoMeta } from '@donotdev/core';
-import { AssetResolver } from '@donotdev/ui';
 // Platform-specific hooks via conditional exports
 import { useRoutePath, useUrlLanguage } from '@donotdev/ui/routing/hooks';
 
+import { useIsNotFoundDocument } from '../../../routing/NotFoundDocument';
+import { AssetResolver } from '../../../utils/assetResolver';
 import { HeadTags } from './HeadTags';
 import { readI18nSeoMeta, resolveSeoField } from './i18nSeoMeta';
 
@@ -78,6 +79,12 @@ interface ResolvedRouteMetadata {
   meta: RouteMetadata;
   dynamic: boolean;
 }
+
+/** Route metadata of the 404 document: none (it has no URL of its own). */
+const NOT_FOUND_ROUTE_METADATA: ResolvedRouteMetadata = {
+  meta: {},
+  dynamic: false,
+};
 
 /**
  * Get route metadata from the build-time config (`globalThis._DNDEV_CONFIG_`).
@@ -252,6 +259,8 @@ function buildSpeculationRules() {
  * - Speculation Rules API
  * - BreadcrumbList + WebSite JSON-LD
  * - 100% Lighthouse SEO compliance
+ * - Inside a NotFoundDocument (the 404, served for any unknown URL): site-level tags
+ *   only, titled with the site name; nothing derived from the URL
  */
 export const AutoMetaTags: ComponentType = () => {
   const { t } = useTranslation();
@@ -260,11 +269,18 @@ export const AutoMetaTags: ComponentType = () => {
   const appMeta = useAppConfig('app');
   const siteName = (seoConfig && seoConfig.siteName) || appMeta?.name || '';
   const baseUrl = getPlatformEnvVar('APP_URL') || '';
+  // /rss.xml exists only when the app has blog posts (generated at build)
+  const hasBlogFeed = getDndevConfig()?.routes?.manifest?.hasBlogFeed === true;
+
+  // The 404 document is served for any unknown URL (Next: rendered once at build, at
+  // `/_not-found`): nothing derived from the URL (route metadata, canonical, og:url,
+  // hreflang, JSON-LD), or the server HTML and the browser render differ (React #418).
+  const notFoundDocument = useIsNotFoundDocument();
 
   // Get route metadata — computed from current pathname
-  const { meta: routeMeta, dynamic: isDynamicRoute } = getRouteMetadata(
-    pathname
-  );
+  const { meta: routeMeta, dynamic: isDynamicRoute } = notFoundDocument
+    ? NOT_FOUND_ROUTE_METADATA
+    : getRouteMetadata(pathname);
   // On Next, a dynamic route's page renders the record's <Seo> (title, description,
   // image). React 19 hoists every <title>/<meta> without deduping (unlike Helmet on
   // Vite), so the page owns those tags there and this component emits site-level tags only.
@@ -283,12 +299,16 @@ export const AutoMetaTags: ComponentType = () => {
     const { defaultNamespace = 'home', defaultImage = '/og-image.png' } =
       seoConfig;
     // Canonical: this page in this language (`/en/x`; `/x` for the default language)
-    const currentUrl = `${baseUrl}${localizePath(pathname, language, routing)}`;
-    const ns = routeMeta.namespace || defaultNamespace;
+    // None on the 404 document (no URL of its own)
+    const currentUrl = notFoundDocument
+      ? null
+      : `${baseUrl}${localizePath(pathname, language, routing)}`;
+    // None on the 404 document: its title is the site name
+    const ns = notFoundDocument ? null : routeMeta.namespace || defaultNamespace;
     const seo = routeMeta.seo;
 
     // Get the meta fields from i18n (image, type, keywords, author, fullTitle)
-    const metaObject = readI18nSeoMeta(t, ns);
+    const metaObject = ns ? readI18nSeoMeta(t, ns) : null;
 
     // Title resolution priority:
     // 1. i18n meta.fullTitle → translated, language-aware (wins)
@@ -305,16 +325,16 @@ export const AutoMetaTags: ComponentType = () => {
       fullTitle = seo.fullTitle;
     } else {
       // Standard resolution: title | siteName
-      const pageTitle = resolveSeoField(seo?.title, `${ns}:title`, t);
+      const pageTitle = ns
+        ? resolveSeoField(seo?.title, `${ns}:title`, t)
+        : undefined;
       fullTitle = pageTitle ? `${pageTitle} | ${siteName}` : siteName;
     }
 
     // Description resolution: seo.description > i18n
-    const description = resolveSeoField(
-      seo?.description,
-      `${ns}:description`,
-      t
-    );
+    const description = ns
+      ? resolveSeoField(seo?.description, `${ns}:description`, t)
+      : undefined;
 
     // Other meta fields: seo > i18n meta object > defaults
     const pageImage = seo?.image || metaObject?.image || defaultImage;
@@ -343,7 +363,16 @@ export const AutoMetaTags: ComponentType = () => {
       publishDate: routeMeta.publishDate,
       modifiedDate: routeMeta.modifiedDate,
     };
-  }, [pathname, language, routeMeta, siteName, baseUrl, seoConfig, t]);
+  }, [
+    notFoundDocument,
+    pathname,
+    language,
+    routeMeta,
+    siteName,
+    baseUrl,
+    seoConfig,
+    t,
+  ]);
 
   // Return null if SEO is disabled — after all hooks have been called
   if (!seoConfig || !metaData) return null;
@@ -361,14 +390,16 @@ export const AutoMetaTags: ComponentType = () => {
 
   // hreflang: only emit when 2+ languages configured
   const shouldEmitHreflang =
-    hreflangEnabled && isMultilingual(routing.languages);
+    hreflangEnabled && !notFoundDocument && isMultilingual(routing.languages);
   const alternates = languageUrls(pathname, baseUrl, routing);
 
   return (
     <HeadTags>
       {/* SITE: canonical + og:url, every route */}
-      {baseUrl && <link rel="canonical" href={metaData.url} />}
-      {baseUrl && <meta property="og:url" content={metaData.url} />}
+      {baseUrl && metaData.url && <link rel="canonical" href={metaData.url} />}
+      {baseUrl && metaData.url && (
+        <meta property="og:url" content={metaData.url} />
+      )}
       <meta property="og:site_name" content={siteName} />
 
       {/* PAGE IDENTITY: owned by the page's <Seo> on Next dynamic routes */}
@@ -475,7 +506,7 @@ export const AutoMetaTags: ComponentType = () => {
       )}
 
       {/* RSS: Auto-discovery for feed readers */}
-      {baseUrl && (
+      {baseUrl && hasBlogFeed && (
         <link
           rel="alternate"
           type="application/rss+xml"
@@ -491,8 +522,8 @@ export const AutoMetaTags: ComponentType = () => {
           <link rel="dns-prefetch" href={new URL(metaData.image).origin} />
         )}
 
-      {/* JSON-LD: Page/Article structured data (the page's <Seo> owns it on Next dynamic routes) */}
-      {!pageOwnsIdentity && (
+      {/* JSON-LD: Page/Article structured data (the page's <Seo> owns it on Next dynamic routes; none on the 404 document) */}
+      {!pageOwnsIdentity && metaData.url && (
         <script type="application/ld+json">
           {JSON.stringify({
             '@context': 'https://schema.org',
@@ -535,7 +566,7 @@ export const AutoMetaTags: ComponentType = () => {
       )}
 
       {/* JSON-LD: BreadcrumbList (auto from URL segments) */}
-      {breadcrumbSchemaEnabled && pathname !== '/' && (
+      {breadcrumbSchemaEnabled && !notFoundDocument && pathname !== '/' && (
         <script type="application/ld+json">
           {JSON.stringify(
             buildBreadcrumbSchema(pathname, baseUrl, siteName, localize)

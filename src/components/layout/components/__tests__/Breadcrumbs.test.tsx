@@ -26,6 +26,7 @@ vi.mock('../../../../routing/Link', () => ({
   ),
 }));
 
+import { NotFoundDocument } from '../../../../routing/NotFoundDocument';
 import Breadcrumbs from '../Breadcrumbs';
 
 describe('Breadcrumbs record segment', () => {
@@ -43,5 +44,27 @@ describe('Breadcrumbs record segment', () => {
   it('keeps the segment when no record label is set', () => {
     const html = renderToStaticMarkup(<Breadcrumbs />);
     expect(html).toContain('Ee8ba791');
+  });
+});
+
+// Regression: the static 404 (built at /_not-found) is served at any URL; a trail from
+// a 2+ segment URL rendered only in the browser (React #418 on apps/next /foo/bar)
+describe('Breadcrumbs in the 404 document', () => {
+  it('renders no generated trail', () => {
+    const html = renderToStaticMarkup(
+      <NotFoundDocument>
+        <Breadcrumbs />
+      </NotFoundDocument>
+    );
+    expect(html).toBe('');
+  });
+
+  it('keeps explicit items', () => {
+    const html = renderToStaticMarkup(
+      <NotFoundDocument>
+        <Breadcrumbs items={[{ label: 'Docs', href: '/docs' }, { label: 'Here' }]} />
+      </NotFoundDocument>
+    );
+    expect(html).toContain('Docs');
   });
 });

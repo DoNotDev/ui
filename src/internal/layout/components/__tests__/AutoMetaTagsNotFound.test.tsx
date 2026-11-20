@@ -1,0 +1,80 @@
+// packages/ui/src/internal/layout/components/__tests__/AutoMetaTagsNotFound.test.tsx
+
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
+
+const page = vi.hoisted(() => ({ pathname: '/_not-found' }));
+
+vi.mock('@donotdev/core', async () => {
+  const languagePath = await import(
+    '../../../../../../core/utils/src/common/languagePath'
+  );
+  return {
+    ...languagePath,
+    getLanguageRouting: () => ({
+      languages: ['fr', 'en'],
+      defaultLanguage: 'fr',
+    }),
+    isNextJs: () => true,
+    // Page titles / descriptions translate, so a namespace lookup shows in the output
+    useTranslation: () => ({
+      t: (key: string) => (/:(title|description)$/.test(key) ? `T(${key})` : ''),
+    }),
+    getDndevConfig: () => ({
+      routes: { mapping: [], manifest: { hasBlogFeed: false } },
+    }),
+    useSeoConfig: () => ({ siteName: 'Shop' }),
+    useAppConfig: () => ({ name: 'Shop' }),
+    getPlatformEnvVar: () => 'https://shop.example',
+    translateArray: () => [],
+  };
+});
+vi.mock('../../../../utils/assetResolver', () => ({
+  AssetResolver: { assetExists: () => false },
+}));
+vi.mock('@donotdev/ui/routing/hooks', () => ({
+  useRoutePath: () => page.pathname,
+  useUrlLanguage: () => 'fr',
+}));
+vi.mock('../HeadTags', () => ({
+  HeadTags: ({ children }: { children: unknown }) => <>{children}</>,
+}));
+
+import { NotFoundDocument } from '../../../../routing/NotFoundDocument';
+import { AutoMetaTags } from '../AutoMetaTags';
+
+const renderAt = (pathname: string) => {
+  page.pathname = pathname;
+  return renderToStaticMarkup(
+    <NotFoundDocument>
+      <AutoMetaTags />
+    </NotFoundDocument>
+  );
+};
+
+// Regression: the static 404 is built at /_not-found and served at any URL; its
+// URL-derived JSON-LD differed from the browser render (React #418 on apps/next).
+describe('AutoMetaTags in the 404 document', () => {
+  it('renders the same tags whatever the URL', () => {
+    expect(renderAt('/does-not-exist')).toBe(renderAt('/_not-found'));
+    expect(renderAt('/a/b')).toBe(renderAt('/_not-found'));
+  });
+
+  it('has no URL-derived tag, the site name as title', () => {
+    const html = renderAt('/legal/unknown');
+    expect(html).not.toMatch(
+      /rel="canonical"|og:url|hrefLang|"@type":"WebPage"|BreadcrumbList/
+    );
+    expect(html).not.toContain('T(');
+    expect(html).toContain('<title>Shop</title>');
+    expect(html).toContain('<meta property="og:site_name" content="Shop"/>');
+  });
+
+  it('outside it, the page keeps its canonical and JSON-LD', () => {
+    page.pathname = '/legal/terms';
+    const html = renderToStaticMarkup(<AutoMetaTags />);
+    expect(html).toContain('rel="canonical" href="https://shop.example/legal/terms"');
+    expect(html).toContain('"@type":"WebPage"');
+    expect(html).toContain('BreadcrumbList');
+  });
+});

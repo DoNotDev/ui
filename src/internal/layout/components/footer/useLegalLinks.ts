@@ -16,12 +16,15 @@ const DEFAULT_LINKS: FooterLegalLink[] = [
 /**
  * Returns the configured legal links for the footer.
  * Handles the logic: `footer: null` or `legalLinks: null` = hide, undefined = defaults,
- * array = custom
+ * array = custom.
+ * The `#cookie-settings` link is dropped when the app has no cookie notice
+ * (`cookieNoticeRequired: false`, see `useCookieNoticeRequired`): nothing to configure.
  *
  * @remarks Not a hook — no React state or effects. Named with `get` prefix.
  */
 export const getLegalLinks = (
-  footerConfig: AppMetadata['footer']
+  footerConfig: AppMetadata['footer'],
+  cookieNoticeRequired = true
 ): FooterLegalLink[] => {
   // No footer at all, or links explicitly null: hidden (also in presets that show them in the sidebar)
   if (footerConfig === null || footerConfig?.legalLinks === null) {
@@ -29,5 +32,8 @@ export const getLegalLinks = (
   }
 
   // Use configured links or defaults
-  return footerConfig?.legalLinks ?? DEFAULT_LINKS;
+  const links = footerConfig?.legalLinks ?? DEFAULT_LINKS;
+  return cookieNoticeRequired
+    ? links
+    : links.filter((link) => link.path !== '#cookie-settings');
 };

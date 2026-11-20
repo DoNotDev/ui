@@ -38,6 +38,7 @@ import type { AppProvidersProps, LanguageNavigate } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
 import { useUrlLanguage } from '@donotdev/ui/routing/hooks';
 
+import { useCookieNoticeRequired } from '../components/cookie-consent/useCookieNoticeRequired';
 import { NextJsStoresInitializer } from '../internal/initializers/NextJsStoresInitializer';
 import { AutoMetaTags } from '../internal/layout/components/AutoMetaTags';
 import FaviconHead from '../internal/layout/components/FaviconHead';
@@ -79,7 +80,10 @@ const RedirectOverlay = lazy(() =>
 function ConsentBanner() {
   const hasConsented = useConsent('hasConsented');
   const showBanner = useConsent('showBanner');
+  const noticeRequired = useCookieNoticeRequired();
 
+  // Only strictly necessary cookies: no banner, and the banner chunk is never loaded
+  if (!noticeRequired) return null;
   if (hasConsented && !showBanner) {
     return null;
   }
