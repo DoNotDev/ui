@@ -219,7 +219,7 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
               serverCookies={serverCookies}
               customStores={customStores}
             >
-              {/* Favicon - uses useFaviconConfig() internally */}
+              {/* Favicon tags, in the server HTML (useFaviconConfig() + asset manifest) */}
               <FaviconHead />
 
               <QueryProviders>
@@ -229,7 +229,9 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
                 <ReactQueryStreamedHydration>
                   <UIProviders>
                     {/* SEO: same head as Vite (title, description, canonical, og, JSON-LD), in the
-                      server HTML. On dynamic routes the page's <Seo> owns the page identity. */}
+                      server HTML. On routes whose page sets its identity on the server
+                      (routes.manifest.serverMetadataPaths: entity pages, blog posts, a page's own
+                      generateMetadata) it emits the site-level tags only. */}
                     <AutoMetaTags />
 
                     {/* Layout - uses config hooks internally */}

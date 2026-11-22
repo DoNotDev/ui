@@ -79,7 +79,9 @@ const lazyComponentCache = new Map<
 
 /**
  * NotFoundPage component with lazy loading and caching
- * Only loads when actually needed (404 route)
+ * Only loads when actually needed (404 route). A client-rendered app answers every URL
+ * with HTTP 200, so the 404 tells crawlers not to index the URL (`robots` noindex, hoisted
+ * into `<head>` by React 19). Next serves a real 404 instead (`notFound()`, not-found pages).
  */
 function NotFoundPage() {
   const cacheKey = '404';
@@ -95,9 +97,12 @@ function NotFoundPage() {
   const LazyNotFoundPage = lazyComponentCache.get(cacheKey)!;
 
   return (
-    <Suspense fallback={<Spinner overlay />}>
-      <LazyNotFoundPage />
-    </Suspense>
+    <>
+      <meta name="robots" content="noindex" />
+      <Suspense fallback={<Spinner overlay />}>
+        <LazyNotFoundPage />
+      </Suspense>
+    </>
   );
 }
 

@@ -98,7 +98,7 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
         const breadcrumbs: BreadcrumbItem[] = [];
         pathSegments.forEach((segment: string, index: number) => {
           const currentPath = prefixes[index] ?? '';
-          // A record id segment shows the record's name, not the raw id
+          // The segment naming the shown record (slug or id) shows the record's name
           const label =
             recordLabel && decodeURIComponent(segment) === recordLabel.id
               ? recordLabel.label

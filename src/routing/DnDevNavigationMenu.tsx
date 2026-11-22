@@ -42,10 +42,22 @@ import type {
 } from '@donotdev/components';
 import { useTranslation } from '@donotdev/core';
 
+import { useRoutePath } from '@donotdev/ui/routing/hooks';
+
 import { Link } from './Link';
 import { useNavigationItems } from './useNavigation';
 import type { NavigationItem } from './useNavigation';
 import { Icon } from '../components/common/icon';
+
+/**
+ * Whether `path` is the current page: exact match, or the current route is
+ * nested under it (segment boundary). Home (`/`) matches exactly only.
+ */
+function isActivePath(path: string | undefined, pathname: string): boolean {
+  if (!path) return false;
+  if (path === '/') return pathname === '/';
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
 
 /** Props for the DnDevNavigationMenu component. */
 export interface DnDevNavigationMenuProps {
@@ -103,6 +115,7 @@ export const DnDevNavigationMenu: ComponentType<DnDevNavigationMenuProps> = ({
   style,
 }) => {
   const { t } = useTranslation('dndev');
+  const pathname = useRoutePath();
   const autoRoutes = useNavigationItems();
   const finalRoutes = routes ?? autoRoutes;
   const containerRef = useRef<HTMLUListElement>(null);
@@ -114,15 +127,22 @@ export const DnDevNavigationMenu: ComponentType<DnDevNavigationMenuProps> = ({
         label: route.label,
         path: route.path,
         icon: <Icon icon={route.icon} fallback={LinkIcon} />,
+        active:
+          isActivePath(route.path, pathname) ||
+          (route.children?.some((child) =>
+            isActivePath(child.path, pathname)
+          ) ??
+            false),
         children: route.children
           ? route.children.map((child) => ({
               label: child.label,
               path: child.path,
               icon: <Icon icon={child.icon} fallback={LinkIcon} />,
+              active: isActivePath(child.path, pathname),
             }))
           : undefined,
       })),
-    [finalRoutes]
+    [finalRoutes, pathname]
   );
 
   useEffect(() => {
@@ -209,6 +229,8 @@ export const DnDevNavigationMenu: ComponentType<DnDevNavigationMenuProps> = ({
                   path={item.path!}
                   className={cn('dndev-interactive')}
                   data-role="nav-trigger"
+                  aria-current={item.active ? 'page' : undefined}
+                  data-active={item.active ? 'true' : undefined}
                 >
                   {showIcons && item.icon}
                   <span className="dndev-interactive-label">{item.label}</span>
@@ -238,6 +260,8 @@ export const DnDevNavigationMenu: ComponentType<DnDevNavigationMenuProps> = ({
                           path={item.path!}
                           className={cn('dndev-interactive')}
                           data-role="menu-item"
+                          aria-current={item.active ? 'page' : undefined}
+                          data-active={item.active ? 'true' : undefined}
                         >
                           {showIcons && item.icon}
                           <span className="dndev-interactive-label">

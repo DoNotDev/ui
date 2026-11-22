@@ -43,11 +43,6 @@ const HelmetProvider = lazy(() =>
 // NavigationProvider uses React hooks (useEffect) and must load in the same chunk as React
 // Lazy loading causes "Invalid hook call" errors because React's dispatcher is null when the chunk loads
 // This has been tested - lazy loading NavigationProvider NEVER works, keep it eagerly imported
-const FaviconHead = lazy(() =>
-  import('../internal/layout/components/FaviconHead').then((m) => ({
-    default: m.default,
-  }))
-);
 
 /** Language of the browser URL (prefix, else the default language). */
 function currentUrlLanguage(): string {
@@ -74,17 +69,19 @@ function useDisposeReplacedRouter(router: ReturnType<typeof createAppRouter>) {
  * 2. SentryInitializer (error monitoring)
  * 3. ViteStoresInitializer (store setup)
  * 4. HelmetProvider (head management)
- * 5. FaviconHead (favicon configuration)
- * 6. NavigationProvider (RouterProvider with auto-abort)
+ * 5. NavigationProvider (RouterProvider with auto-abort)
  *
  * Provider hierarchy (inside router via RootLayout):
- * 7. QueryProviders (React Query)
- * 8. UIProviders (design system)
- * 9. AutoMetaTags (SEO)
- * 10. FrameworkReadySignal (framework initialization)
- * 11. Layout (application layout)
- * 12. ConsentBanner (cookie consent)
- * 13. PWAUpdateNotification (PWA updates)
+ * 6. QueryProviders (React Query)
+ * 7. UIProviders (design system)
+ * 8. AutoMetaTags (SEO)
+ * 9. FrameworkReadySignal (framework initialization)
+ * 10. Layout (application layout)
+ * 11. ConsentBanner (cookie consent)
+ * 12. PWAUpdateNotification (PWA updates)
+ *
+ * No favicon component: the build writes the favicon tags into index.html and every
+ * prerendered page (`createViteFaviconPlugin`, `faviconHeadTags` of `@donotdev/core`).
  *
  * @version 0.1.0
  * @since 0.0.1
@@ -146,9 +143,6 @@ export function ViteAppProviders(props: AppProvidersProps) {
       <ViteStoresInitializer customStores={customStores}>
         <Suspense fallback={null}>
           <HelmetProvider>
-            {/* Favicon - uses useFaviconConfig() internally */}
-            <FaviconHead />
-
             {/* NavigationProvider uses RouterProvider with data router pattern */}
             {/* RootLayout (inside router config) provides QueryProviders, UIProviders, Layout, etc. */}
             <LanguageNavigationProvider navigate={navigateToLanguage}>

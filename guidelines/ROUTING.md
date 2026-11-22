@@ -50,6 +50,7 @@ Internal paths render a real `<a href>` on both platforms (via `@donotdev/ui/rou
 // Auto-fetches routes, handles auth filtering
 <DnDevNavigationMenu vertical display={DISPLAY.AUTO} />
 ```
+The link of the current route gets `aria-current="page"` + `data-active="true"` (exact match, or the route is nested under the item's path; `/` matches exactly only). A parent item is active when one of its children is. Also applies to the header overflow ("More") dropdown.
 
 ### Hooks
 

@@ -8,19 +8,34 @@ const page = vi.hoisted(() => ({
   language: 'en',
   routing: { languages: ['fr', 'en'], defaultLanguage: 'fr' },
   hasBlogFeed: false,
+  trailingSlash: false,
 }));
 
 vi.mock('@donotdev/core', async () => {
   const languagePath = await import(
     '../../../../../../core/utils/src/common/languagePath'
   );
+  // AutoMetaTags builds its tags with these (shared with the Vite prerender)
+  const headTags = await import(
+    '../../../../../../core/utils/src/common/headTags'
+  );
+  // The route matcher AutoMetaTags shares with crud
+  const routeMatch = await import('../../../../../../core/utils/src/common/routeMatch');
   return {
     ...languagePath,
+    ...headTags,
+    ...routeMatch,
     getLanguageRouting: () => page.routing,
     isNextJs: () => true,
     useTranslation: () => ({ t: () => '' }),
     getDndevConfig: () => ({
-      routes: { mapping: [], manifest: { hasBlogFeed: page.hasBlogFeed } },
+      routes: {
+        mapping: [],
+        manifest: {
+          hasBlogFeed: page.hasBlogFeed,
+          trailingSlash: page.trailingSlash,
+        },
+      },
     }),
     useSeoConfig: () => ({ siteName: 'Shop' }),
     useAppConfig: () => ({ name: 'Shop' }),
@@ -28,9 +43,6 @@ vi.mock('@donotdev/core', async () => {
     translateArray: () => [],
   };
 });
-vi.mock('../../../../utils/assetResolver', () => ({
-  AssetResolver: { assetExists: () => false },
-}));
 vi.mock('@donotdev/ui/routing/hooks', () => ({
   useRoutePath: () => page.pathname,
   useUrlLanguage: () => page.language,
@@ -50,6 +62,7 @@ describe('AutoMetaTags: one URL per language', () => {
     page.language = 'en';
     page.routing = { languages: ['fr', 'en'], defaultLanguage: 'fr' };
     page.hasBlogFeed = false;
+    page.trailingSlash = false;
   });
 
   it('canonical is the page in its own language', () => {
@@ -101,5 +114,33 @@ describe('AutoMetaTags: one URL per language', () => {
     const html = renderToStaticMarkup(<AutoMetaTags />);
     expect(html).toContain('type="application/rss+xml"');
     expect(html).toContain('href="https://shop.example/rss.xml"');
+  });
+
+  it('trailingSlash: canonical, og:url, hreflang and JSON-LD URLs end with `/`', () => {
+    page.trailingSlash = true;
+    page.pathname = '/';
+    const home = renderToStaticMarkup(<AutoMetaTags />);
+    expect(linkHref(home, 'rel="canonical"')).toBe('https://shop.example/en/');
+    expect(home).toContain('<meta property="og:url" content="https://shop.example/en/"/>');
+    expect(linkHref(home, 'rel="alternate" hrefLang="fr"')).toBe('https://shop.example/');
+    expect(linkHref(home, 'rel="alternate" hrefLang="en"')).toBe('https://shop.example/en/');
+    expect(home).toContain('"urlTemplate":"https://shop.example/search/?q={search_term_string}"');
+
+    page.pathname = '/produits';
+    const html = renderToStaticMarkup(<AutoMetaTags />);
+    expect(linkHref(html, 'rel="canonical"')).toBe('https://shop.example/en/produits/');
+    expect(linkHref(html, 'rel="alternate" hrefLang="fr"')).toBe(
+      'https://shop.example/produits/'
+    );
+    expect(html).toContain('"url":"https://shop.example/en/produits/"');
+    expect(html).toContain('"item":"https://shop.example/en/"');
+    expect(html).toContain('"item":"https://shop.example/en/produits/"');
+  });
+
+  it('no trailingSlash: URLs keep the route form (FR home at the root, /en without slash)', () => {
+    page.pathname = '/';
+    const home = renderToStaticMarkup(<AutoMetaTags />);
+    expect(linkHref(home, 'rel="canonical"')).toBe('https://shop.example/en');
+    expect(home).toContain('"urlTemplate":"https://shop.example/search?q={search_term_string}"');
   });
 });

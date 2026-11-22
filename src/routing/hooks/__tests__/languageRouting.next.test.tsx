@@ -96,6 +96,18 @@ describe('Next routing with a language prefix', () => {
     expect(renderHook(() => useRoutePath()).result.current).toBe('/produits');
   });
 
+  it('useRoutePath gives the route form of a trailing-slash URL (Next trailingSlash)', () => {
+    nav.pathname = '/en/produits/';
+    expect(renderHook(() => useRoutePath()).result.current).toBe('/produits');
+    expect(renderHook(() => useUrlLanguage()).result.current).toBe('en');
+    nav.pathname = '/en/';
+    expect(renderHook(() => useRoutePath()).result.current).toBe('/');
+    nav.pathname = '/a-propos/';
+    expect(renderHook(() => useRoutePath()).result.current).toBe('/a-propos');
+    nav.pathname = '/';
+    expect(renderHook(() => useRoutePath()).result.current).toBe('/');
+  });
+
   it('useLocation keeps the query string', () => {
     nav.pathname = '/en/produits';
     nav.search = 'page=2';

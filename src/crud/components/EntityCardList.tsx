@@ -15,7 +15,7 @@
  */
 
 import { Heart } from 'lucide-react';
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   Card,
@@ -25,6 +25,7 @@ import {
   Skeleton,
   Section,
   Button,
+  observeElement,
 } from '@donotdev/components';
 import {
   useTranslation,
@@ -77,6 +78,9 @@ function resolveSkeletonSlots(entity: EntityCardListProps['entity']) {
     footerFields: [] as string[],
   };
 }
+
+/** Opt-in feed: reveal the next page this far before the end of the grid enters the viewport. */
+const REVEAL_MARGIN = '600px 0px';
 
 /**
  * Skeleton grid — renders the same Card structure as CrudCard but with
@@ -160,12 +164,16 @@ function CardListSkeleton({
  * - Simple formatted text display (labels + values)
  * - Empty state handling
  * - Auto-routing when handler not provided
+ * - Opt-in feed rendering (`pageSize`): the first `pageSize` cards render (server HTML
+ *   included), `pageSize` more are added as the end of the grid nears the viewport,
+ *   until every card is shown. Without `pageSize`, every card renders at once.
  */
 export function EntityCardList({
   entity,
   basePath,
   onClick,
   cols = [1, 2, 3, 4],
+  pageSize,
   staleTime = 1000 * 60 * 30, // 30 minutes default cache
   queryOptions,
   filter,
@@ -234,6 +242,26 @@ export function EntityCardList({
       return aFav - bFav;
     });
   }
+
+  // Opt-in feed (pageSize): same first page on server and client (no hydration
+  // mismatch); the sentinel after the grid reveals the next page. Re-observing after
+  // each page re-fires while the sentinel stays in range, so tall screens fill without
+  // a scroll. Without pageSize every card renders.
+  const [shownCount, setShownCount] = useState(pageSize ?? Infinity);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const hasMore =
+    pageSize != null && !loading && !fetchError && shownCount < data.length;
+  useEffect(() => {
+    const element = moreRef.current;
+    if (!element || !hasMore || pageSize == null) return;
+    return observeElement(
+      element,
+      (entry) => {
+        if (entry.isIntersecting) setShownCount((n) => n + pageSize);
+      },
+      { rootMargin: REVEAL_MARGIN }
+    );
+  }, [hasMore, shownCount, pageSize]);
 
   // Entity + crud namespaces so formatValue can resolve crud:price.* etc.
   const { t } = useTranslation([entity.namespace, 'crud']);
@@ -344,56 +372,63 @@ export function EntityCardList({
             </Text>
           </Stack>
         ) : (
-          <Grid cols={cols}>
-            {/* item type is EntityRecord (Record<string, AnyFieldValue=unknown>); id is guaranteed by data layer */}
-            {data.map((item: EntityRecord & { id: string }) => {
-              const itemIsFavorite = isFavorite(item.id);
-              const detailHref =
-                isPreview || onClick ? undefined : `${base}/${item.id}`;
+          <>
+            <Grid cols={cols}>
+              {/* item type is EntityRecord (Record<string, AnyFieldValue=unknown>); id is guaranteed by data layer */}
+              {data
+                .slice(0, shownCount)
+                .map((item: EntityRecord & { id: string }) => {
+                  const itemIsFavorite = isFavorite(item.id);
+                  const detailHref =
+                    isPreview || onClick ? undefined : `${base}/${item.id}`;
 
-              return (
-                <CrudCard
-                  key={item.id}
-                  item={item}
-                  entity={entity}
-                  detailHref={detailHref}
-                  onClick={
-                    isPreview
-                      ? undefined
-                      : onClick
-                        ? () => handleView(item.id)
-                        : undefined
-                  }
-                  renderOverlay={renderCardOverlay?.(item)}
-                  renderActions={
-                    <Heart
-                      fill={itemIsFavorite ? '#ef4444' : '#ffffff'}
-                      stroke={
-                        itemIsFavorite ? '#ef4444' : 'var(--muted-foreground)'
+                  return (
+                    <CrudCard
+                      key={item.id}
+                      item={item}
+                      entity={entity}
+                      detailHref={detailHref}
+                      onClick={
+                        isPreview
+                          ? undefined
+                          : onClick
+                            ? () => handleView(item.id)
+                            : undefined
                       }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (!isPreview) toggleFavorite(item.id);
-                      }}
-                      style={{
-                        cursor: isPreview ? 'default' : 'pointer',
-                        width: 'var(--icon-md)',
-                        height: 'var(--icon-md)',
-                        transition: 'fill 0.2s, stroke 0.2s',
-                        opacity: isPreview ? 0.5 : 1,
-                      }}
-                      aria-label={
-                        itemIsFavorite
-                          ? tCrud('favorites.remove')
-                          : tCrud('favorites.add')
+                      renderOverlay={renderCardOverlay?.(item)}
+                      renderActions={
+                        <Heart
+                          fill={itemIsFavorite ? '#ef4444' : '#ffffff'}
+                          stroke={
+                            itemIsFavorite
+                              ? '#ef4444'
+                              : 'var(--muted-foreground)'
+                          }
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!isPreview) toggleFavorite(item.id);
+                          }}
+                          style={{
+                            cursor: isPreview ? 'default' : 'pointer',
+                            width: 'var(--icon-md)',
+                            height: 'var(--icon-md)',
+                            transition: 'fill 0.2s, stroke 0.2s',
+                            opacity: isPreview ? 0.5 : 1,
+                          }}
+                          aria-label={
+                            itemIsFavorite
+                              ? tCrud('favorites.remove')
+                              : tCrud('favorites.add')
+                          }
+                        />
                       }
                     />
-                  }
-                />
-              );
-            })}
-          </Grid>
+                  );
+                })}
+            </Grid>
+            {hasMore && <div ref={moreRef} aria-hidden="true" />}
+          </>
         )}
       </Section>
     </>

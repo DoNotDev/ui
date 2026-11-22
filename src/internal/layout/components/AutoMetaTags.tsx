@@ -24,11 +24,17 @@ import { useMemo } from 'react';
 import type { ComponentType } from 'react';
 
 import {
+  buildBreadcrumbJsonLd,
+  formatTrailingSlash,
   getLanguageRouting,
   isMultilingual,
-  isNextJs,
+  languageUrl,
   languageUrls,
-  localizePath,
+  matchRoute,
+  routeHeadTags,
+  routeSeo,
+  siteHeadTags,
+  SITE_LOGO_PATH,
   useTranslation,
 } from '@donotdev/core';
 import { getDndevConfig } from '@donotdev/core';
@@ -38,9 +44,10 @@ import type { SeoMeta } from '@donotdev/core';
 import { useRoutePath, useUrlLanguage } from '@donotdev/ui/routing/hooks';
 
 import { useIsNotFoundDocument } from '../../../routing/NotFoundDocument';
-import { AssetResolver } from '../../../utils/assetResolver';
+import { headTagElement } from './headTagElement';
 import { HeadTags } from './HeadTags';
-import { readI18nSeoMeta, resolveSeoField } from './i18nSeoMeta';
+import { prerenderedHead } from './prerenderedHead';
+import { appTrailingSlash } from './trailingSlash';
 
 interface RouteMetadata {
   namespace?: string;
@@ -57,118 +64,80 @@ interface RouteMetadata {
 }
 
 /**
- * Match pathname against route path pattern (e.g. /cars/:id or /blog/:slug/comments/:id).
- * Supports arbitrary nesting: any depth, any mix of static and :param segments.
+ * Route metadata plus whether the route's page sets its identity on the server: its path
+ * is in `routes.manifest.serverMetadataPaths` (Next: entity page, blog post, page module
+ * exporting `generateMetadata`, written by the route generator; absent on Vite), and
+ * whether the page is auth-only (PageMeta `auth`, same rule as the sitemap's
+ * `isIndexableRoute`: noindex by default), and whether the page renders its own
+ * BreadcrumbList (Next entity page: `routes.manifest.recordBreadcrumbPaths`).
  */
-function matchRoutePath(pattern: string, pathname: string): boolean {
-  const patternSegments = pattern.split('/').filter(Boolean);
-  const pathnameSegments = pathname.split('/').filter(Boolean);
-  if (patternSegments.length !== pathnameSegments.length) return false;
-  for (let i = 0; i < patternSegments.length; i++) {
-    const segment = patternSegments[i];
-    const pathSegment = pathnameSegments[i];
-    if (segment === undefined || pathSegment === undefined) return false;
-    if (segment.startsWith(':')) continue; // param matches any value
-    if (segment !== pathSegment) return false;
-  }
-  return true;
-}
-
-/** Route metadata plus whether it came from a dynamic (`:param`) route pattern. */
 interface ResolvedRouteMetadata {
   meta: RouteMetadata;
-  dynamic: boolean;
+  serverMetadata: boolean;
+  authOnly: boolean;
+  recordBreadcrumb: boolean;
 }
 
 /** Route metadata of the 404 document: none (it has no URL of its own). */
 const NOT_FOUND_ROUTE_METADATA: ResolvedRouteMetadata = {
   meta: {},
-  dynamic: false,
+  serverMetadata: false,
+  authOnly: false,
+  recordBreadcrumb: false,
 };
 
 /**
  * Get route metadata from the build-time config (`globalThis._DNDEV_CONFIG_`).
- * Resolves dynamic routes by pattern (e.g. /cars/:id) so PageMeta (including namespace) is used for SEO.
- * The config is set at module load on the server (Next SSR) and in the browser, so the
- * server render and the hydration pass resolve the same metadata.
+ * The route of the path is `matchRoute` (`@donotdev/core`, shared with crud): exact
+ * path, then `:param` patterns (e.g. /cars/:id), then catch-alls by prefix (e.g.
+ * /docs/*), so PageMeta (including namespace) is used for SEO. The config is set at
+ * module load on the server (Next SSR) and in the
+ * browser, so the server render and the hydration pass resolve the same metadata.
  */
 function getRouteMetadata(pathname: string): ResolvedRouteMetadata {
   const config = getDndevConfig();
   const routeData = config?.routes?.mapping;
+  const serverMetadataPaths = config?.routes?.manifest?.serverMetadataPaths ?? [];
+  const recordBreadcrumbPaths = config?.routes?.manifest?.recordBreadcrumbPaths ?? [];
+  const resolved = (route: {
+    path: string;
+    meta: RouteMetadata;
+    auth?: unknown;
+  }) => ({
+    meta: route.meta,
+    serverMetadata: serverMetadataPaths.includes(route.path),
+    authOnly: !!route.auth,
+    recordBreadcrumb: recordBreadcrumbPaths.includes(route.path),
+  });
   if (routeData && Array.isArray(routeData)) {
-    // 1. Exact match (static routes)
-    let route = routeData.find((r) => r.path === pathname);
-    if (route) return { meta: route.meta, dynamic: false };
-
-    // 2. Pattern match (dynamic routes: /cars/:id, /blog/:slug/comments/:id, etc.)
-    const dynamicRoutes = routeData.filter(
-      (r): r is typeof r & { path: string } =>
-        typeof r.path === 'string' && r.path.includes(':')
-    );
-    const matches = dynamicRoutes.filter((r) =>
-      matchRoutePath(r.path, pathname)
-    );
-    // Prefer most specific (longest path) so /blog/:slug/comments wins over /blog/:slug for /blog/a/comments
-    if (matches.length > 0) {
-      route = matches.reduce((best, r) =>
-        r.path.length > best.path.length ? r : best
-      );
-      return { meta: route.meta, dynamic: true };
-    }
+    const match = matchRoute(routeData, pathname);
+    if (match) return resolved(match.route);
   }
 
   // Fallback: first path segment as namespace (e.g. /cars/abc123 → ns: cars)
   const segments = pathname.split('/').filter(Boolean);
   if (segments.length > 0) {
-    return { meta: { namespace: segments[0] }, dynamic: false };
+    return {
+      meta: { namespace: segments[0] },
+      serverMetadata: false,
+      authOnly: false,
+      recordBreadcrumb: false,
+    };
   }
 
-  return { meta: {}, dynamic: false };
-}
-
-/**
- * Build BreadcrumbList JSON-LD from URL path segments
- */
-function buildBreadcrumbSchema(
-  pathname: string,
-  baseUrl: string,
-  siteName: string,
-  localize: (path: string) => string
-) {
-  const segments = pathname.split('/').filter(Boolean);
-  const items = [
-    {
-      '@type': 'ListItem' as const,
-      position: 1,
-      name: siteName,
-      item: `${baseUrl}${localize('/')}`,
-    },
-  ];
-
-  let currentPath = '';
-  for (let i = 0; i < segments.length; i++) {
-    currentPath += `/${segments[i]}`;
-    items.push({
-      '@type': 'ListItem' as const,
-      position: i + 2,
-      name: segments[i]!.split('-')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' '),
-      item: `${baseUrl}${localize(currentPath)}`,
-    });
-  }
-
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: items,
-  };
+  return { meta: {}, serverMetadata: false, authOnly: false, recordBreadcrumb: false };
 }
 
 /**
  * Build WebSite JSON-LD with SearchAction (sitelinks search box)
+ *
+ * @param trailingSlash - The app's URL form (`/search/?q=` under Next `trailingSlash`)
  */
-function buildWebSiteSchema(baseUrl: string, siteName: string) {
+function buildWebSiteSchema(
+  baseUrl: string,
+  siteName: string,
+  trailingSlash: boolean
+) {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -178,7 +147,7 @@ function buildWebSiteSchema(baseUrl: string, siteName: string) {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${baseUrl}/search?q={search_term_string}`,
+        urlTemplate: `${baseUrl}${formatTrailingSlash('/search?q={search_term_string}', trailingSlash)}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -186,7 +155,8 @@ function buildWebSiteSchema(baseUrl: string, siteName: string) {
 }
 
 /**
- * Build Organization JSON-LD from app metadata (links, description)
+ * Build Organization JSON-LD from app metadata (links, description), logo
+ * `SITE_LOGO_PATH` (`/logo.svg`, as the WebPage publisher logo)
  * Only emitted on homepage when links are configured
  */
 function buildOrganizationSchema(
@@ -208,7 +178,7 @@ function buildOrganizationSchema(
     ...(sameAs.length > 0 && { sameAs }),
     logo: {
       '@type': 'ImageObject',
-      url: `${baseUrl}/icon-512x512.png`,
+      url: `${baseUrl}${SITE_LOGO_PATH}`,
     },
   };
 }
@@ -261,6 +231,9 @@ function buildSpeculationRules() {
  * - 100% Lighthouse SEO compliance
  * - Inside a NotFoundDocument (the 404, served for any unknown URL): site-level tags
  *   only, titled with the site name; nothing derived from the URL
+ * - Vite prerendered page (static HTML the build wrote: static route, blog post, entity
+ *   record): the identity tags the build embedded, exactly the prerendered ones; elsewhere
+ *   `routeSeo` / `routeHeadTags` (@donotdev/core), the derivation the build uses
  */
 export const AutoMetaTags: ComponentType = () => {
   const { t } = useTranslation();
@@ -278,96 +251,69 @@ export const AutoMetaTags: ComponentType = () => {
   const notFoundDocument = useIsNotFoundDocument();
 
   // Get route metadata — computed from current pathname
-  const { meta: routeMeta, dynamic: isDynamicRoute } = notFoundDocument
+  const {
+    meta: routeMeta,
+    serverMetadata,
+    authOnly,
+    recordBreadcrumb,
+  } = notFoundDocument
     ? NOT_FOUND_ROUTE_METADATA
     : getRouteMetadata(pathname);
-  // On Next, a dynamic route's page renders the record's <Seo> (title, description,
-  // image). React 19 hoists every <title>/<meta> without deduping (unlike Helmet on
-  // Vite), so the page owns those tags there and this component emits site-level tags only.
-  const pageOwnsIdentity = isDynamicRoute && isNextJs();
+  // Next routes whose page sets its identity on the server (generated entity metadata,
+  // blog posts, a page module's own generateMetadata) get it from there: React 19 does not
+  // dedupe <title>/<meta>, so this component then emits site-level tags only. Every other
+  // route (static or dynamic, Vite always) gets its identity here: PageMeta + i18n, or on
+  // a Vite prerendered page the tags the build wrote (prerendered below).
+  const pageOwnsIdentity = serverMetadata;
 
   // One URL per language (default language at the root): canonical, og:url, JSON-LD
-  // and hreflang use the page's URL in each language.
+  // and hreflang use the page's URL in each language, in the app's trailing-slash form.
   const routing = getLanguageRouting();
   const language = useUrlLanguage();
-  const localize = (path: string) => localizePath(path, language, routing);
+  const trailingSlash = appTrailingSlash();
+  const pageUrl = (path: string) =>
+    languageUrl(path, language, baseUrl, routing, trailingSlash);
 
-  // Memoize computed values for performance — must be called before any early return
+  // Vite: the static HTML the build wrote for this URL (static page, blog post, entity
+  // record) embeds the identity tags it holds; rendered as written, so Helmet keeps the
+  // prerendered nodes. Other URLs: the route's identity (PageMeta + i18n).
+  const prerendered =
+    notFoundDocument || serverMetadata
+      ? null
+      : prerenderedHead(pageUrl(pathname));
+
+  // Memoize computed values for performance — must be called before any early return.
+  // routeSeo (@donotdev/core): the same derivation the Vite build prerenders with.
   const metaData = useMemo(() => {
     if (!seoConfig) return null;
 
-    const { defaultNamespace = 'home', defaultImage = '/og-image.png' } =
-      seoConfig;
-    // Canonical: this page in this language (`/en/x`; `/x` for the default language)
-    // None on the 404 document (no URL of its own)
-    const currentUrl = notFoundDocument
-      ? null
-      : `${baseUrl}${localizePath(pathname, language, routing)}`;
-    // None on the 404 document: its title is the site name
-    const ns = notFoundDocument ? null : routeMeta.namespace || defaultNamespace;
-    const seo = routeMeta.seo;
-
-    // Get the meta fields from i18n (image, type, keywords, author, fullTitle)
-    const metaObject = ns ? readI18nSeoMeta(t, ns) : null;
-
-    // Title resolution priority:
-    // 1. i18n meta.fullTitle → translated, language-aware (wins)
-    // 2. seo.fullTitle (static PageMeta) → fallback for non-i18n apps
-    // 3. seo.title (explicit) → "title | siteName"
-    // 4. i18n ns:title → "translated | siteName"
-    // 5. siteName only (when seo.title === null or no translation)
-    let fullTitle: string;
-    if (metaObject?.fullTitle) {
-      // i18n fullTitle (ns:meta.fullTitle) → translated, takes priority
-      fullTitle = metaObject.fullTitle;
-    } else if (seo?.fullTitle) {
-      // Static fullTitle in PageMeta → fallback for non-i18n apps
-      fullTitle = seo.fullTitle;
-    } else {
-      // Standard resolution: title | siteName
-      const pageTitle = ns
-        ? resolveSeoField(seo?.title, `${ns}:title`, t)
-        : undefined;
-      fullTitle = pageTitle ? `${pageTitle} | ${siteName}` : siteName;
-    }
-
-    // Description resolution: seo.description > i18n
-    const description = ns
-      ? resolveSeoField(seo?.description, `${ns}:description`, t)
-      : undefined;
-
-    // Other meta fields: seo > i18n meta object > defaults
-    const pageImage = seo?.image || metaObject?.image || defaultImage;
-    const pageType = seo?.type || metaObject?.type || 'website';
-    const pageKeywords = seo?.keywords || metaObject?.keywords;
-    const pageAuthor = routeMeta.author || metaObject?.author;
-
-    const image = pageImage || undefined;
-    const type = pageType || 'website';
-    const keywords = pageKeywords || undefined;
-    const author = pageAuthor || undefined;
-
-    // Link-preview crawlers need an absolute URL
-    const imagePath =
-      image && !image.startsWith('http') ? `${baseUrl}${image}` : image;
-
-    return {
-      title: fullTitle,
-      description,
-      image: imagePath,
-      url: currentUrl,
-      type,
-      noindex: seo?.noindex || routeMeta.noindex || false,
-      keywords,
-      author,
-      publishDate: routeMeta.publishDate,
-      modifiedDate: routeMeta.modifiedDate,
-    };
+    // defaultImage: AppConfigProvider default (DEFAULT_OG_IMAGE, /og-image.png)
+    const { defaultNamespace = 'home', defaultImage } = seoConfig;
+    return routeSeo({
+      meta: routeMeta,
+      // The page's own namespace; a page without one reads the site defaults
+      // (appConfig.seo.defaultNamespace), never their title. None on the 404 document:
+      // its title is the site name
+      ns: notFoundDocument ? null : routeMeta.namespace || null,
+      defaultNs: notFoundDocument ? null : defaultNamespace,
+      t,
+      siteName,
+      baseUrl,
+      // Canonical: this page in this language (`/en/x`; `/x` for the default language).
+      // None on the 404 document (no URL of its own)
+      url: notFoundDocument
+        ? null
+        : languageUrl(pathname, language, baseUrl, routing, trailingSlash),
+      defaultImage,
+      authOnly,
+    });
   }, [
     notFoundDocument,
     pathname,
     language,
+    trailingSlash,
     routeMeta,
+    authOnly,
     siteName,
     baseUrl,
     seoConfig,
@@ -391,88 +337,34 @@ export const AutoMetaTags: ComponentType = () => {
   // hreflang: only emit when 2+ languages configured
   const shouldEmitHreflang =
     hreflangEnabled && !notFoundDocument && isMultilingual(routing.languages);
-  const alternates = languageUrls(pathname, baseUrl, routing);
+
+  // Page identity: the page's server metadata owns it on Next serverMetadataPaths routes,
+  // the prerendered tags on a Vite prerendered page, else the route's (PageMeta + i18n).
+  const identityTags = prerendered
+    ? prerendered.tags
+    : pageOwnsIdentity
+      ? []
+      : routeHeadTags(metaData, { siteName, baseUrl });
+  // Canonical, og:url (with an app URL), og:site_name, hreflang: the build writes the same
+  const siteTags = siteHeadTags({
+    url: baseUrl ? metaData.url : null,
+    siteName,
+    alternates: shouldEmitHreflang
+      ? languageUrls(pathname, baseUrl, routing, trailingSlash)
+      : null,
+    defaultLanguage: routing.defaultLanguage,
+  });
+  // Entity record pages carry their own BreadcrumbList (record title last): Next's
+  // generated page, the Vite prerendered record page
+  const pageOwnsBreadcrumb = recordBreadcrumb || prerendered?.breadcrumb === true;
 
   return (
     <HeadTags>
-      {/* SITE: canonical + og:url, every route */}
-      {baseUrl && metaData.url && <link rel="canonical" href={metaData.url} />}
-      {baseUrl && metaData.url && (
-        <meta property="og:url" content={metaData.url} />
-      )}
-      <meta property="og:site_name" content={siteName} />
+      {/* SITE: canonical, og:url, og:site_name, hreflang (every route) */}
+      {siteTags.map(headTagElement)}
 
-      {/* PAGE IDENTITY: owned by the page's <Seo> on Next dynamic routes */}
-      {!pageOwnsIdentity && (
-        <>
-          <title>{metaData.title}</title>
-          {metaData.description && (
-            <meta name="description" content={metaData.description} />
-          )}
-
-          {/* SEO: Additional meta tags */}
-          {metaData.keywords && (
-            <meta
-              name="keywords"
-              content={
-                Array.isArray(metaData.keywords)
-                  ? metaData.keywords.join(', ')
-                  : metaData.keywords
-              }
-            />
-          )}
-          {metaData.author && <meta name="author" content={metaData.author} />}
-          {metaData.noindex && (
-            <meta name="robots" content="noindex, nofollow" />
-          )}
-
-          {/* OPEN GRAPH: Facebook, LinkedIn, etc. */}
-          <meta property="og:title" content={metaData.title} />
-          {metaData.description && (
-            <meta property="og:description" content={metaData.description} />
-          )}
-          <meta property="og:type" content={metaData.type} />
-          {metaData.image && (
-            <meta property="og:image" content={metaData.image} />
-          )}
-          {metaData.image && <meta property="og:image:width" content="1200" />}
-          {metaData.image && <meta property="og:image:height" content="630" />}
-
-          {/* ARTICLES: Additional Open Graph for blog posts */}
-          {metaData.type === 'article' && (
-            <>
-              {metaData.author && (
-                <meta property="article:author" content={metaData.author} />
-              )}
-              {metaData.publishDate && (
-                <meta
-                  property="article:published_time"
-                  content={metaData.publishDate}
-                />
-              )}
-              {metaData.modifiedDate && (
-                <meta
-                  property="article:modified_time"
-                  content={metaData.modifiedDate}
-                />
-              )}
-            </>
-          )}
-
-          {/* TWITTER CARDS: Enhanced social sharing */}
-          <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content={metaData.title} />
-          {metaData.description && (
-            <meta name="twitter:description" content={metaData.description} />
-          )}
-          {metaData.image && (
-            <meta name="twitter:image" content={metaData.image} />
-          )}
-          {metaData.author && (
-            <meta name="twitter:creator" content={metaData.author} />
-          )}
-        </>
-      )}
+      {/* PAGE IDENTITY: title, description, Open Graph, Twitter, WebPage / record JSON-LD */}
+      {identityTags.map(headTagElement)}
       {twitterHandle && (
         <meta name="twitter:site" content={`@${twitterHandle}`} />
       )}
@@ -487,24 +379,6 @@ export const AutoMetaTags: ComponentType = () => {
         <meta key={name} name={name} content={content} />
       ))}
 
-      {/* HREFLANG: Alternate language links (only when 2+ languages) */}
-      {shouldEmitHreflang &&
-        routing.languages.map((lang) => (
-          <link
-            key={`hreflang-${lang}`}
-            rel="alternate"
-            hrefLang={lang}
-            href={alternates[lang]}
-          />
-        ))}
-      {shouldEmitHreflang && (
-        <link
-          rel="alternate"
-          hrefLang="x-default"
-          href={alternates[routing.defaultLanguage]}
-        />
-      )}
-
       {/* RSS: Auto-discovery for feed readers */}
       {baseUrl && hasBlogFeed && (
         <link
@@ -515,69 +389,20 @@ export const AutoMetaTags: ComponentType = () => {
         />
       )}
 
-      {/* PERFORMANCE: DNS prefetch for external images */}
-      {!pageOwnsIdentity &&
-        metaData.image &&
-        metaData.image.startsWith('http') && (
-          <link rel="dns-prefetch" href={new URL(metaData.image).origin} />
+      {/* JSON-LD: BreadcrumbList (auto from URL segments; entity record pages own theirs) */}
+      {breadcrumbSchemaEnabled &&
+        !notFoundDocument &&
+        !pageOwnsBreadcrumb &&
+        pathname !== '/' && (
+          <script type="application/ld+json">
+            {JSON.stringify(buildBreadcrumbJsonLd(pathname, siteName, pageUrl))}
+          </script>
         )}
-
-      {/* JSON-LD: Page/Article structured data (the page's <Seo> owns it on Next dynamic routes; none on the 404 document) */}
-      {!pageOwnsIdentity && metaData.url && (
-        <script type="application/ld+json">
-          {JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': metaData.type === 'article' ? 'Article' : 'WebPage',
-            name: metaData.title,
-            ...(metaData.description && { description: metaData.description }),
-            url: metaData.url,
-            ...(metaData.image && { image: metaData.image }),
-            ...(metaData.type === 'article' && {
-              ...(metaData.author && {
-                author: {
-                  '@type': 'Person',
-                  name: metaData.author,
-                },
-              }),
-              ...(metaData.publishDate && {
-                datePublished: metaData.publishDate,
-              }),
-              ...(metaData.modifiedDate && {
-                dateModified: metaData.modifiedDate,
-              }),
-            }),
-            publisher: {
-              '@type': 'Organization',
-              name: siteName,
-              logo: {
-                '@type': 'ImageObject',
-                // Absolute: schema.org consumers (Google) ignore a relative logo URL
-                url: `${baseUrl}${
-                  AssetResolver.assetExists('/icon-512x512.png')
-                    ? '/icon-512x512.png'
-                    : AssetResolver.assetExists('/icon-192x192.png')
-                      ? '/icon-192x192.png'
-                      : '/logo.svg'
-                }`,
-              },
-            },
-          })}
-        </script>
-      )}
-
-      {/* JSON-LD: BreadcrumbList (auto from URL segments) */}
-      {breadcrumbSchemaEnabled && !notFoundDocument && pathname !== '/' && (
-        <script type="application/ld+json">
-          {JSON.stringify(
-            buildBreadcrumbSchema(pathname, baseUrl, siteName, localize)
-          )}
-        </script>
-      )}
 
       {/* JSON-LD: WebSite with SearchAction (sitelinks search box) */}
       {websiteSchemaEnabled && baseUrl && (
         <script type="application/ld+json">
-          {JSON.stringify(buildWebSiteSchema(baseUrl, siteName))}
+          {JSON.stringify(buildWebSiteSchema(baseUrl, siteName, trailingSlash))}
         </script>
       )}
 

@@ -312,7 +312,8 @@ export function useRouteManifest() {
  * Groups discovered routes by entity/domain for organized navigation
  *
  * Takes raw route data from the virtual module system and organizes it into
- * logical groups based on entity names extracted from route paths or metadata.
+ * logical groups: the route's `meta.entity` (collection of the entity its page declares
+ * in PageMeta), else the URL's first path segment, else `other` (the root route).
  *
  * Features:
  * - Automatic entity extraction from route paths

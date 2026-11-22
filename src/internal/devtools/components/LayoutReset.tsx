@@ -208,7 +208,7 @@ export const LayoutReset: ComponentType = memo(() => {
         width: 'var(--touch-target)',
         height: 'var(--touch-target)',
         borderRadius: 'var(--radius-lg)',
-        transition: 'var(--transition-fast)',
+        transition: 'background-color var(--dur-fast) var(--ease-in-out), color var(--dur-fast) var(--ease-in-out), box-shadow var(--dur-fast) var(--ease-in-out)',
         cursor: isResetting ? 'not-allowed' : 'pointer',
         ...(isResetting
           ? {

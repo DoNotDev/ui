@@ -16,6 +16,7 @@ import {
   getLanguageRouting,
   publicPathname,
   splitLanguagePath,
+  stripTrailingSlash,
 } from '@donotdev/core';
 
 /**
@@ -25,9 +26,11 @@ import {
  * `useSearchParams`) moves the render to the browser up to the nearest Suspense
  * boundary. Use it whenever the query string is not needed. The server render of a
  * per-request page reads its internal pathname (`/<lang>/dndev-session/…`): dropped here, so
- * the server and the browser see the same path.
+ * the server and the browser see the same path. Under Next `trailingSlash: true` the URL
+ * ends with `/` (`/en/produits/`): the route path does not (`/produits`), the form of the
+ * route mapping.
  *
- * @returns Route path, always starting with `/`
+ * @returns Route path, always starting with `/`, never ending with `/` (except the root)
  *
  * @example
  * ```tsx
@@ -35,13 +38,13 @@ import {
  * const active = path === '/produits';
  * ```
  *
- * @version 0.1.0
+ * @version 0.1.1
  * @since 0.2.3
  * @author AMBROISE PARK Consulting
  */
 export function useRoutePath(): string {
   return splitLanguagePath(
-    publicPathname(usePathname() ?? '/'),
+    publicPathname(stripTrailingSlash(usePathname() ?? '/')),
     getLanguageRouting()
   ).path;
 }

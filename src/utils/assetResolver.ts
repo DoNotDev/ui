@@ -10,7 +10,13 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { getDndevConfig, isClient, isDev } from '@donotdev/core';
+import {
+  getDndevConfig,
+  isClient,
+  isDev,
+  resolveFaviconFiles,
+} from '@donotdev/core';
+import type { FaviconSet } from '@donotdev/core';
 
 /**
  * Asset formats interface
@@ -27,21 +33,13 @@ export interface AssetFormats {
 }
 
 /**
- * Favicon set interface
+ * Favicon set: the `@donotdev/core` type ({@link resolveFaviconFiles}), re-exported
  *
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
-export interface FaviconSet {
-  svg?: string;
-  ico?: string;
-  png16?: string;
-  png32?: string;
-  apple180?: string;
-  android192?: string;
-  android512?: string;
-}
+export type { FaviconSet };
 
 interface BrowserSupport {
   svg: boolean;
@@ -59,7 +57,6 @@ interface AssetManifest {
     optimal?: string | null;
     fallback?: string | null;
     available?: string[];
-    set?: FaviconSet;
   };
   appleTouchIcon?: string | null;
   androidChrome?: {
@@ -154,13 +151,11 @@ export class AssetResolver {
   }
 
   /**
-   * Check if an asset exists (SSR-safe)
-   * Checks build-time injected manifest structure (nested objects, arrays)
+   * Whether the build-time asset manifest lists `path` (any string in its nested objects
+   * and arrays). The server render and the browser read the same manifest
+   * ({@link getAssetManifest}), so they answer the same and the HTML hydrates.
    */
   static assetExists(path: string): boolean {
-    // SSR environment
-    if (!isClient()) return false;
-
     const manifest = this.getAssetManifest();
     if (!manifest) return false;
 
@@ -170,10 +165,14 @@ export class AssetResolver {
   }
 
   /**
-   * Get asset manifest if available
+   * The build-time asset manifest (`getDndevConfig().assets.mapping`), or null before the
+   * generated asset config ran. Read on the server too: the app's generated config sets it
+   * on `globalThis` at module load in the Next SSR process (`src/config/dndev-config-asset.js`,
+   * imported first by `ClientLayout`) and in the browser (same file on Next, the Vite
+   * assets virtual module), so every resolver gives the server render and the hydration
+   * pass the same paths.
    */
   static getAssetManifest(): AssetManifest | null {
-    if (!isClient()) return null;
     const config = getDndevConfig();
     return config?.assets?.mapping || null;
   }
@@ -190,7 +189,9 @@ export class AssetResolver {
 
   /**
    * Resolve logo path
-   * Rule: Use manifest optimal if available, otherwise /logo.svg (user must provide)
+   * Rule: Use manifest optimal if available, otherwise /logo.svg (user must provide).
+   * Cached once the manifest is read (the server process keeps the cache across requests,
+   * so a resolution made before the generated config ran is not kept).
    */
   static resolveLogo(customPath?: string): string {
     if (customPath) return customPath;
@@ -203,7 +204,7 @@ export class AssetResolver {
     const manifest = this.getAssetManifest();
     const logoPath = manifest?.logo?.optimal || '/logo.svg';
 
-    this.cache.set(cacheKey, logoPath);
+    if (manifest) this.cache.set(cacheKey, logoPath);
     return logoPath;
   }
 
@@ -234,8 +235,9 @@ export class AssetResolver {
   }
 
   /**
-   * Resolve complete favicon set with modern standards
-   * Follows PWA manifest and web.dev best practices
+   * Resolve complete favicon set: `resolveFaviconFiles` (`@donotdev/core`) over the
+   * build-time manifest ({@link assetExists}). Same set on the server and in the browser
+   * (both read the manifest); cached once the manifest is read.
    */
   static resolveFaviconSet(): FaviconSet {
     const cacheKey = 'favicon-set';
@@ -243,58 +245,8 @@ export class AssetResolver {
       return this.cache.get(cacheKey);
     }
 
-    // Try to use build-time detected favicon set
-    const manifest = this.getAssetManifest();
-    if (manifest?.favicon?.set) {
-      const set = manifest.favicon.set;
-      // Use icon-512x512.png as fallback (generated from logo.svg)
-      const fallbackIcon = this.assetExists('/icon-512x512.png')
-        ? '/icon-512x512.png'
-        : this.assetExists('/icon-192x192.png')
-          ? '/icon-192x192.png'
-          : '/logo.svg';
-      // Filter out null values and provide framework fallbacks
-      const resolvedSet: FaviconSet = {
-        svg: set.svg || '/favicon.svg',
-        ico: set.ico || '/favicon.ico',
-        png16: set.png16 || fallbackIcon,
-        png32: set.png32 || fallbackIcon,
-        apple180: set.apple180 || fallbackIcon,
-        android192: set.android192 || fallbackIcon,
-        android512: set.android512 || fallbackIcon,
-      };
-
-      this.cache.set(cacheKey, resolvedSet);
-      return resolvedSet;
-    }
-
-    // Manual detection fallback - use generated icons instead of logo.png
-    const fallbackIcon = this.assetExists('/icon-512x512.png')
-      ? '/icon-512x512.png'
-      : this.assetExists('/icon-192x192.png')
-        ? '/icon-192x192.png'
-        : '/logo.svg';
-    const faviconSet: FaviconSet = {
-      svg: this.assetExists('/favicon.svg') ? '/favicon.svg' : '/logo.svg',
-      ico: this.assetExists('/favicon.ico') ? '/favicon.ico' : '/favicon.svg',
-      png16: this.assetExists('/favicon-16x16.png')
-        ? '/favicon-16x16.png'
-        : fallbackIcon,
-      png32: this.assetExists('/favicon-32x32.png')
-        ? '/favicon-32x32.png'
-        : fallbackIcon,
-      apple180: this.assetExists('/apple-touch-icon.png')
-        ? '/apple-touch-icon.png'
-        : fallbackIcon,
-      android192: this.assetExists('/icon-192x192.png')
-        ? '/icon-192x192.png'
-        : fallbackIcon,
-      android512: this.assetExists('/icon-512x512.png')
-        ? '/icon-512x512.png'
-        : fallbackIcon,
-    };
-
-    this.cache.set(cacheKey, faviconSet);
+    const faviconSet = resolveFaviconFiles((path) => this.assetExists(path));
+    if (this.getAssetManifest()) this.cache.set(cacheKey, faviconSet);
     return faviconSet;
   }
 

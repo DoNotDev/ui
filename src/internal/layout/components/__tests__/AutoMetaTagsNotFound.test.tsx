@@ -9,8 +9,16 @@ vi.mock('@donotdev/core', async () => {
   const languagePath = await import(
     '../../../../../../core/utils/src/common/languagePath'
   );
+  // AutoMetaTags builds its tags with these (shared with the Vite prerender)
+  const headTags = await import(
+    '../../../../../../core/utils/src/common/headTags'
+  );
+  // The route matcher AutoMetaTags shares with crud
+  const routeMatch = await import('../../../../../../core/utils/src/common/routeMatch');
   return {
     ...languagePath,
+    ...headTags,
+    ...routeMatch,
     getLanguageRouting: () => ({
       languages: ['fr', 'en'],
       defaultLanguage: 'fr',
@@ -29,9 +37,6 @@ vi.mock('@donotdev/core', async () => {
     translateArray: () => [],
   };
 });
-vi.mock('../../../../utils/assetResolver', () => ({
-  AssetResolver: { assetExists: () => false },
-}));
 vi.mock('@donotdev/ui/routing/hooks', () => ({
   useRoutePath: () => page.pathname,
   useUrlLanguage: () => 'fr',

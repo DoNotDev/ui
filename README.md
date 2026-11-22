@@ -213,11 +213,10 @@ Automatic SEO meta tags:
 
 ### Favicon System
 
-Automatic PWA-compliant favicons:
+Automatic favicon tags (icons, apple-touch-icon, theme-color, color-scheme), in the server HTML on Next (`FaviconHead`) and written into `index.html` by the Vite build. Declare none in `AppDocument` / `index.html`.
 
 ```tsx
-// Favicon is automatic - uses useFaviconConfig() internally
-// Configure via config.favicon
+// Favicon is automatic - configure via config.favicon (false disables it)
 ```
 
 ## Provider Hierarchy
