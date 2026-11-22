@@ -124,6 +124,7 @@ function DnDevMergedBarComponent({
           open={open}
           onOpenChange={setOpen}
           title={t('sheet.navigation', { defaultValue: 'Navigation' })}
+          closeLabel={t('sheet.close', { defaultValue: 'Close sheet' })}
         >
           {sheetNode}
         </Sheet>

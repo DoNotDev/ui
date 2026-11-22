@@ -122,7 +122,7 @@ async function prerenderedHeadOf(file: string): Promise<string> {
     hreflang: true,
     defaultNamespace: 'home',
     defaultImage: '/og-image.png',
-    shellHtml:
+    pageShell: () =>
       '<html><head><title>Loading...</title></head><body><div id="root"></div></body></html>',
   });
   const html = pages.find((p) => p.file === file)!.html;

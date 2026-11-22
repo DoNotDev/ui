@@ -3,25 +3,9 @@
 /* 1. Complete UI system (base design system + layout variables) */
 @import './styles/index.css';
 
-/* 2. Font catalogue from @fontsource (self-hosted, never Google Fonts). Must match
-   FONT_WEIGHTS in packages/core/config/constants.js (a test guards it). The Vite build
-   keeps only the families the app's theme renders text in (FontPreloadPlugin). */
-@import '@fontsource/inter/300.css';
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
-@import '@fontsource/playfair-display/400.css';
-@import '@fontsource/playfair-display/500.css';
-@import '@fontsource/playfair-display/600.css';
-@import '@fontsource/playfair-display/700.css';
-@import '@fontsource/roboto/400.css';
-@import '@fontsource/roboto/700.css';
-@import '@fontsource/space-grotesk/300.css';
-@import '@fontsource/space-grotesk/400.css';
-@import '@fontsource/space-grotesk/500.css';
-@import '@fontsource/space-grotesk/600.css';
-@import '@fontsource/space-grotesk/700.css';
-@import '@fontsource/press-start-2p/400.css';
+/* Fonts never go through this CSS: the framework font plan ships the families the
+   theme names as head tags (preloads + inline @font-face, @donotdev/core
+   config/fonts/buildFontPlan.js). Same file on Vite and Next. */
 
 /* Ensure valid CSS file termination for Turbopack */
 :root {

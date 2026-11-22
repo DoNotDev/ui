@@ -10,7 +10,5 @@
  */
 
 export { NextJsAppProviders } from './providers/NextJsAppProviders';
-export {
-  FontPreloadLinks,
-  default as FontPreloadLinksDefault,
-} from './internal/layout/components/FontPreloadLinks';
+export { FontHead } from './internal/layout/components/FontHead';
+export type { FontHeadData } from './internal/layout/components/FontHead';
