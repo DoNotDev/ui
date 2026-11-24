@@ -6,7 +6,9 @@
  * @description Professional breadcrumb navigation with route discovery
  *
  * Features:
- * - Automatic route discovery and breadcrumb generation
+ * - Automatic trail: home, the page's ancestors (`routeAncestors` in `@donotdev/core`:
+ *   URL prefixes that are routes, PageMeta `parent`), the page; each named by its route's
+ *   title (`routeLabel`, the `<title>` chain), the shown record by its name
  * - Clickable navigation
  * - Professional styling with icons
  * - Responsive design
@@ -23,14 +25,31 @@ import { useMemo } from 'react';
 import type { ComponentType } from 'react';
 
 import { cn } from '@donotdev/components';
-import { useLayout, useTranslation } from '@donotdev/core';
+import {
+  breadcrumbNamespaces,
+  getRoutes,
+  matchRoute,
+  routeAncestors,
+  routeLabel,
+  useAppConfig,
+  useLayout,
+  useSeoConfig,
+  useTranslation,
+} from '@donotdev/core';
 // Platform-specific hooks via conditional exports
 import { useRoutePath } from '@donotdev/ui/routing/hooks';
 
 import { Link } from '../../../routing/Link';
 import { useIsNotFoundDocument } from '../../../routing/NotFoundDocument';
-import { getPathPrefixes } from '../../../routing/parentRoute';
-import { useAllRoutes } from '../../../routing/useRouteDiscovery';
+
+/** URL segment as the router hands it to the page (malformed encodings stay as they are). */
+function decodeSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
 
 /** Single breadcrumb navigation item. */
 export interface BreadcrumbItem {
@@ -63,7 +82,14 @@ export interface BreadcrumbsProps {
  * @author AMBROISE PARK Consulting
  *
  * Automatically generates breadcrumbs from current route or accepts custom items.
- * Renders no generated trail inside a NotFoundDocument (the 404, served for any URL).
+ * Generated trail: home, the page's ancestors (`routeAncestors`, the chain of the
+ * BreadcrumbList JSON-LD and the forms' parent path), linked, then the page, each named by
+ * its route's title (`routeLabel`: `seo.title`, else `<namespace>:title`, as its
+ * `<title>`); the page reads as the shown record's name (`useRecordBreadcrumb`) when its
+ * last URL segment names it. A URL prefix that is no route is no crumb. Routes are the
+ * build's route manifest (not auth-filtered): the server render and the browser build the
+ * same trail. Renders no generated trail inside a NotFoundDocument (the 404, served for
+ * any URL).
  */
 const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
   items,
@@ -73,16 +99,18 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
   variant = 'default',
   className,
 }) => {
-  const { t } = useTranslation('dndev');
   const pathname = useRoutePath();
-  const allRoutes = useAllRoutes();
+  const routes = getRoutes();
+  // Crumb labels read their routes' namespaces (lazy page namespaces load here)
+  const namespaces = useMemo(
+    () => breadcrumbNamespaces(pathname, routes),
+    [pathname, routes]
+  );
+  const { t } = useTranslation(['dndev', ...namespaces]);
+  const seoConfig = useSeoConfig();
+  const appMeta = useAppConfig('app');
   // Record shown by the page (set by EntityFormRenderer / EntityDisplayRenderer)
   const recordLabel = useLayout('routeRecordLabel');
-
-  // Build set of valid route paths for existence checking
-  const validRoutes = useMemo(() => {
-    return new Set(allRoutes.map((route) => route.path));
-  }, [allRoutes]);
 
   // The 404 document is served for any unknown URL (Next: rendered once at build, at
   // `/_not-found`): no trail derived from the URL, or server and browser differ (React #418)
@@ -93,23 +121,26 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
   const breadcrumbItems: BreadcrumbItem[] = items
     ? items
     : (() => {
-        const pathSegments = pathname.split('/').filter(Boolean);
-        const prefixes = getPathPrefixes(pathname);
-        const breadcrumbs: BreadcrumbItem[] = [];
-        pathSegments.forEach((segment: string, index: number) => {
-          const currentPath = prefixes[index] ?? '';
-          // The segment naming the shown record (slug or id) shows the record's name
-          const label =
-            recordLabel && decodeURIComponent(segment) === recordLabel.id
-              ? recordLabel.label
-              : segment
-                  .split('-')
-                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(' ');
-          // Only add href if route actually exists
-          const href = validRoutes.has(currentPath) ? currentPath : undefined;
-          breadcrumbs.push({ label, href });
-        });
+        // Labels: each route's title (the <title> chain), as the BreadcrumbList names it
+        const site = {
+          t,
+          // As AutoMetaTags: appConfig.seo.defaultNamespace, site name (seo off: app name)
+          defaultNs: (seoConfig && seoConfig.defaultNamespace) || 'home',
+          siteName: (seoConfig && seoConfig.siteName) || appMeta?.name || '',
+        };
+        const breadcrumbs: BreadcrumbItem[] = routeAncestors(pathname, routes).map(
+          (route) => ({ label: routeLabel(route, site), href: route.path })
+        );
+        const page = matchRoute(routes, pathname)?.route;
+        const lastSegment = pathname.split('/').filter(Boolean).at(-1);
+        // The last segment naming the shown record (slug or id) shows the record's name
+        const label =
+          recordLabel && lastSegment && decodeSegment(lastSegment) === recordLabel.id
+            ? recordLabel.label
+            : page
+              ? routeLabel(page, site)
+              : undefined;
+        if (label) breadcrumbs.push({ label });
         return breadcrumbs;
       })();
 

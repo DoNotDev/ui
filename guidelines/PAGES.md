@@ -113,6 +113,9 @@ export const meta: PageMeta = {
 
   // Signed-in visitors go elsewhere (e.g. landing → catalogue)
   signedInRedirect: '/catalogue',          // Next + Supabase cookie: proxy redirects (verified session) before render; else client replace
+
+  // Parent page when the URL prefix is no page (/produits/:slug, no /produits page)
+  parent: '/catalogue',                    // Breadcrumbs, BreadcrumbList JSON-LD, forms' parent path (ROUTING guideline)
 };
 ```
 

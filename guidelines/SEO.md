@@ -112,7 +112,7 @@ An app whose own config lacks `cleanUrls` never serves the prerendered pages at 
 
 | Route | Page identity (title, description, Open Graph, Twitter, robots, JSON-LD) | Always AutoMetaTags |
 |-------|------|------|
-| Static (`/about`), dynamic without server metadata | AutoMetaTags (PageMeta + i18n) | canonical, `og:url`, `og:site_name`, `hreflang`, BreadcrumbList / WebSite / Organization JSON-LD |
+| Static (`/about`), dynamic without server metadata | AutoMetaTags (PageMeta + i18n) | canonical, `og:url`, `og:site_name`, `hreflang`, BreadcrumbList (site, the page's ancestors and the page, by page title) / WebSite / Organization JSON-LD |
 | Entity page (`/produits/:slug`, see below) | The generated page: `generateMetadata` + JSON-LD from the record (AutoMetaTags emits none) | same, except the BreadcrumbList: the page renders it (record title last) |
 | Page module exporting `generateMetadata` | That `generateMetadata` (AutoMetaTags emits none) | same |
 | Blog post (`blog` namespace, dynamic route) | The generated page's `generateMetadata` (per-post title, description, Open Graph) | same |
@@ -143,7 +143,7 @@ export const meta: PageMeta = {
 - **Read:** the generated `page.tsx` reads the record named by the URL (`<param> == value`, `status` not in `HIDDEN_STATUSES`) with the public server reader of `generateStaticParams` (signed-out visitor: RLS / Security Rules decide; `@donotdev/supabase` or `@donotdev/firebase`, any other provider fails the build). React `cache`: `generateMetadata` and the page share one read per request. The page's own client data reads are separate. `appConfig.prerenderRecords: false` stops the build-time prerender only: each URL still reads its record on its first request.
 - **`generateMetadata`:** title `<record title> | <site name>` (absolute: no layout title template; site name = `appConfig.seo.siteName`, else `appConfig.app.name`), description, Open Graph (title, description, absolute image, `og:type`), Twitter card. Derived by `deriveEntitySeo` with the entity's `seo` option (see Entity-derived identity), text in the URL's language (entity namespace then `crud` translations, `@donotdev/core/rsc`). Canonical, `og:url` and `hreflang` stay with AutoMetaTags.
 - **`og:type`:** PageMeta `seo.type` (`website` default, `article`, `product`). `product` also renders Product JSON-LD (`<script type="application/ld+json">`, from `buildProductJsonLd`) and `<meta property="og:type" content="product">` in the page (Next's metadata API has no `product` type).
-- **BreadcrumbList JSON-LD:** rendered by the page (`buildBreadcrumbJsonLd`, shared with the Vite record pages): the site name, the URL's segments named as the visible breadcrumb names them (words title-cased), the record title last: the label the visible breadcrumb shows on the segment naming the record (`useRecordBreadcrumb`: the slug on `/produits/:slug`, the id on `/products/:id`). No record title: no BreadcrumbList.
+- **BreadcrumbList JSON-LD:** rendered by the page (`buildBreadcrumbJsonLd`, shared with the Vite record pages and AutoMetaTags): the site name, the page's ancestors (`routeAncestors`: URL prefixes that are pages, else PageMeta `parent`, see ROUTING.md) each named by its page title in the page language (`routeLabel`, the `<title>` chain; the generated page embeds those routes as `BREADCRUMB_ROUTES`), the record title last: the label the visible breadcrumb shows for the page (`useRecordBreadcrumb`: the slug on `/produits/:slug`, the id on `/products/:id`). A URL prefix that is no page is no item (`/produits/serum` with `parent: '/catalogue'`: site > Catalogue > record). No record title: no BreadcrumbList.
 - **Missing record** (unknown value, hidden status): `notFound()`. The response is HTTP 404 with the app's 404 page and Next's `noindex`; a page component's own not-found state is never served for such a URL.
 - **Own `generateMetadata` wins:** a server page module (no `'use client'`) exporting `generateMetadata` replaces the generated metadata, JSON-LD and 404 (one source, no second title); it then calls `notFound()` itself.
 - **Build fails** without the app's `entities` package, without a site name, or with a provider that has no server reader. Opt a route out with `seo: { noindex: true }` (also leaves the sitemap).
@@ -224,11 +224,11 @@ export const meta: PageMeta = {
 
 The build generates `public/og-image.png` (1200x630, logo centered) from `public/logo.svg`, next to the favicon and PWA icons. Vite and Next.js both default `og:image` to it (`appConfig.seo.defaultImage`, default `DEFAULT_OG_IMAGE`, `/og-image.png`), as an absolute URL when `APP_URL` is set. One default for every tag: AutoMetaTags, the Vite prerendered pages (static and record), the Next entity page metadata and `getMetadataForPath`.
 
-- **Replace it:** put your own `public/og-image.png`; an existing file is never overwritten.
+- **Replace it:** put your own `public/og-image.png`: it is never overwritten. The build regenerates only the one it generated (recorded in `.dndev/icons.json`) when `logo.svg` changes, and replaces a framework default one.
 - **Per page:** `seo.image` in `PageMeta`, or `meta.image` in the namespace's translations.
 - **Entity pages (Next, Vite record pages):** the record's first image (`deriveEntitySeo`), else the site default.
 - **Site-wide:** `appConfig.seo.defaultImage` (e.g. `'/og-image.jpg'`) replaces the default everywhere (build-written and runtime tags stay identical).
-- **Not generated** without `public/logo.svg` or without `sharp` installed (the build log lists it as skipped): `og:image` then points to a missing `/og-image.png`. Add the file to `public/`.
+- **Not generated** without `public/logo.svg` or without `sharp` installed (build warning): `og:image` then points to a missing `/og-image.png`. Add the file to `public/`.
 
 Use JPG or PNG: link-preview crawlers do not reliably render SVG.
 
@@ -238,7 +238,7 @@ Use JPG or PNG: link-preview crawlers do not reliably render SVG.
 
 The JSON-LD logo is always the app's `public/logo.svg` (`SITE_LOGO_PATH`, `@donotdev/core`), as an absolute URL: the Organization `logo` (home page, when `appConfig.app.links` is set) and the WebPage / Article `publisher.logo` (every page with an app URL). One path, no existence check or asset-manifest lookup at render, so the server render, the browser and the Vite prerendered pages write the same URL (no hydration mismatch). The generated PWA icons (`icon-*x*.png`) are never used for it.
 
-- **Missing `public/logo.svg`:** the build warns (`logo.svg not found in public/`); the JSON-LD logo then points to a missing file, and no favicon, PWA icons or `og-image.png` are generated. Add `public/logo.svg`.
+- **Missing `public/logo.svg`:** the build warns (`public/logo.svg is missing: ...`, naming any framework default icon left in `public/`); the JSON-LD logo then points to a missing file, and no favicon, PWA icons or `og-image.png` are generated. Add `public/logo.svg`.
 
 ---
 

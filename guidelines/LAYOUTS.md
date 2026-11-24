@@ -250,6 +250,8 @@ footerMode: 'scroll',
 
 A footer inside `main` (`scroll`, or a `<footer>` rendered after the page) keeps its own height and sits at the bottom of the screen on a short page: only the page grows (the first child of `main`, or the one after the breadcrumbs). While a page inside a `<Suspense>` streams in, `main` stays empty above the footer, so nothing moves when it arrives.
 
+While an `ActionBar` (`@donotdev/components`) is shown, the layout reserves its height at the bottom (`--action-bar-height`, set by the bar on `<html>`), so the end of the page and the footer, in either mode, scroll above the bar instead of under it.
+
 Set `footerMode` in your preset config or in the `layout` prop:
 ```tsx
 <ViteAppProviders

@@ -11,7 +11,8 @@
  * - Open Graph and Twitter Card support with image dimensions
  * - hreflang alternate links (auto from i18n config)
  * - Speculation Rules API (prefetch/prerender for Chromium) - opt-in, requires CSP config
- * - BreadcrumbList + WebSite JSON-LD structured data
+ * - BreadcrumbList (home, the page's ancestors `routeAncestors`, the page; named by their
+ *   route titles) + WebSite JSON-LD structured data
  * - Internationalization integration
  * - Canonical URL management
  *
@@ -24,6 +25,7 @@ import { useMemo } from 'react';
 import type { ComponentType } from 'react';
 
 import {
+  breadcrumbNamespaces,
   buildBreadcrumbJsonLd,
   formatTrailingSlash,
   getLanguageRouting,
@@ -77,6 +79,9 @@ interface ResolvedRouteMetadata {
   authOnly: boolean;
   recordBreadcrumb: boolean;
 }
+
+/** No route manifest (no config): no route, no ancestor. */
+const EMPTY_ROUTES: readonly { path: string }[] = [];
 
 /** Route metadata of the 404 document: none (it has no URL of its own). */
 const NOT_FOUND_ROUTE_METADATA: ResolvedRouteMetadata = {
@@ -236,8 +241,15 @@ function buildSpeculationRules() {
  *   `routeSeo` / `routeHeadTags` (@donotdev/core), the derivation the build uses
  */
 export const AutoMetaTags: ComponentType = () => {
-  const { t } = useTranslation();
   const pathname = useRoutePath();
+  // The BreadcrumbList names the page's ancestors by their titles: their namespaces load
+  // with the page's (Next inlines every namespace: server render = browser render)
+  const routes = getDndevConfig()?.routes?.mapping ?? EMPTY_ROUTES;
+  const crumbNamespaces = useMemo(
+    () => breadcrumbNamespaces(pathname, routes),
+    [pathname, routes]
+  );
+  const { t } = useTranslation(['dndev', ...crumbNamespaces]);
   const seoConfig = useSeoConfig();
   const appMeta = useAppConfig('app');
   const siteName = (seoConfig && seoConfig.siteName) || appMeta?.name || '';
@@ -389,13 +401,23 @@ export const AutoMetaTags: ComponentType = () => {
         />
       )}
 
-      {/* JSON-LD: BreadcrumbList (auto from URL segments; entity record pages own theirs) */}
+      {/* JSON-LD: BreadcrumbList (home, the page's ancestors and the page, by route
+          title; entity record pages own theirs) */}
       {breadcrumbSchemaEnabled &&
         !notFoundDocument &&
         !pageOwnsBreadcrumb &&
         pathname !== '/' && (
           <script type="application/ld+json">
-            {JSON.stringify(buildBreadcrumbJsonLd(pathname, siteName, pageUrl))}
+            {JSON.stringify(
+              buildBreadcrumbJsonLd({
+                pathname,
+                routes,
+                siteName,
+                t,
+                defaultNs: seoConfig.defaultNamespace ?? 'home',
+                pageUrl,
+              })
+            )}
           </script>
         )}
 

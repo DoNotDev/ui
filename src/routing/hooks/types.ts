@@ -17,3 +17,15 @@ export interface NavigateOptions {
   /** Preserve scroll position (default: false, scrolls to top) */
   preserveScroll?: boolean;
 }
+
+/** Navigates to an app path, or `'back'`. */
+export type NavigateFunction = (path: string, options?: NavigateOptions) => void;
+
+/**
+ * What `useNavigate()` returns: the navigate function, also carrying itself as
+ * `navigate` and the transition's `pending` (true until the new route has rendered).
+ */
+export type Navigate = NavigateFunction & {
+  navigate: NavigateFunction;
+  pending: boolean;
+};

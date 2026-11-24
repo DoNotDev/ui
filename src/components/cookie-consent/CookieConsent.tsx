@@ -363,7 +363,6 @@ function CookieConsent({
         <Button
           onClick={() => setShowBanner(true)}
           variant={BUTTON_VARIANT.OUTLINE}
-          floating
           icon={Cookie}
           display="compact"
           tooltip={t('cookiePreferences')}

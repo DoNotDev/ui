@@ -30,7 +30,8 @@ vi.mock('@donotdev/core', async () => {
     useTranslation: () => ({ t: () => '' }),
     getDndevConfig: () => ({
       routes: {
-        mapping: [],
+        // The page the tests render: its BreadcrumbList item (a URL that is no page has none)
+        mapping: [{ path: '/produits', meta: {} }],
         manifest: {
           hasBlogFeed: page.hasBlogFeed,
           trailingSlash: page.trailingSlash,

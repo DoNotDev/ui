@@ -20,7 +20,7 @@ import {
   TooltipProvider,
 } from '@donotdev/components';
 import type { LinkRendererProps } from '@donotdev/components';
-import { useOverlayStore } from '@donotdev/core';
+import { getRoutes, useOverlayStore } from '@donotdev/core';
 import type { FormNavigation } from '@donotdev/crud';
 // Platform-specific hooks via conditional exports
 import { useNavigate, useRoutePath } from '@donotdev/ui/routing/hooks';
@@ -28,7 +28,6 @@ import { useNavigate, useRoutePath } from '@donotdev/ui/routing/hooks';
 import { FormNavigationProvider, isCrudModuleAvailable } from '../../crud/crudImports';
 import { Link } from '../../routing/Link';
 import { getParentRoutePath } from '../../routing/parentRoute';
-import { useAllRoutes } from '../../routing/useRouteDiscovery';
 
 import DnDevErrorBoundary from '../common/DnDevErrorBoundary';
 import GlobalErrorFallback from '../common/GlobalErrorFallback';
@@ -53,21 +52,17 @@ function UIGlobalErrorFallback(
 function FormNavigationBridge({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRoutePath();
-  const routes = useAllRoutes();
-  const latest = useRef({ navigate, pathname, routes });
+  const latest = useRef({ navigate, pathname });
   useEffect(() => {
-    latest.current = { navigate, pathname, routes };
+    latest.current = { navigate, pathname };
   });
   const [value] = useState<FormNavigation>(() => ({
     navigate: (path) => {
       void latest.current.navigate(path);
     },
     currentPath: () => latest.current.pathname,
-    parentPath: () =>
-      getParentRoutePath(
-        latest.current.pathname,
-        new Set(latest.current.routes.map((route) => route.path))
-      ),
+    // The page's nearest ancestor (the Breadcrumbs chain, over the route manifest)
+    parentPath: () => getParentRoutePath(latest.current.pathname, getRoutes()),
   }));
   return <FormNavigationProvider value={value}>{children}</FormNavigationProvider>;
 }

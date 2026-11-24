@@ -4,8 +4,9 @@
 /**
  * @fileoverview Record name in the breadcrumbs
  * @description Publishes the shown record's display name to the layout store, so the
- * breadcrumb segment naming the record (`/produits/<slug>`, `/products/<uuid>`) reads as
- * the record's name: the name the page's BreadcrumbList JSON-LD ends with (entity pages).
+ * breadcrumb of the page whose last URL segment names the record (`/produits/<slug>`,
+ * `/products/<uuid>`) reads as the record's name: the name the page's BreadcrumbList
+ * JSON-LD ends with (entity pages).
  *
  * @version 0.2.0
  * @since 0.2.3
@@ -56,7 +57,7 @@ function recordSegment(
  * the card (the same title `deriveEntitySeo` gives the entity page's metadata and the last
  * BreadcrumbList item), on the segment naming the record ({@link recordSegment}: its slug
  * on `/produits/:slug`, its id on `/products/:id`). Cleared when the page unmounts or the record
- * has no title, unless another component replaced it meanwhile (its label stays). Client effect: the server render keeps the URL segment.
+ * has no title, unless another component replaced it meanwhile (its label stays). Client effect: the server render names the page by its route title (`routeLabel`).
  *
  * @param entity - Entity of the record
  * @param record - Loaded record (`undefined` / `null` while loading)

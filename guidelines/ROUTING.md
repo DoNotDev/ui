@@ -79,6 +79,11 @@ not-found wrappers opt into this generic, badge-free content. This prop hides on
 the path badge; translated labels, route suggestions and Home/Back actions remain
 server-renderable. It does not disable SSR or defer navigation until mount.
 
+A Next page answers 404 with Next's `notFound()` (`next/navigation`; entity pages
+get it generated). The framework error boundaries re-throw Next's router control flow
+(`notFound()`, `forbidden()`, `unauthorized()`, `redirect()`), so the app's 404 page
+shows, not the error fallback.
+
 The badge is not the only URL-derived output. The static Next 404 is built once (at
 `/_not-found`) and served for every unknown URL, so anything computed from the
 pathname differs between its HTML and the browser's render (React #418). The
@@ -132,6 +137,14 @@ function ProductForm() {
   return <form onSubmit={handleSubmit}>...</form>;
 }
 ```
+
+**Loading state while the next page loads:** destructure `pending` (true until the new route has rendered; navigation runs in a React transition):
+```tsx
+const { navigate, pending } = useNavigate();
+
+<Button loading={pending} onClick={() => navigate('/checkout')}>{t('checkout')}</Button>
+```
+Overlays still close at the click, so a button inside a framework Dialog/Sheet will not show its spinner.
 
 **DON'T use react-router-dom:**
 ```tsx
@@ -389,6 +402,34 @@ export function ProductsPage() {
 - Filters by auth permissions
 - Handles lazy loading
 - Creates route structure
+
+### Parent page and breadcrumbs
+
+A page's ancestors are its URL prefixes that are pages (`/routines/:id` → `/routines`). A
+page whose URL prefix is no page names its parent with PageMeta `parent`:
+
+```tsx
+// src/pages/ProductPage.tsx: /produits/:slug, no /produits page; the catalogue lists them
+export const meta: PageMeta = {
+  route: '/produits/:slug',
+  entity: productEntity,
+  parent: '/catalogue',
+};
+```
+
+One chain (`routeAncestors` in `@donotdev/core`: the direct URL prefix when it is a page,
+else `parent`, else the nearest shorter prefix that is a page, then the parent's own chain)
+feeds the visible `Breadcrumbs` (Home > Catalogue > product), every BreadcrumbList JSON-LD
+(see SEO.md) and the forms' parent path (cancel / after save). Each crumb is named by its
+page's title (the `<title>` chain: `seo.title`, else `<namespace>:title`; `routeLabel`);
+a URL prefix that is no page is no crumb; the shown record keeps its name
+(`useRecordBreadcrumb`). The trail reads the build's route manifest, so the server HTML and
+the browser render are identical.
+
+`parent` is read at build like `route`: a literal static path of an existing page
+(`/x`, no `:param`, `*`, query or hash), `'/'` for home. The build fails on any other
+value, on the page itself, on a loop, and when the URL prefix is itself a page (it is the
+parent already: remove `parent`).
 
 ---
 

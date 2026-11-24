@@ -101,6 +101,7 @@ async function prerenderedHeadOf(file: string): Promise<string> {
   const { pages } = await buildPrerenderedPages({
     staticRoutes: [MAPPING[0]!],
     records: recordRoutes([MAPPING[1]!]),
+    routes: MAPPING,
     crud,
     readSchemas: entityReadSchemas(
       { productEntity },

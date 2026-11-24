@@ -19,9 +19,9 @@ import {
   Button,
   BUTTON_VARIANT,
   Card,
+  Floating,
   Label,
   Portal,
-  PortalButton,
   cn,
   Stack,
 } from '@donotdev/components';
@@ -103,20 +103,16 @@ const DebugTools = ({ className }: DebugToolsProps) => {
     setDebugEnabled(newValue);
   };
 
-  // Don't render if hidden - use PortalButton for minimized state
+  // Don't render if hidden - use Floating + Button for minimized state
   if (!isVisible) {
     return (
-      <PortalButton
-        onClick={() => setIsVisible(true)}
-        className="dndev-z-overlay"
-        style={{
-          position: 'fixed',
-          top: 'calc(var(--gap-lg) + var(--header-height))',
-          insetInlineStart: 'calc(var(--gap-sm) + var(--sidebar-width))',
-        }}
-        icon={Bug}
-        title="Show Debug Tools"
-      />
+      <Floating placement="bottom-start">
+        <Button
+          onClick={() => setIsVisible(true)}
+          icon={Bug}
+          title="Show Debug Tools"
+        />
+      </Floating>
     );
   }
 

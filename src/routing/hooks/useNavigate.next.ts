@@ -10,11 +10,13 @@
  * @author AMBROISE PARK Consulting
  */
 
+import { useTransition } from 'react';
+
 import { useRouter as useNextRouter } from 'next/navigation';
 
 import { isClient, useOverlayStore } from '@donotdev/core';
 
-import type { NavigateOptions } from './types';
+import type { Navigate, NavigateFunction, NavigateOptions } from './types';
 import { useLocalizedPath } from './useUrlLanguage.next';
 
 /**
@@ -23,39 +25,44 @@ import { useLocalizedPath } from './useUrlLanguage.next';
  * App paths stay in the current URL's language (`/produits` → `/en/produits` on an
  * English page); a path with an explicit language prefix keeps it.
  *
- * @version 0.3.0
+ * Returns the navigate function itself, so `const navigate = useNavigate()` works as
+ * before. It also carries `navigate` and `pending`, for `const { navigate, pending } =
+ * useNavigate()`: the router call runs in a React transition and `pending` stays true
+ * until the App Router has rendered the new route. Use it for `loading` on the button
+ * that navigates. Overlays still close at the click (`closeAll`).
+ *
+ * @version 0.4.0
  * @since 0.0.1
  */
-export function useNavigate() {
+export function useNavigate(): Navigate {
   const router = useNextRouter();
   const closeAll = useOverlayStore((state) => state.closeAll);
   const localize = useLocalizedPath();
+  const [pending, startTransition] = useTransition();
 
-  return (path: string, options?: NavigateOptions) => {
-    if (path === 'back') {
-      closeAll();
-      return router.back();
-    }
-
+  const navigate: NavigateFunction = (path, options) => {
     closeAll();
-    const to = localize(path);
 
-    if (options?.preserveScroll && isClient()) {
-      const scrollY = window.scrollY;
-      if (options?.replace) {
-        router.replace(to);
-      } else {
-        router.push(to);
-      }
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: scrollY, behavior: 'auto' });
-      });
+    if (path === 'back') {
+      startTransition(() => router.back());
       return;
     }
 
-    if (options?.replace) return router.replace(to);
-    return router.push(to);
+    const to = localize(path);
+    startTransition(() => {
+      if (options?.replace) router.replace(to);
+      else router.push(to);
+    });
+
+    if (options?.preserveScroll && isClient()) {
+      const scrollY = window.scrollY;
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollY, behavior: 'auto' });
+      });
+    }
   };
+
+  return Object.assign(navigate, { navigate, pending });
 }
 
 export function useBack() {

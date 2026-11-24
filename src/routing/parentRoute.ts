@@ -1,49 +1,34 @@
 // packages/ui/src/routing/parentRoute.ts
 
 /**
- * @fileoverview Breadcrumb path rules
- * @description One rule for Breadcrumbs and form navigation: every cumulative
- * path prefix is a crumb, and a crumb links only when it is a known route.
+ * @fileoverview Parent page of a URL
+ * @description The forms' parent path (cancel / after-save navigation): the nearest
+ * ancestor of the page, by the ancestor chain the Breadcrumbs and the BreadcrumbList
+ * JSON-LD read (`routeAncestors` in `@donotdev/core`: URL prefixes that are routes,
+ * PageMeta `parent`).
  *
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.2.5
  * @author AMBROISE PARK Consulting
  */
 
-/**
- * Cumulative prefixes of a pathname: `/a/b/c` → `['/a', '/a/b', '/a/b/c']`.
- *
- * @param pathname - App path (no language prefix)
- * @returns One entry per segment, in order
- */
-export function getPathPrefixes(pathname: string): string[] {
-  const prefixes: string[] = [];
-  let current = '';
-  for (const segment of pathname.split('/').filter(Boolean)) {
-    current += `/${segment}`;
-    prefixes.push(current);
-  }
-  return prefixes;
-}
+import { routeAncestors } from '@donotdev/core';
+import type { AncestorRoute } from '@donotdev/core';
 
 /**
- * Previous breadcrumb: the nearest parent prefix that is a known route, else home.
- * `/routines/abc` → `/routines`; `/reglages` → `/`.
+ * Previous breadcrumb: the page's nearest ancestor (`routeAncestors`), else home.
+ * `/routines/abc` → `/routines`; `/reglages` → `/`; `/produits/serum` with PageMeta
+ * `parent: '/catalogue'` → `/catalogue`.
  *
  * @param pathname - App path (no language prefix)
- * @param routePaths - Known route paths (what Breadcrumbs links)
- * @param homePath - Path when no parent route exists
+ * @param routes - Known routes, with their PageMeta (what Breadcrumbs links)
+ * @param homePath - Path when the page has no ancestor
  * @returns The path the previous breadcrumb links to
  */
 export function getParentRoutePath(
   pathname: string,
-  routePaths: ReadonlySet<string>,
+  routes: readonly AncestorRoute[],
   homePath = '/'
 ): string {
-  const parents = getPathPrefixes(pathname).slice(0, -1);
-  for (let index = parents.length - 1; index >= 0; index--) {
-    const path = parents[index];
-    if (path !== undefined && routePaths.has(path)) return path;
-  }
-  return homePath;
+  return routeAncestors(pathname, routes).at(-1)?.path ?? homePath;
 }

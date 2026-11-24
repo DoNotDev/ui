@@ -10,6 +10,8 @@
  * @author AMBROISE PARK Consulting
  */
 
+import { useTransition } from 'react';
+
 import { useNavigate as useRouterNavigate } from 'react-router-dom';
 
 import {
@@ -19,7 +21,7 @@ import {
   useOverlayStore,
 } from '@donotdev/core';
 
-import type { NavigateOptions } from './types';
+import type { Navigate, NavigateFunction, NavigateOptions } from './types';
 import { useUrlLanguage } from './useUrlLanguage.vite';
 
 /**
@@ -29,21 +31,30 @@ import { useUrlLanguage } from './useUrlLanguage.vite';
  * stay in the current language. A path prefixed with another language opens that
  * language's URL (document navigation: the router restarts under its prefix).
  *
- * @version 0.3.0
+ * Returns the navigate function itself, so `const navigate = useNavigate()` works as
+ * before. It also carries `navigate` and `pending`, for `const { navigate, pending } =
+ * useNavigate()`: the router call runs in a React transition and `pending` stays true
+ * while the new route suspends (lazy route chunk). Use it for `loading` on the button
+ * that navigates. Overlays still close at the click (`closeAll`).
+ *
+ * @version 0.4.0
  * @since 0.0.1
  */
-export function useNavigate() {
+export function useNavigate(): Navigate {
   const routerNavigate = useRouterNavigate();
   const closeAll = useOverlayStore((state) => state.closeAll);
   const language = useUrlLanguage();
+  const [pending, startTransition] = useTransition();
 
-  return (path: string, options?: NavigateOptions) => {
-    if (path === 'back') {
-      closeAll();
-      return routerNavigate(-1);
-    }
-
+  const navigate: NavigateFunction = (path, options) => {
     closeAll();
+
+    if (path === 'back') {
+      startTransition(() => {
+        void routerNavigate(-1);
+      });
+      return;
+    }
 
     const split = path.startsWith('/')
       ? splitLanguagePath(path, getLanguageRouting())
@@ -54,9 +65,12 @@ export function useNavigate() {
     }
     const to = split?.prefixed ? split.path : path;
 
-    if (options?.replace) return routerNavigate(to, { replace: true });
-    return routerNavigate(to);
+    startTransition(() => {
+      void routerNavigate(to, options?.replace ? { replace: true } : undefined);
+    });
   };
+
+  return Object.assign(navigate, { navigate, pending });
 }
 
 export function useBack() {

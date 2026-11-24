@@ -1,17 +1,24 @@
 // packages/ui/src/routing/__tests__/parentRoute.test.ts
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { getParentRoutePath, getPathPrefixes } from '../parentRoute';
+vi.mock('@donotdev/core', async () =>
+  import('../../../../core/utils/src/common/routeAncestors')
+);
 
-const routes = new Set(['/', '/routines', '/routines/:id', '/fournisseur', '/reglages']);
+import { getParentRoutePath } from '../parentRoute';
 
-describe('breadcrumb path rules', () => {
-  it('lists cumulative prefixes', () => {
-    expect(getPathPrefixes('/a/b/c')).toEqual(['/a', '/a/b', '/a/b/c']);
-    expect(getPathPrefixes('/')).toEqual([]);
-  });
+const routes = [
+  { path: '/' },
+  { path: '/routines' },
+  { path: '/routines/:id' },
+  { path: '/fournisseur' },
+  { path: '/reglages' },
+  { path: '/catalogue' },
+  { path: '/produits/:slug', meta: { parent: '/catalogue' } },
+];
 
+describe('getParentRoutePath', () => {
   it('returns the nearest parent that is a known route', () => {
     expect(getParentRoutePath('/routines/abc', routes)).toBe('/routines');
     expect(getParentRoutePath('/routines/new', routes)).toBe('/routines');
@@ -19,6 +26,11 @@ describe('breadcrumb path rules', () => {
 
   it('skips parents that are not routes', () => {
     expect(getParentRoutePath('/fournisseur/abc/reception', routes)).toBe('/fournisseur');
+  });
+
+  // REGRESSION (BUGS #35): no page at /produits, forms went back to home
+  it("returns the page's PageMeta parent when its URL prefix is no route", () => {
+    expect(getParentRoutePath('/produits/serum', routes)).toBe('/catalogue');
   });
 
   it('falls back to home for top-level pages', () => {

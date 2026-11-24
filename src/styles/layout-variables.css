@@ -821,6 +821,14 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
   }
 }
 
+/* ActionBar (@donotdev/components): while shown, it sets its height as --action-bar-height on
+   <html> (absent while hidden). The layout reserves it at the bottom, like the bottom
+   mergedBar, so the end of main and a footer (inside main or in its grid row) sit above the
+   bar. The grid shrinks from the bottom: content above the reading position does not move. */
+.dndev-layout {
+  padding-block-end: var(--action-bar-height, 0px);
+}
+
 /* Desktop (>=1024px): Always hide merged-bar */
 @media (width >=1024px) {
   .merged-bar {
@@ -1002,15 +1010,21 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
   }
 }
 
-/* Breadcrumbs navigation */
+/* Breadcrumbs navigation. Wraps instead of overflowing (long record names on a phone);
+   flush with the content edge, so a trail placed in page content lines up with it. */
 .breadcrumbs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--gap-sm);
-  padding-inline-start: var(--gap-sm);
   font-size: var(--font-size-base);
   min-height: 32px;
   color: var(--muted-foreground);
+}
+
+/* The layout's breadcrumb bar insets the trail from the bar's edge */
+.breadcrumbs-container .breadcrumbs {
+  padding-inline-start: var(--gap-sm);
 }
 
 .breadcrumb-item {

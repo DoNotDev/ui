@@ -26,7 +26,7 @@ export { useMatch } from './useMatch.next';
 export { useQueryParams } from './useQueryParams.next';
 export { useRedirectGuard } from './useRedirectGuard.next';
 export { useLocalizedPath, useUrlLanguage } from './useUrlLanguage.next';
-export type { NavigateOptions } from './types';
+export type { Navigate, NavigateFunction, NavigateOptions } from './types';
 export type {
   RedirectGuardOptions,
   RedirectGuardResult,

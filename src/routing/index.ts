@@ -49,6 +49,8 @@ export {
   useUrlLanguage,
 } from '@donotdev/ui/routing/hooks';
 export type {
+  Navigate,
+  NavigateFunction,
   NavigateOptions,
   RedirectGuardOptions,
   RedirectGuardResult,

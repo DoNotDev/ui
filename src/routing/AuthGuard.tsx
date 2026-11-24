@@ -11,7 +11,7 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactNode, ComponentType } from 'react';
 
 import { Spinner } from '@donotdev/components';
@@ -46,6 +46,9 @@ interface AuthGuardProps {
  * For SPA navigation, auth is intercepted in useNavigate (before page mount).
  * This component handles the cold-load case: user pastes a protected URL directly.
  * It redirects to authRoute, saves returnTo, and AuthReturnTo handles the redirect back.
+ * A user who signs out (or deletes the account) on the page is sent to authRoute
+ * without a returnTo or the guard toast: they left on purpose, and a saved returnTo
+ * would send the next sign-in (or the sign-in that ends a sign-up) back here.
  *
  * @version 0.1.0
  * @since 0.0.1
@@ -64,10 +67,15 @@ export function AuthGuard({
     auth,
   });
 
-  // Redirect if needed - save current path when redirecting unauthenticated user
+  // Signed in at some point on this page: losing the user is a sign-out, not a cold load.
+  const signedInHere = useRef(false);
+  if (user) signedInHere.current = true;
+
+  // Redirect if needed - save current path when redirecting an unauthenticated visitor
+  // (cold load only, see above)
   useEffect(() => {
     if (shouldRedirect && redirectTo) {
-      if (!user && isClient()) {
+      if (!user && !signedInHere.current && isClient()) {
         safeSessionStorage.setItem(
           'dndev.auth.returnTo',
           window.location.pathname + window.location.search

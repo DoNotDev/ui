@@ -26,7 +26,7 @@ export { useMatch } from './useMatch.vite';
 export { useQueryParams } from './useQueryParams.vite';
 export { useRedirectGuard } from './useRedirectGuard.vite';
 export { useLocalizedPath, useUrlLanguage } from './useUrlLanguage.vite';
-export type { NavigateOptions } from './types';
+export type { Navigate, NavigateFunction, NavigateOptions } from './types';
 export type {
   RedirectGuardOptions,
   RedirectGuardResult,
