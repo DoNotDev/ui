@@ -16,6 +16,7 @@ const { TEXTS, ROUTES } = vi.hoisted(() => ({
     'catalogue:title': 'Catalogue',
     'product:title': 'Produit',
     'products:title': 'Products',
+    'navigation.home': 'Home',
   } as Record<string, string>,
   ROUTES: [
     { path: '/', meta: { namespace: 'home' } },

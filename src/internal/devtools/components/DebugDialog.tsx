@@ -50,7 +50,7 @@ export const DebugDialog = () => {
       }
       side="top"
       showOverlay={false}
-      title={t('sheet.debugPanel', { defaultValue: 'Debug Panel' })}
+      title={t('sheet.debugPanel')}
       className="dndev-h-[80vh] dndev-max-h-[80vh]"
       data-dndev-devtools="true"
     >

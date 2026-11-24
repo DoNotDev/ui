@@ -171,7 +171,7 @@ export const RouteErrorFallback: ComponentType<RouteErrorFallbackProps> = ({
                 margin: 0,
               }}
             >
-              {t('routeError.title', 'Something went wrong')}
+              {t('routeError.title')}
             </h1>
             <p
               className="dndev-text-base"
@@ -181,16 +181,13 @@ export const RouteErrorFallback: ComponentType<RouteErrorFallbackProps> = ({
                 margin: 0,
               }}
             >
-              {t(
-                'routeError.description',
-                'We encountered an error while loading this page.'
-              )}
+              {t('routeError.description')}
             </p>
             <Alert variant={ALERT_VARIANT.INFO} hideIcon>
               <div
                 style={{ fontSize: 'var(--font-size-sm)', textAlign: 'center' }}
               >
-                {t('routeError.dataSafe', "Don't worry, your data is safe.")}
+                {t('routeError.dataSafe')}
               </div>
             </Alert>
           </Stack>
@@ -206,7 +203,7 @@ export const RouteErrorFallback: ComponentType<RouteErrorFallbackProps> = ({
                 color: 'var(--foreground)',
               }}
             >
-              {t('routeError.errorId', 'Error ID')}: {eventId}
+              {t('routeError.errorId')}: {eventId}
             </code>
           )}
 
@@ -230,8 +227,8 @@ export const RouteErrorFallback: ComponentType<RouteErrorFallbackProps> = ({
                   disabled={copiedStack}
                 >
                   {copiedStack
-                    ? t('routeError.copied', 'Copied')
-                    : t('routeError.copyDetails', 'Copy Details')}
+                    ? t('routeError.copied')
+                    : t('routeError.copyDetails')}
                 </Button>
               </Stack>
               <pre
@@ -257,13 +254,13 @@ export const RouteErrorFallback: ComponentType<RouteErrorFallbackProps> = ({
               onClick={handleRetry}
               fullWidth
             >
-              {t('routeError.tryAgain', 'Try Again')}
+              {t('routeError.tryAgain')}
             </Button>
 
             <Stack direction="row" justify="center">
               <Link path="/">
                 <Button variant={BUTTON_VARIANT.DEFAULT} icon={Home} fullWidth>
-                  {t('routeError.goHome', 'Go Home')}
+                  {t('routeError.goHome')}
                 </Button>
               </Link>
               <Button
@@ -272,7 +269,7 @@ export const RouteErrorFallback: ComponentType<RouteErrorFallbackProps> = ({
                 onClick={handleGoBack}
                 fullWidth
               >
-                {t('routeError.goBack', 'Go Back')}
+                {t('routeError.goBack')}
               </Button>
             </Stack>
           </Stack>
@@ -285,10 +282,7 @@ export const RouteErrorFallback: ComponentType<RouteErrorFallbackProps> = ({
               margin: 0,
             }}
           >
-            {t(
-              'routeError.contactSupport',
-              'If the problem persists, please contact support.'
-            )}
+            {t('routeError.contactSupport')}
           </p>
         </Stack>
       </Card>

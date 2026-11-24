@@ -127,20 +127,14 @@ function PWAUpdateNotification({ onUpdate }: PWAUpdateNotificationProps) {
       };
 
       const { id } = toast({
-        title: t('pwa.update.title', 'Update available'),
-        description: t(
-          'pwa.update.description',
-          'A new version is ready. Refresh to update.'
-        ),
+        title: t('pwa.update.title'),
+        description: t('pwa.update.description'),
         toastType: 'info',
         duration: 0, // Persistent (industry standard)
         action: (
-          <ToastAction
-            asChild
-            altText={t('pwa.update.altText', 'Update application')}
-          >
+          <ToastAction asChild altText={t('pwa.update.altText')}>
             <Button onClick={handleUpdate} icon={RefreshCw}>
-              {t('pwa.update.button', 'Update')}
+              {t('pwa.update.button')}
             </Button>
           </ToastAction>
         ),

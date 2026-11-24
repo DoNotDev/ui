@@ -24,19 +24,21 @@ import { AssetResolver } from '../assetResolver';
  * (AssetDiscovery._buildAssetManifest output, as the Next asset config sets it).
  */
 const MAPPING = {
-  logo: { optimal: '/logo.png', fallback: '/logo.png' },
+  logo: { optimal: '/logo.svg', fallback: '/logo.png' },
   favicon: { optimal: '/favicon.svg', fallback: '/favicon.ico' },
   appleTouchIcon: '/apple-touch-icon.png',
   androidChrome: { 192: null, 512: null },
   manifest: '/manifest.json',
-  modernFormats: [
+  assets: [
     '/apple-touch-icon.png',
+    '/favicon.ico',
+    '/favicon.svg',
     '/icon-192x192.png',
     '/icon-512x512.png',
     '/logo.png',
+    '/logo.svg',
     '/og-image.png',
   ],
-  fallbackFormats: ['/favicon.ico', '/favicon.svg', '/logo.svg'],
 };
 
 /** Resolve everything the head and header render, fresh (no cache from another run). */
@@ -80,7 +82,8 @@ describe('AssetResolver on the server and in the browser', () => {
     const client = resolveAll();
     expect(server).toEqual(client);
     expect(server).toEqual({
-      logo: '/logo.png',
+      // logo.svg wins over logo.png (regression: a stale logo.png was the Next logo)
+      logo: '/logo.svg',
       favicon: '/favicon.svg',
       faviconSet: {
         svg: '/favicon.svg',
@@ -100,8 +103,9 @@ describe('AssetResolver on the server and in the browser', () => {
     delete (globalThis as { _DNDEV_CONFIG_?: unknown })._DNDEV_CONFIG_;
     AssetResolver.clearCache();
     expect(AssetResolver.resolveLogo()).toBe('/logo.svg');
+    // An app with logo.png only: its manifest logo, not the /logo.svg resolved before
     globalThis._DNDEV_CONFIG_ = {
-      assets: { mapping: MAPPING },
+      assets: { mapping: { ...MAPPING, logo: { optimal: '/logo.png', fallback: '/logo.png' } } },
     } as unknown as typeof globalThis._DNDEV_CONFIG_;
     expect(AssetResolver.resolveLogo()).toBe('/logo.png');
     expect(AssetResolver.resolveFaviconSet().apple180).toBe('/apple-touch-icon.png');

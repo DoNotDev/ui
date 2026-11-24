@@ -72,8 +72,7 @@ const CONFIG = {
       appleTouchIcon: '/apple-touch-icon.png',
       androidChrome: { 192: null, 512: null },
       manifest: '/manifest.json',
-      modernFormats: ['/icon-192x192.png', '/icon-512x512.png', '/logo.png'],
-      fallbackFormats: ['/favicon.ico', '/favicon.svg', '/logo.svg'],
+      assets: ['/favicon.ico', '/favicon.svg', '/logo.svg', '/icon-192x192.png', '/icon-512x512.png', '/logo.png'],
     },
   },
 };

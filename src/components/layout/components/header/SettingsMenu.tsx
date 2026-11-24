@@ -111,19 +111,19 @@ function SettingsMenu({
 
   const items: DropdownMenuItemData[] = [
     {
-      label: t('auth.title', 'Authentication'),
+      label: t('auth.title'),
       subContent: <AuthHeader display={DISPLAY.COMPACT} />,
     },
     {
-      label: t('settings.theme', 'Theme'),
+      label: t('settings.theme'),
       subItems: themeItems,
     },
     {
-      label: t('settings.language', 'Language'),
+      label: t('settings.language'),
       subItems: languageItems,
     },
     {
-      label: t('settings.clearCache.title', 'Clear Cache'),
+      label: t('settings.clearCache.title'),
       subContent: <CacheSettings />,
     },
   ];
@@ -133,7 +133,7 @@ function SettingsMenu({
       trigger={
         <Button
           variant={variant}
-          aria-label={t('settings.title', 'Settings')}
+          aria-label={t('settings.title')}
           icon={Settings}
         />
       }

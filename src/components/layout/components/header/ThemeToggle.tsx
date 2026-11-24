@@ -99,19 +99,17 @@ const ThemeToggle: ComponentType<ThemeToggleProps> = ({
   const buttonIcon = isTwoThemes ? nextIcon : currentIcon;
   const buttonTooltip = isTwoThemes
     ? !noTooltip
-      ? t(
-          'common.themeSelector.tooltipWithNext',
-          'Change Theme: Switch to {{next}}',
-          { next: nextThemeInfo?.displayName || nextThemeInfo?.name }
-        )
+      ? t('common.themeSelector.tooltipWithNext', {
+          next: nextThemeInfo?.displayName || nextThemeInfo?.name,
+        })
       : undefined
     : !noTooltip
-      ? t('common.themeSelector.changeTheme', 'Change Theme')
+      ? t('common.themeSelector.changeTheme')
       : undefined;
 
   const buttonProps = {
     variant: BUTTON_VARIANT.OUTLINE,
-    'aria-label': t('common.themeSelector.changeTheme', 'Change Theme'),
+    'aria-label': t('common.themeSelector.changeTheme'),
     tooltip: buttonTooltip,
     icon: buttonIcon,
     display,

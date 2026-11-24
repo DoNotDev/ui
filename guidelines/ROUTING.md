@@ -102,8 +102,8 @@ over framework resources: a legacy override wins for that field; otherwise its
 reference resolves the canonical value, including a consumer canonical override.
 If both families override the same field, the legacy override wins. Prefer
 `messages.notFound.*` for new overrides; remove an old field override when migrating
-it to canonical. `navigateTo` interpolates `{{label}}`. Existing English component
-defaults remain for missing resources; there is no runtime key-family fallback chain.
+it to canonical. `navigateTo` interpolates `{{label}}`. The component passes no
+default text: a missing resource shows its key; there is no runtime key-family fallback chain.
 
 ---
 

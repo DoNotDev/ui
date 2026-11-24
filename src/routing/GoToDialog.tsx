@@ -91,8 +91,8 @@ const GoToDialogContent: ComponentType = () => {
               data-favorited={isFavorite(item.path)}
               aria-label={
                 isFavorite(item.path)
-                  ? t('globalGoTo.unfavorite', 'Remove from favorites')
-                  : t('globalGoTo.favorite', 'Add to favorites')
+                  ? t('globalGoTo.unfavorite')
+                  : t('globalGoTo.favorite')
               }
             >
               <Icon icon={Star} className="dndev-size-sm" />
@@ -109,7 +109,7 @@ const GoToDialogContent: ComponentType = () => {
 
   if (favoriteItems.length > 0) {
     commandGroups.push({
-      heading: t('globalGoTo.favorites', 'Favorites'),
+      heading: t('globalGoTo.favorites'),
       items: createItems(favoriteItems, false),
     });
   }
@@ -121,7 +121,7 @@ const GoToDialogContent: ComponentType = () => {
 
     if (recentCommandItems.length > 0) {
       commandGroups.push({
-        heading: t('globalGoTo.recent', 'Recent'),
+        heading: t('globalGoTo.recent'),
         separator: favoriteItems.length > 0,
         items: recentCommandItems,
       });
@@ -129,7 +129,7 @@ const GoToDialogContent: ComponentType = () => {
   }
 
   commandGroups.push({
-    heading: t('globalGoTo.allPages', 'All Pages'),
+    heading: t('globalGoTo.allPages'),
     separator: favoriteItems.length > 0 || recentItems.length > 0,
     items: createItems(navigationItems),
   });
@@ -142,11 +142,9 @@ const GoToDialogContent: ComponentType = () => {
       onOpenChange={(open: boolean) => (open ? null : closeCommandDialog())}
     >
       <Command
-        placeholder={t('globalGoTo.placeholder', 'Search pages...')}
+        placeholder={t('globalGoTo.placeholder')}
         emptyMessage={
-          hasResults
-            ? t('globalGoTo.noResults', 'No results found.')
-            : t('globalGoTo.empty', 'No pages available.')
+          hasResults ? t('globalGoTo.noResults') : t('globalGoTo.empty')
         }
         groups={commandGroups}
       />
@@ -154,20 +152,20 @@ const GoToDialogContent: ComponentType = () => {
         <div className="dndev-command-footer-shortcuts">
           <div className="dndev-command-footer-shortcut">
             <kbd className="dndev-command-footer-key">⌘K</kbd>
-            <span>{t('globalGoTo.shortcutOpen', 'Open')}</span>
+            <span>{t('globalGoTo.shortcutOpen')}</span>
           </div>
           <div className="dndev-command-footer-shortcut">
             <kbd className="dndev-command-footer-key">↑</kbd>
             <kbd className="dndev-command-footer-key">↓</kbd>
-            <span>{t('globalGoTo.shortcutNavigate', 'Navigate')}</span>
+            <span>{t('globalGoTo.shortcutNavigate')}</span>
           </div>
           <div className="dndev-command-footer-shortcut">
             <kbd className="dndev-command-footer-key">↵</kbd>
-            <span>{t('globalGoTo.shortcutSelect', 'Select')}</span>
+            <span>{t('globalGoTo.shortcutSelect')}</span>
           </div>
           <div className="dndev-command-footer-shortcut">
             <kbd className="dndev-command-footer-key">Esc</kbd>
-            <span>{t('globalGoTo.shortcutClose', 'Close')}</span>
+            <span>{t('globalGoTo.shortcutClose')}</span>
           </div>
         </div>
       </div>

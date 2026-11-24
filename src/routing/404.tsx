@@ -113,7 +113,7 @@ export default function NotFoundPage({
               margin: 0,
             }}
           >
-            {t('errors.notFound.title', 'Page Not Found')}
+            {t('errors.notFound.title')}
           </Text>
 
           <Text
@@ -124,10 +124,7 @@ export default function NotFoundPage({
               margin: 0,
             }}
           >
-            {t(
-              'errors.notFound.description',
-              "The page you're looking for doesn't exist or has been moved."
-            )}
+            {t('errors.notFound.description')}
           </Text>
 
           {/* Static fallbacks cannot know the eventual requested URL. */}
@@ -164,7 +161,7 @@ export default function NotFoundPage({
                 color: 'var(--muted-foreground)',
               }}
             >
-              {t('errors.notFound.suggestions', 'You might be looking for:')}
+              {t('errors.notFound.suggestions')}
             </p>
 
             <Stack direction="row" wrap="wrap" justify="center" gap="tight">
@@ -173,11 +170,9 @@ export default function NotFoundPage({
                   <Button
                     variant={BUTTON_VARIANT.OUTLINE}
                     icon={<Icon icon={route.icon} fallback={LinkIcon} />}
-                    aria-label={t(
-                      'errors.notFound.navigateTo',
-                      `Navigate to ${route.label}`,
-                      { label: route.label }
-                    )}
+                    aria-label={t('errors.notFound.navigateTo', {
+                      label: route.label,
+                    })}
                   >
                     {route.label}
                   </Button>
@@ -193,9 +188,9 @@ export default function NotFoundPage({
             <Button
               variant={BUTTON_VARIANT.DEFAULT}
               icon={Home}
-              aria-label={t('errors.notFound.goHome', 'Go to home page')}
+              aria-label={t('errors.notFound.goHome')}
             >
-              {t('errors.notFound.goHome', 'Go Home')}
+              {t('errors.notFound.goHome')}
             </Button>
           </Link>
 
@@ -203,9 +198,9 @@ export default function NotFoundPage({
             variant={BUTTON_VARIANT.OUTLINE}
             icon={ArrowLeft}
             onClick={handleBack}
-            aria-label={t('errors.notFound.goBack', 'Go back to previous page')}
+            aria-label={t('errors.notFound.goBack')}
           >
-            {t('errors.notFound.goBack', 'Go Back')}
+            {t('errors.notFound.goBack')}
           </Button>
         </Stack>
       </Stack>

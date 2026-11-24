@@ -27,7 +27,6 @@ import type { ComponentType } from 'react';
 import {
   breadcrumbNamespaces,
   buildBreadcrumbJsonLd,
-  formatTrailingSlash,
   getLanguageRouting,
   isMultilingual,
   languageUrl,
@@ -134,28 +133,15 @@ function getRouteMetadata(pathname: string): ResolvedRouteMetadata {
 }
 
 /**
- * Build WebSite JSON-LD with SearchAction (sitelinks search box)
- *
- * @param trailingSlash - The app's URL form (`/search/?q=` under Next `trailingSlash`)
+ * Build WebSite JSON-LD (site name and URL, used by Google for the site name).
+ * No `SearchAction`: Google retired the sitelinks search box (2024-11-21).
  */
-function buildWebSiteSchema(
-  baseUrl: string,
-  siteName: string,
-  trailingSlash: boolean
-) {
+function buildWebSiteSchema(baseUrl: string, siteName: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: siteName,
     url: baseUrl || '/',
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${baseUrl}${formatTrailingSlash('/search?q={search_term_string}', trailingSlash)}`,
-      },
-      'query-input': 'required name=search_term_string',
-    },
   };
 }
 
@@ -421,10 +407,10 @@ export const AutoMetaTags: ComponentType = () => {
           </script>
         )}
 
-      {/* JSON-LD: WebSite with SearchAction (sitelinks search box) */}
+      {/* JSON-LD: WebSite (site name and URL) */}
       {websiteSchemaEnabled && baseUrl && (
         <script type="application/ld+json">
-          {JSON.stringify(buildWebSiteSchema(baseUrl, siteName, trailingSlash))}
+          {JSON.stringify(buildWebSiteSchema(baseUrl, siteName))}
         </script>
       )}
 

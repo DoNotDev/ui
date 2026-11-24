@@ -245,7 +245,7 @@ export const DnDevNavigationMenu: ComponentType<DnDevNavigationMenuProps> = ({
                   <Button
                     className="dndev-size-touch"
                     style={{ flexShrink: 0 }}
-                    aria-label={t('navigation.more', 'More')}
+                    aria-label={t('navigation.more')}
                   >
                     <MoreHorizontal className="dndev-size-md" />
                   </Button>

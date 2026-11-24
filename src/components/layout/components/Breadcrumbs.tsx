@@ -146,10 +146,7 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
 
   // Add home item if enabled
   const allItems: BreadcrumbItem[] = showHome
-    ? [
-        { label: t('navigation.home', 'Home'), href: homeHref },
-        ...breadcrumbItems,
-      ]
+    ? [{ label: t('navigation.home'), href: homeHref }, ...breadcrumbItems]
     : breadcrumbItems;
 
   // Smart variant: Hide breadcrumbs on simple pages (root or single segment)

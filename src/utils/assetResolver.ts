@@ -51,12 +51,10 @@ interface AssetManifest {
   logo?: {
     optimal?: string | null;
     fallback?: string | null;
-    available?: string[];
   };
   favicon?: {
     optimal?: string | null;
     fallback?: string | null;
-    available?: string[];
   };
   appleTouchIcon?: string | null;
   androidChrome?: {
@@ -64,9 +62,8 @@ interface AssetManifest {
     512?: string | null;
   };
   manifest?: string | null;
-  modernFormats?: string[];
-  fallbackFormats?: string[];
-  all?: string[];
+  /** Public path of every discovered asset */
+  assets?: string[];
 }
 
 // Global types are imported from @donotdev/core
@@ -189,7 +186,8 @@ export class AssetResolver {
 
   /**
    * Resolve logo path
-   * Rule: Use manifest optimal if available, otherwise /logo.svg (user must provide).
+   * Rule: the manifest's `logo.optimal` (`/logo.svg` whenever `public/logo.svg` exists, a
+   * raster `logo.*` only without it), otherwise /logo.svg (user must provide).
    * Cached once the manifest is read (the server process keeps the cache across requests,
    * so a resolution made before the generated config ran is not kept).
    */

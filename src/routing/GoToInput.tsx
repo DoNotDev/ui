@@ -71,10 +71,10 @@ const GoToInput = () => {
         onChange={(e) => setValue(e.target.value)}
         onFocus={handleFocus}
         onKeyDown={handleKeyDown}
-        placeholder={t('globalGoTo.searchPlaceholder', 'Search pages...')}
+        placeholder={t('globalGoTo.searchPlaceholder')}
         className="dndev-input dndev-w-full"
         style={{ paddingInlineStart: '2.5rem', paddingInlineEnd: '5rem' }}
-        aria-label={t('globalGoTo.ariaLabel', 'Search navigation')}
+        aria-label={t('globalGoTo.ariaLabel')}
       />
       <div
         className="dndev-absolute dndev-flex dndev-items-center dndev-text-sm"

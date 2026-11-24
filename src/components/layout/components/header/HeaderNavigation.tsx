@@ -123,7 +123,7 @@ const HeaderNavigation: ComponentType<HeaderNavigationProps> = ({
           <Button
             variant="ghost"
             icon={MoreHorizontal}
-            aria-label={t('navigation.menu', 'Navigation')}
+            aria-label={t('navigation.menu')}
             className={className}
           />
         }

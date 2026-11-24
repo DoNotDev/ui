@@ -125,7 +125,6 @@ describe('AutoMetaTags: one URL per language', () => {
     expect(home).toContain('<meta property="og:url" content="https://shop.example/en/"/>');
     expect(linkHref(home, 'rel="alternate" hrefLang="fr"')).toBe('https://shop.example/');
     expect(linkHref(home, 'rel="alternate" hrefLang="en"')).toBe('https://shop.example/en/');
-    expect(home).toContain('"urlTemplate":"https://shop.example/search/?q={search_term_string}"');
 
     page.pathname = '/produits';
     const html = renderToStaticMarkup(<AutoMetaTags />);
@@ -142,6 +141,19 @@ describe('AutoMetaTags: one URL per language', () => {
     page.pathname = '/';
     const home = renderToStaticMarkup(<AutoMetaTags />);
     expect(linkHref(home, 'rel="canonical"')).toBe('https://shop.example/en');
-    expect(home).toContain('"urlTemplate":"https://shop.example/search?q={search_term_string}"');
+  });
+
+  it('WebSite JSON-LD keeps name and url, with no potentialAction / SearchAction', () => {
+    page.pathname = '/';
+    const home = renderToStaticMarkup(<AutoMetaTags />);
+    const blocks = [...home.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(
+      (m) => JSON.parse(m[1].replace(/&quot;/g, '"'))
+    );
+    const site = blocks.find((b) => b['@type'] === 'WebSite');
+    expect(site).toBeDefined();
+    expect(site.url).toBe('https://shop.example');
+    expect(site).not.toHaveProperty('potentialAction');
+    expect(home).not.toContain('SearchAction');
+    expect(home).not.toContain('search_term_string');
   });
 });

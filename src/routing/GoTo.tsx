@@ -73,9 +73,9 @@ export const GoTo = ({
       icon={Search}
       onClick={handleClick}
       className={className}
-      aria-label={t('goTo.ariaLabel', 'Go to page')}
+      aria-label={t('goTo.ariaLabel')}
     >
-      {t('goTo.label', 'Go to')}
+      {t('goTo.label')}
       <kbd
         style={{
           marginInlineStart: 'var(--gap-sm)',

@@ -306,14 +306,14 @@ function CookieConsent({
         variant={BUTTON_VARIANT.OUTLINE}
         style={{ flex: 1 }}
       >
-        {t('form.cancel', 'Cancel')}
+        {t('dndev:form.cancel')}
       </Button>
       <Button
         onClick={handleSave}
         variant={BUTTON_VARIANT.DEFAULT}
         style={{ flex: 1 }}
       >
-        {t('savePreferences', 'Save Preferences')}
+        {t('savePreferences')}
       </Button>
     </Stack>
   ) : (

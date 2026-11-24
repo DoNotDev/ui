@@ -237,17 +237,10 @@ function CacheSettings() {
 
       const successMessage =
         clearedItems.length > 0
-          ? t(
-              'settings.clearCache.success',
-              'Cache cleared successfully: {{items}}',
-              {
-                items: clearedItems.join(', '),
-              }
-            )
-          : t(
-              'settings.clearCache.noItemsCleared',
-              'No cache items were cleared'
-            );
+          ? t('settings.clearCache.success', {
+              items: clearedItems.join(', '),
+            })
+          : t('settings.clearCache.noItemsCleared');
 
       toast('success', successMessage);
 
@@ -268,7 +261,7 @@ function CacheSettings() {
       }
     } catch (error) {
       console.error('Error clearing cache:', error);
-      toast('error', t('settings.clearCache.error', 'Error clearing cache'));
+      toast('error', t('settings.clearCache.error'));
     } finally {
       setIsClearing(false);
     }
@@ -295,10 +288,7 @@ function CacheSettings() {
                 cursor: 'pointer',
               }}
             >
-              {t(
-                `settings.clearCache.${key}`,
-                key.charAt(0).toUpperCase() + key.slice(1)
-              )}
+              {t(`settings.clearCache.${key}`)}
             </label>
           </Stack>
         ))}
@@ -312,8 +302,8 @@ function CacheSettings() {
         icon={Trash2}
       >
         {isClearing
-          ? t('settings.clearCache.clearing', 'Clearing...')
-          : t('settings.clearCache.button', 'Clear Cache')}
+          ? t('settings.clearCache.clearing')
+          : t('settings.clearCache.button')}
       </Button>
     </Stack>
   );

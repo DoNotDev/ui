@@ -170,8 +170,8 @@ export const AuthHeader: ComponentType<AuthHeaderProps> = ({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const loginPath = authConfig.loginPath;
-  const signInLabel = t('auth.signIn', { defaultValue: 'Sign In' });
-  const loadingLabel = t('auth.loading', { defaultValue: 'Loading...' });
+  const signInLabel = t('auth.signIn');
+  const loadingLabel = t('auth.loading');
 
   const hasPasswordProvider =
     enabled.includes('password') || enabled.includes('emailLink');

@@ -365,10 +365,10 @@ export function EntityCardList({
             style={{ padding: 'var(--gap-lg)', textAlign: 'center' }}
           >
             <Text level="h3" style={{ color: 'var(--muted-foreground)' }}>
-              {tCrud('emptyState.title')}
+              {tCrud('emptyState.title', { entity: entityName })}
             </Text>
             <Text style={{ color: 'var(--muted-foreground)' }}>
-              {tCrud('emptyState.description')}
+              {tCrud('emptyState.description', { entity: entityName })}
             </Text>
           </Stack>
         ) : (

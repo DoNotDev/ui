@@ -114,15 +114,10 @@ function FeatureDisabled({
   customActions,
   className = '',
 }: FeatureDisabledProps) {
-  const { t } = useTranslation('ui');
+  const { t } = useTranslation('dndev');
 
   const defaultDescription =
-    description ||
-    t(
-      'featureDisabled.description',
-      '{featureName} is not available. This may be due to missing configuration or disabled features.',
-      { featureName }
-    );
+    description || t('featureDisabled.description', { featureName });
 
   const handleReviewCookies = () => {
     if (onReviewCookies) {
@@ -170,7 +165,7 @@ function FeatureDisabled({
                 onClick={handleReviewCookies}
                 icon={Cookie}
               >
-                {t('featureDisabled.reviewCookies', 'Review Cookies')}
+                {t('featureDisabled.reviewCookies')}
               </Button>
             )}
 
@@ -180,7 +175,7 @@ function FeatureDisabled({
                 onClick={handleContactSupport}
                 icon={Mail}
               >
-                {t('featureDisabled.contactSupport', 'Contact Support')}
+                {t('adminLanding.contactSupport')}
               </Button>
             )}
 
@@ -190,7 +185,7 @@ function FeatureDisabled({
                 onClick={onRetry}
                 icon={RefreshCw}
               >
-                {t('featureDisabled.retry', 'Retry')}
+                {t('featureDisabled.retry')}
               </Button>
             )}
 
@@ -205,10 +200,7 @@ function FeatureDisabled({
             color: 'var(--muted-foreground)',
           }}
         >
-          {t(
-            'featureDisabled.helpText',
-            'If you believe this is an error, please contact support or try refreshing the page.'
-          )}
+          {t('featureDisabled.helpText')}
         </p>
       </div>
     </Card>

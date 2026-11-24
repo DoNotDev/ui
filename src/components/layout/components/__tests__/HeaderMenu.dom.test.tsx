@@ -63,13 +63,25 @@ vi.mock('../../../../../../core/i18n/src/utils/languageSelector', () => ({
 }));
 vi.mock(
   '../../../../../../core/i18n/src/hooks/useTranslation',
-  async (importOriginal) => ({
-    ...(await importOriginal<Record<string, unknown>>()),
-    useTranslation: () => ({
-      t: (key: string, options?: { defaultValue?: string }) =>
-        options?.defaultValue ?? key,
-    }),
-  })
+  async (importOriginal) => {
+    // The framework `en` texts: components carry no fallback text
+    const { createInstance } = await import('i18next');
+    const { default: dndev } = await import(
+      '../../../../../../core/i18n/locales/eager/dndev_en.json'
+    );
+    const instance = createInstance();
+    await instance.init({
+      lng: 'en',
+      ns: ['dndev'],
+      defaultNS: 'dndev',
+      resources: { en: { dndev } },
+      interpolation: { escapeValue: false },
+    });
+    return {
+      ...(await importOriginal<Record<string, unknown>>()),
+      useTranslation: () => ({ t: instance.getFixedT('en', 'dndev') }),
+    };
+  }
 );
 
 // DOM from the vitest environment (happy-dom); act() without testing-library needs the flag.

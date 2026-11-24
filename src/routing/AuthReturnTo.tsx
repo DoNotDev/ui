@@ -52,10 +52,7 @@ export function AuthReturnTo() {
     const flag = safeSessionStorage.getItem('dndev.auth.guardToast');
     if (!flag) return;
     safeSessionStorage.removeItem('dndev.auth.guardToast');
-    toast(
-      'warning',
-      t('guard.signInRequired', 'Please sign in to access this page')
-    );
+    toast('warning', t('guard.signInRequired'));
   }, []);
 
   // Return-to after sign-in: saved by AuthGuard (sessionStorage) or passed as

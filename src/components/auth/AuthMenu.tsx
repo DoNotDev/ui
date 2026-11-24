@@ -254,7 +254,7 @@ export const AuthMenu = ({
    * Get user tooltip text with account info (desktop only)
    */
   const getUserTooltip = (): string => {
-    if (!user) return t('auth.userMenu', { defaultValue: 'User menu' });
+    if (!user) return t('auth.userMenu');
     const parts = [getUserDisplayName()];
     if (user.email) parts.push(user.email);
     if (role && role !== 'guest') parts.push(`Role: ${role}`);
@@ -283,7 +283,7 @@ export const AuthMenu = ({
     // Profile (if configured in appConfig.auth)
     if (profilePath) {
       items.push({
-        label: t('auth.profile', { defaultValue: 'Profile' }),
+        label: t('auth.profile'),
         icon: User,
         onClick: () => navigate(profilePath),
       });
@@ -340,7 +340,7 @@ export const AuthMenu = ({
 
     // Delete Account (always show - mandatory GDPR/UX)
     items.push({
-      label: t('auth.deleteAccount.label', { defaultValue: 'Delete Account' }),
+      label: t('auth.deleteAccount.label'),
       icon: Trash2,
       onClick: deletion.startDeleteFlow,
       variant: 'destructive',
@@ -348,7 +348,7 @@ export const AuthMenu = ({
 
     // Sign out (always show - mandatory GDPR/UX)
     items.push({
-      label: t('auth.signOut', { defaultValue: 'Sign Out' }),
+      label: t('auth.signOut'),
       icon: LogOut,
       onClick: () => signOut(),
       variant: 'destructive',
@@ -423,12 +423,12 @@ export const AuthMenu = ({
               )
             }
             display={display}
-            aria-label={t('auth.userMenu', { defaultValue: 'User menu' })}
+            aria-label={t('auth.userMenu')}
             tooltip={
               !noTooltip && isLaptop && user
                 ? getUserTooltip()
                 : !noTooltip
-                  ? t('auth.userMenu', { defaultValue: 'User menu' })
+                  ? t('auth.userMenu')
                   : undefined
             }
             className={className}

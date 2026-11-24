@@ -111,13 +111,10 @@ export function AuthGuardFallback({
                   fontWeight: 700,
                 }}
               >
-                {t('auth.fallback.title', 'Authentication Required')}
+                {t('dndev:errors.fallback.title')}
               </div>
               <p style={{ color: 'var(--muted-foreground)' }}>
-                {t(
-                  'auth.fallback.description',
-                  'Please sign in to access this page'
-                )}
+                {t('dndev:errors.fallback.description')}
               </p>
             </Stack>
           }
@@ -131,7 +128,7 @@ export function AuthGuardFallback({
                     color: 'var(--muted-foreground)',
                   }}
                 >
-                  {t('auth.fallback.chooseProvider')}
+                  {t('dndev:errors.fallback.chooseProvider')}
                 </p>
               </div>
 
@@ -140,7 +137,7 @@ export function AuthGuardFallback({
                   layout="vertical"
                   spacing="tight"
                   fullWidth={true}
-                  ariaLabel={t('auth.fallback.authOptions')}
+                  ariaLabel={t('dndev:errors.fallback.authOptions')}
                 />
               </Suspense>
             </Stack>
@@ -167,8 +164,8 @@ export function AuthGuardFallback({
                 color: 'var(--muted-foreground)',
               }}
             >
-              <p>{t('auth.fallback.secure')}</p>
-              <p>{t('auth.fallback.terms')}</p>
+              <p>{t('dndev:errors.fallback.secure')}</p>
+              <p>{t('dndev:errors.fallback.terms')}</p>
             </Stack>
           </Stack>
         </Card>
