@@ -27,6 +27,8 @@ vi.mock('@donotdev/core', async () => {
     ...routeMatch,
     getLanguageRouting: () => page.routing,
     isNextJs: () => true,
+    // No record shown (layout store routeRecordLabel)
+    useLayout: () => null,
     useTranslation: () => ({ t: () => '' }),
     getDndevConfig: () => ({
       routes: {

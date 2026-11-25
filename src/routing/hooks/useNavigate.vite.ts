@@ -18,10 +18,12 @@ import {
   getLanguageRouting,
   isClient,
   splitLanguagePath,
+  useNavigationStore,
   useOverlayStore,
 } from '@donotdev/core';
 
 import type { Navigate, NavigateFunction, NavigateOptions } from './types';
+import { useRoutePath } from './useRoutePath.vite';
 import { useUrlLanguage } from './useUrlLanguage.vite';
 
 /**
@@ -44,6 +46,8 @@ export function useNavigate(): Navigate {
   const routerNavigate = useRouterNavigate();
   const closeAll = useOverlayStore((state) => state.closeAll);
   const language = useUrlLanguage();
+  const routePath = useRoutePath();
+  const startNavigation = useNavigationStore((state) => state.startNavigation);
   const [pending, startTransition] = useTransition();
 
   const navigate: NavigateFunction = (path, options) => {
@@ -64,6 +68,7 @@ export function useNavigate(): Navigate {
       return;
     }
     const to = split?.prefixed ? split.path : path;
+    startNavigation(to, routePath);
 
     startTransition(() => {
       void routerNavigate(to, options?.replace ? { replace: true } : undefined);

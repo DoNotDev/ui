@@ -34,6 +34,9 @@ vi.mock('@donotdev/core', async () => {
     isClient: () => true,
     useOverlayStore: (select: (s: { closeAll: () => void }) => unknown) =>
       select({ closeAll: () => {} }),
+    useNavigationStore: (
+      select: (s: { startNavigation: (to?: string, from?: string) => void }) => unknown
+    ) => select({ startNavigation: () => {} }),
   };
 });
 

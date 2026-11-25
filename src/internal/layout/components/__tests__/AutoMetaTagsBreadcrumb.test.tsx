@@ -35,6 +35,8 @@ vi.mock('@donotdev/core', async () => {
     ...headTags,
     ...routeMatch,
     getLanguageRouting: () => ({ languages: ['fr'], defaultLanguage: 'fr' }),
+    // No record shown (layout store routeRecordLabel)
+    useLayout: () => null,
     useTranslation: (namespaces: unknown) => {
       page.namespaces = namespaces;
       return {

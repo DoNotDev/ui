@@ -16,6 +16,7 @@ import {
   use,
   type HTMLAttributes,
   type ComponentProps,
+  type ReactNode,
 } from 'react';
 import {
   Controller,
@@ -26,7 +27,7 @@ import {
   useFormContext,
 } from 'react-hook-form';
 
-import { Label, Slot, cn, Stack } from '@donotdev/components';
+import { FieldMessage, Label, Slot, cn, Stack } from '@donotdev/components';
 
 /**
  * Form provider component
@@ -183,7 +184,9 @@ const FormLabel = ({ className, ...props }: ComponentProps<typeof Label>) => {
 /**
  * Form control component
  *
- * Wraps form input components with proper ARIA attributes.
+ * Wraps form input components with proper ARIA attributes: `aria-invalid` while the
+ * field has an error, `aria-describedby` to the `FormMessage` slot then (the error), else
+ * to the `FormDescription`.
  *
  * @param {ComponentProps<typeof Slot>} props - Component props
  * @returns {JSX.Element | null} Form control component
@@ -198,12 +201,8 @@ const FormControl = ({ ...props }: ComponentProps<typeof Slot>) => {
   return (
     <Slot
       id={formItemId}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
-      aria-invalid={!!error}
+      aria-describedby={error ? formMessageId : formDescriptionId}
+      aria-invalid={error ? true : undefined}
       {...props}
     />
   );
@@ -212,9 +211,10 @@ const FormControl = ({ ...props }: ComponentProps<typeof Slot>) => {
 /**
  * Form description component
  *
- * Renders descriptive text for a form field.
+ * Helper text under the field (`FieldMessage` from `@donotdev/components`). Hidden while
+ * the field has an error: the error replaces it (shown by `FormMessage`).
  *
- * @param {HTMLAttributes<HTMLParagraphElement>} props - Component props
+ * @param {{ children?: ReactNode; className?: string }} props - Component props
  * @returns {JSX.Element | null} Form description component
  * @version 0.1.0
  * @since 0.0.1
@@ -222,20 +222,18 @@ const FormControl = ({ ...props }: ComponentProps<typeof Slot>) => {
  */
 const FormDescription = ({
   className,
-  ...props
-}: HTMLAttributes<HTMLParagraphElement>) => {
+  children,
+}: {
+  children?: ReactNode;
+  className?: string;
+}) => {
   const formField = useFormField();
-  if (!formField) return null;
-  const { formDescriptionId } = formField;
+  if (!formField || formField.error) return null;
   return (
-    <p
-      id={formDescriptionId}
+    <FieldMessage
+      id={formField.formDescriptionId}
+      helperText={children}
       className={className}
-      style={{
-        fontSize: 'var(--font-size-sm)',
-        color: 'var(--muted-foreground)',
-      }}
-      {...props}
     />
   );
 };
@@ -243,9 +241,11 @@ const FormDescription = ({
 /**
  * Form message component
  *
- * Renders error or custom messages for a form field.
+ * The field's message slot (`FieldMessage` from `@donotdev/components`): the validation
+ * error (icon + text, announced: polite live region mounted before it), else `children`
+ * as helper text, else nothing (no blank line).
  *
- * @param {HTMLAttributes<HTMLParagraphElement>} props - Component props
+ * @param {{ children?: ReactNode; className?: string }} props - Component props
  * @returns {JSX.Element | null} Form message component
  * @version 0.1.0
  * @since 0.0.1
@@ -254,28 +254,20 @@ const FormDescription = ({
 const FormMessage = ({
   className,
   children,
-  ...props
-}: HTMLAttributes<HTMLParagraphElement>) => {
+}: {
+  children?: ReactNode;
+  className?: string;
+}) => {
   const formField = useFormField();
   if (!formField) return null;
   const { error, formMessageId } = formField;
-  const body = error ? String(error?.message) : children;
-  if (!body) {
-    return null;
-  }
   return (
-    <p
+    <FieldMessage
       id={formMessageId}
+      error={error?.message}
+      helperText={children}
       className={className}
-      style={{
-        fontSize: 'var(--font-size-sm)',
-        fontWeight: 500,
-        color: 'var(--destructive)',
-      }}
-      {...props}
-    >
-      {body}
-    </p>
+    />
   );
 };
 

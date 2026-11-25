@@ -31,6 +31,7 @@ import {
   isMultilingual,
   LanguageNavigationProvider,
   QueryProviders,
+  useNavigationStore,
   RequestLanguageProvider,
 } from '@donotdev/core';
 import { useConsent } from '@donotdev/core';
@@ -46,6 +47,7 @@ import { DnDevLayout } from '../internal/layout/DnDevLayout';
 import { SentryInitializer } from '../internal/providers/SentryInitializer';
 import { UIProviders } from '../internal/providers/UIProviders';
 import { AuthReturnTo } from '../routing/AuthReturnTo';
+import { useIsNotFoundDocument } from '../routing/NotFoundDocument';
 import { PasswordResetCallback } from '../utils/useAuthSafe';
 
 // Null fallback for lazy components that fail to load (e.g., optional auth dependency absent)
@@ -159,16 +161,28 @@ export interface NextJsAppProvidersProps extends AppProvidersProps {
   /**
    * The request's `Cookie` header, passed by the app's root layout. The server render
    * and the client's hydration pass read the language cookie and the auth session
-   * from it, so both render the visitor's language and signed-in state.
+   * from it, so both render the visitor's language and signed-in state. Inside a
+   * NotFoundDocument (the 404 pages) the auth session is unknown, whatever this says.
    */
   serverCookies?: string;
   /** The request's `Accept-Language` header, passed by the app's root layout. */
   acceptLanguage?: string | null;
 }
 
-/** Auth session snapshot of the request, `null` when the auth provider cannot tell. */
-function readAuthSnapshot(cookieHeader: string | undefined) {
-  if (cookieHeader === undefined || !hasProvider('auth')) return null;
+/**
+ * Auth session snapshot of the request, `null` when it cannot tell: no cookie header, no
+ * auth provider, or a 404 document (NotFoundDocument). A 404 document is rendered once
+ * and served to every visitor, signed in or not, so its `serverCookies=""` is not this
+ * visitor's: read as signed out, it seeded a false identity, the provider's session then
+ * reset the query cache and refreshed the router (onQueryCacheIdentityChange), whose RSC
+ * request for the URL answers 404, which Next turns into a full reload: a reload loop.
+ */
+function readAuthSnapshot(
+  cookieHeader: string | undefined,
+  notFoundDocument: boolean
+) {
+  if (notFoundDocument || cookieHeader === undefined || !hasProvider('auth'))
+    return null;
   return getProvider('auth').readSessionSnapshot?.(cookieHeader) ?? null;
 }
 
@@ -187,11 +201,15 @@ export function NextJsAppProviders(props: NextJsAppProvidersProps) {
   useFollowLanguage(language);
   // Language switchers (core) open the other language's URL through the Next router
   const router = useRouter();
-  const navigateToLanguage: LanguageNavigate = (url) =>
+  const startNavigation = useNavigationStore((state) => state.startNavigation);
+  const navigateToLanguage: LanguageNavigate = (url) => {
+    startNavigation();
     router.push(url, { scroll: false });
+  };
+  const notFoundDocument = useIsNotFoundDocument();
   const authSnapshot = useMemo(
-    () => readAuthSnapshot(serverCookies),
-    [serverCookies]
+    () => readAuthSnapshot(serverCookies, notFoundDocument),
+    [serverCookies, notFoundDocument]
   );
   // SSR is the default for Next apps: render the provider tree on the server so
   // page content is present in the initial HTML (crawlable, real SSR). An app

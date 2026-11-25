@@ -11,6 +11,8 @@ const page = vi.hoisted(() => ({
     auth?: unknown;
   }>,
   serverMetadataPaths: undefined as string[] | undefined,
+  // Layout store routeRecordLabel: the record the page names (useRecordBreadcrumb)
+  recordLabel: null as { id: string; label: string } | null,
 }));
 
 vi.mock('@donotdev/core', async () => {
@@ -28,6 +30,7 @@ vi.mock('@donotdev/core', async () => {
     ...headTags,
     ...routeMatch,
     getLanguageRouting: () => ({ languages: ['fr'], defaultLanguage: 'fr' }),
+    useLayout: (key: string) => (key === 'routeRecordLabel' ? page.recordLabel : undefined),
     useTranslation: () => ({ t: () => '' }),
     getDndevConfig: () => ({
       routes: {
@@ -135,5 +138,39 @@ describe('AutoMetaTags: robots', () => {
 
   it('public pages carry no robots tag', () => {
     expect(robotsAt('/')).toBeUndefined();
+  });
+});
+
+describe('AutoMetaTags: record named by its page (useRecordBreadcrumb)', () => {
+  beforeEach(() => {
+    page.serverMetadataPaths = undefined;
+    page.recordLabel = null;
+    page.mapping = [
+      // Private entity page: no server metadata, no namespace title
+      { path: '/produits/:slug', meta: { namespace: 'product' }, auth: { required: true } },
+      { path: '/fiches/:slug', meta: { seo: { fullTitle: 'Fiche' } } },
+    ];
+  });
+
+  it('titles the page `<record name> | <site name>` when the URL names the record', () => {
+    expect(titleAt('/produits/serum')).toBe('Shop');
+    page.recordLabel = { id: 'crème', label: 'Crème Riche' };
+    expect(titleAt('/produits/cr%C3%A8me')).toBe('Crème Riche | Shop');
+  });
+
+  it('never reads the label of another record (previous page)', () => {
+    page.recordLabel = { id: 'serum', label: 'Sérum' };
+    expect(titleAt('/produits/creme')).toBe('Shop');
+  });
+
+  it('leaves the identity to the server on serverMetadataPaths routes', () => {
+    page.serverMetadataPaths = ['/produits/:slug'];
+    page.recordLabel = { id: 'serum', label: 'Sérum' };
+    expect(titleAt('/produits/serum')).toBeUndefined();
+  });
+
+  it("keeps the page's own seo.fullTitle", () => {
+    page.recordLabel = { id: 'a', label: 'A' };
+    expect(titleAt('/fiches/a')).toBe('Fiche');
   });
 });

@@ -8,7 +8,10 @@
  * is rendered once at build (Next's internal path `/_not-found`) and served for every
  * unknown URL: output derived from the URL (canonical, og:url, JSON-LD, breadcrumbs)
  * would differ between the server HTML and the browser (React #418) and describe no
- * page. Components below read useIsNotFoundDocument() and omit it.
+ * page. Components below read useIsNotFoundDocument() and omit it. Same for the
+ * visitor: the document is shared by signed-in and signed-out visitors, so
+ * NextJsAppProviders passes no auth session snapshot there (unknown until the auth
+ * provider reads the session).
  *
  * @version 0.1.0
  * @since 0.3.2

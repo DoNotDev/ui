@@ -29,6 +29,7 @@ All presets automatically include these components when applicable:
 *   **AuthMenu** - Automatically shown if auth is configured in `.env` (Firebase keys present)
 *   **Navigation Menu** - Automatically generated from `src/pages/*Page.tsx` files for sidebars
 *   **GoTo Component** - Command palette (Cmd+K) for quick navigation - always available
+*   **Navigation feedback** - While an in-app navigation is in progress the page stays, `<main>` is `aria-busy` and an indeterminate `Progress` shows under the header (ROUTING.md, Navigation Feedback)
 *   **Footer** - Automatic footer with copyright and legal links
 *   **LegalLinks + Copyright** - Automatically included in footer from `config/legal.ts`
 
@@ -102,7 +103,8 @@ sidebar: () => <MyFullSidebar />,
 In custom mode:
 - **Sidebar** gets resize handle, keyboard nav, collapse for free. No framework background/border.
 - **Header** gets grid-area, height, sticky, z-index. No framework background/border/padding.
-- **Footer** gets grid-area, z-index, grid-column span. No framework background/border/min-height/padding.
+- **Footer** gets grid-area, z-index. No framework background/border/min-height/padding.
+- **Header and grid-row footer stop before main's scrollbar gutter** (a grid column the width of main's scrollbar, 0 with overlay scrollbars): pad your header content with the same inline padding as the page content (e.g. `--section-gutter`) and its edges match the content's at any scrollbar width.
 
 **Your component must NOT render the semantic wrapper** (`<aside>`, `<header>`, `<footer>`) - the framework handles that. Render a `<div>` or fragment as your root.
 
@@ -249,6 +251,8 @@ footerMode: 'scroll',
 ```
 
 A footer inside `main` (`scroll`, or a `<footer>` rendered after the page) keeps its own height and sits at the bottom of the screen on a short page: only the page grows (the first child of `main`, or the one after the breadcrumbs). While a page inside a `<Suspense>` streams in, `main` stays empty above the footer, so nothing moves when it arrives.
+
+`main` is the only scroll container and reserves its scrollbar gutter (`scrollbar-gutter: stable`), so the content does not move sideways between a short and a long page. Page geometry comes from main's content box, never the viewport: `main` is an inline-size container, full-width Sections are `100cqi` wide (not `100vw`, which includes the scrollbar), and the header stops before the gutter. In app CSS, size page-wide elements with `cqi`, not `vw`.
 
 While an `ActionBar` (`@donotdev/components`) is shown, the layout reserves its height at the bottom (`--action-bar-height`, set by the bar on `<html>`), so the end of the page and the footer, in either mode, scroll above the bar instead of under it.
 

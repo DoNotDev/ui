@@ -99,7 +99,13 @@ const HeaderNavigation: ComponentType<HeaderNavigationProps> = ({
         }
         className={className}
         render={({ children, ...props }) => (
-          <Link path={singleRoute.path} {...props}>
+          <Link
+            path={singleRoute.path}
+            {...props}
+            {...(singleRoute.isActive
+              ? { 'aria-current': 'page' as const, 'data-active': 'true' }
+              : undefined)}
+          >
             {children}
           </Link>
         )}

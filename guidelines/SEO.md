@@ -119,6 +119,7 @@ An app whose own config lacks `cleanUrls` never serves the prerendered pages at 
 
 The route generator writes the routes of the last three rows into the route manifest (`routes.manifest.serverMetadataPaths`); AutoMetaTags skips the identity exactly there. Entity pages are also in `routes.manifest.recordBreadcrumbPaths`: AutoMetaTags emits no BreadcrumbList there.
 
+- **Record a page shows, outside server metadata** (Next private entity page: `auth` or `seo: { noindex: true }`, so no generated `generateMetadata`; crud display/form pages; Vite pages not prerendered): the page names it with `useRecordBreadcrumb(entity, record)` (`EntityDisplayRenderer` / `EntityFormRenderer` do), and AutoMetaTags titles it `<record name> | <site name>` (the record name is the page's `seo.title`; a `seo.fullTitle` still wins) while the URL's last segment names that record. Browser only (the label is set in an effect): the server `<title>` is the route's.
 - **Route of a URL** (both platforms): exact path, then `:param` patterns (most specific), then catch-alls: a `/docs/*` route's PageMeta applies to every URL under `/docs` (longest prefix wins).
 - **Site-level metadata:** `export const metadata` in `src/app/AppDocument.tsx` (`metadataBase`), re-exported by the generated root layout. No page titles there.
 

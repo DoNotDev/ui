@@ -17,6 +17,7 @@
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
+import { Spinner } from '@donotdev/components';
 import { globalEmitter, isClient, QueryProviders } from '@donotdev/core';
 import type { LayoutConfig } from '@donotdev/core';
 
@@ -256,7 +257,11 @@ export function RootLayout({ layout }: RootDnDevLayoutProps) {
           {/* Layout with route content - CRITICAL PATH, no lazy */}
           <DnDevLayout layout={layout}>
             <RouteReadySignal>
-              <Outlet />
+              {/* One boundary for every route's lazy page: the first load shows the spinner;
+                  an in-app navigation (a transition) keeps the current page meanwhile. */}
+              <Suspense fallback={<Spinner overlay />}>
+                <Outlet />
+              </Suspense>
             </RouteReadySignal>
           </DnDevLayout>
 

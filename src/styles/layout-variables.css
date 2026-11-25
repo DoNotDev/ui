@@ -255,23 +255,42 @@ main[role='main'][data-routing-animation='none'] {
   max-height: 100dvh;
   overflow: hidden;
   display: grid;
-  /* Grid structure: 3 rows, 2 columns */
+  /* Grid structure: 3 rows, 3 columns. The last column is main's scrollbar gutter
+     (.dndev-scroll-gutter below): main spans it, the header and a grid-row footer stop
+     before it, so their inner edges match main's content box at any scrollbar width. */
   grid-template-areas:
-    'header header'
-    'sidebar main'
-    'footer footer';
+    'header header gutter'
+    'sidebar main main'
+    'footer footer .';
   grid-template-rows: var(--header-height) 1fr minmax(
       var(--footer-height),
       auto
     );
-  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-columns: var(--sidebar-width) 1fr auto;
+}
+
+/* Main's scrollbar gutter, outside main (DnDevLayout renders it after the header).
+   main is the scroll container and reserves its gutter (`scrollbar-gutter: stable`);
+   the header and a grid-row footer sit outside it, so they spanned the gutter too and
+   their content ended a scrollbar width past main's (10px on a classic scrollbar).
+   This empty box reserves the same gutter the same way (`overflow: hidden` +
+   `scrollbar-gutter: stable`, the same scrollbar styles as main): its `auto` column is
+   exactly main's gutter, 0 with overlay scrollbars (phones, macOS default). Not on the
+   header itself: `overflow: hidden` there would clip what drops out of it (the
+   NavigationMenu viewport is absolutely positioned inside it). Not document scrolling:
+   main is the sole scroll container (fixed 100dvh grid, sidebar, grid-row footer, scroll
+   restoration, sticky Floating). */
+.dndev-scroll-gutter {
+  grid-area: gutter;
+  overflow: hidden;
+  scrollbar-gutter: stable;
 }
 
 /* Footer inline: renders inside main, grid drops to 2 rows */
 .dndev-layout[data-footer-inline] {
   grid-template-areas:
-    'header header'
-    'sidebar main';
+    'header header gutter'
+    'sidebar main main';
   grid-template-rows: var(--header-height) 1fr;
 }
 
@@ -283,8 +302,8 @@ main[role='main'][data-routing-animation='none'] {
 /* No footer rendered (app.footer: null): no footer row, main takes the space */
 .dndev-layout:not(:has(> footer)) {
   grid-template-areas:
-    'header header'
-    'sidebar main';
+    'header header gutter'
+    'sidebar main main';
   grid-template-rows: var(--header-height) 1fr;
 }
 
@@ -664,6 +683,20 @@ aside[role='navigation'].sidebar[data-collapsed='true'] {
   }
 }
 
+/* In-app navigation in progress (DnDevLayout): the indeterminate Progress laid over the
+   top edge of main's area, under the header, taking no space; hidden for the first
+   --dur-fast so an instant navigation shows nothing. */
+.dndev-progress.dndev-navigation-progress {
+  grid-area: main;
+  align-self: start;
+  z-index: var(--z-header);
+  height: 3px;
+  border-radius: 0;
+  background-color: transparent;
+  opacity: 0;
+  animation: fade-in var(--dur-fast) linear var(--dur-fast) forwards;
+}
+
 /* Main content: Starts at header-height and sidebar-width */
 main[role='main'] {
   grid-area: main;
@@ -673,13 +706,24 @@ main[role='main'] {
   flex-direction: column;
   padding: 0;
   contain: layout style;
+  /* The scroll container: room for its scrollbar whether the page scrolls or not, so the
+     content does not move sideways between a short and a long page. */
+  scrollbar-gutter: stable;
+  /* The page width: a full-width (bleed / breakthrough) Section, HeroSection or
+     CallToAction is `100cqi` wide, main's content box (the scrollbar gutter excluded),
+     not `100vw` (which includes it and overflowed main by half the gutter). */
+  container-type: inline-size;
 
-  /* The page (first child, or the one after breadcrumbs) grows to fill the space and never
-     shrinks (the scroll container owns overflow). Only the page: a footer rendered inside
-     main keeps its own height. */
-  & > :first-child:not(.breadcrumbs-container, footer),
-  & > .breadcrumbs-container + :not(footer) {
+  /* The page slot (DnDevLayout `.dndev-page`, the app's layout wrapper and the page in
+     it) grows to fill the space and never shrinks (the scroll container owns overflow),
+     by class, not position: a Suspense boundary streaming in leaves a <template> as
+     main's first child. A flex column as main is, so a PageContainer (flex: 1 1 auto)
+     still fills it. A footer rendered inside main keeps its own height. */
+  & > .dndev-page {
     flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
   /* Footer inside main: always at the bottom, even while the page is not there yet
@@ -691,13 +735,13 @@ main[role='main'] {
   }
 }
 
-/* Footer: Full width by default, app presets start after sidebar */
+/* Footer: full width (the `footer` area: sidebar and main columns, not main's scrollbar
+   gutter column, so its content edges match main's) */
 /* box-sizing: border-box ensures borders are included in height */
 footer[role='contentinfo'] {
   /* Structural - always applies */
   grid-area: footer;
   box-sizing: border-box;
-  grid-column: 1 / -1;
   z-index: var(--z-footer);
   display: flex;
   align-items: center;
@@ -1199,14 +1243,12 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
 .dndev-container > .dndev-section-full-width,
 .dndev-container > .dndev-cta,
 .dndev-container > .dndev-tech-bento {
-  /* Break out of PageContainer padding and max-width constraint */
-  /* Account for sidebar: --sidebar-width is 0px for presets without sidebar */
-  width: calc(100vw - var(--sidebar-width));
-  width: calc(100dvw - var(--sidebar-width));
-  max-width: calc(100vw - var(--sidebar-width));
-  max-width: calc(100dvw - var(--sidebar-width));
-  margin-inline: calc((-50vw + var(--sidebar-width) / 2) + 50%);
-  margin-inline: calc((-50dvw + var(--sidebar-width) / 2) + 50%);
+  /* Break out of PageContainer padding and max-width constraint: the page width
+     (`100cqi`: main's content box, main is the inline-size container; no sidebar, no
+     scrollbar gutter), centred on main like the PageContainer */
+  width: 100cqi;
+  max-width: 100cqi;
+  margin-inline: calc(50% - 50cqi);
   /* Eat gap BEFORE section only */
   margin-top: calc(-1 * var(--gap-lg));
   margin-bottom: 0;
@@ -1217,12 +1259,9 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
 /* HeroSection: breakthrough when fullHeight or contain mode */
 .dndev-container > .dndev-hero-section[style*='height'],
 .dndev-container > .dndev-hero-section--bg-contain {
-  width: calc(100vw - var(--sidebar-width));
-  width: calc(100dvw - var(--sidebar-width));
-  max-width: calc(100vw - var(--sidebar-width));
-  max-width: calc(100dvw - var(--sidebar-width));
-  margin-inline: calc((-50vw + var(--sidebar-width) / 2) + 50%);
-  margin-inline: calc((-50dvw + var(--sidebar-width) / 2) + 50%);
+  width: 100cqi;
+  max-width: 100cqi;
+  margin-inline: calc(50% - 50cqi);
   margin-top: calc(-1 * var(--gap-lg));
   margin-bottom: 0;
   --content-width: var(--max-content-width, 100%);

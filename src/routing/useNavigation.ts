@@ -10,11 +10,12 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 
 import type { NavigationRoute } from '@donotdev/core';
 import {
   filterNavigationRoutes,
+  getNavigationRoutesSnapshot,
   useNavigationStore,
   useTranslation,
 } from '@donotdev/core';
@@ -37,10 +38,59 @@ export interface NavigationItem extends NavigationRoute {
 }
 
 /**
+ * The one rule for "which routes may this user navigate to", shared by
+ * `useNavigationItems` and `useAccessibleNavigationRoutes`.
+ *
+ * 1. `filterNavigationRoutes` (core): menu visibility (`hideFromMenu`), sign-in and role.
+ *    Signed out, or signed in without a role, is `USER_ROLES.GUEST`.
+ * 2. `can.navigate` (the rule AuthGuard uses) for what core cannot read: PageMeta
+ *    `auth.tier` and `auth.validate`. Only those two keys are passed: sign-in and role
+ *    are already decided in step 1 (`can.navigate` does not treat a signed-out visitor
+ *    as the guest role, so passing `role` would hide guest pages).
+ *
+ * Without `@donotdev/auth`, `useAuthSafe('can')` is the degraded `can` (DEGRADED_AUTH_API):
+ * tier-gated pages without `required` stay listed, nothing crashes.
+ *
+ * The routes come from `getNavigationRoutesSnapshot` (core): the build-time route mapping
+ * until the navigation store is initialized, so the server render, the hydration pass and
+ * the first client render already list them (navigation in the server HTML, no pop-in).
+ *
+ * @returns Routes the current user may navigate to, in discovery order
+ * @internal
+ */
+export function useNavigableRoutes(): NavigationRoute[] {
+  const user = useAuthSafe('user');
+  const can = useAuthSafe('can');
+  const authenticated = !!user;
+  const role = user?.role || USER_ROLES.GUEST;
+  // The app's routes from the first render on, server included: the store's once
+  // initialized, else the build-time route mapping's (same array). Never live getters.
+  const allRoutes = useSyncExternalStore(
+    useNavigationStore.subscribe,
+    getNavigationRoutesSnapshot,
+    getNavigationRoutesSnapshot
+  );
+
+  return useMemo(
+    () =>
+      filterNavigationRoutes(allRoutes, { authenticated, role }).filter(
+        (route) => {
+          if (typeof route.auth !== 'object') return true;
+          const { tier, validate } = route.auth;
+          return !tier && !validate ? true : can.navigate({ tier, validate });
+        }
+      ),
+    [allRoutes, authenticated, role, can]
+  );
+}
+
+/**
  * Smart navigation hook with auth filtering
  *
  * Use this for UI menus, sidebars, and navigation components that should
- * only show routes the user can access.
+ * only show routes the user can access: menu visibility, sign-in and role
+ * (`filterNavigationRoutes`), then the page's full access rule (`can.navigate`,
+ * the one AuthGuard uses), which adds PageMeta `auth.tier` and `auth.validate`.
  *
  * @version 0.1.0
  * @since 0.0.1
@@ -57,18 +107,11 @@ export interface NavigationItem extends NavigationRoute {
  */
 export function useNavigationItems(): NavigationItem[] {
   const pathname = useRoutePath();
-
-  // Get auth state - hooks must be called at top level
-  const user = useAuthSafe('user');
-  const authenticated = !!user;
   const { t } = useTranslation();
-  const role = user?.role || USER_ROLES.GUEST;
-
-  // Select snapshot-owned data; store getters close over live state during hydration.
-  const allRoutes = useNavigationStore((state) => state.cache.allRoutes);
+  const routes = useNavigableRoutes();
 
   return useMemo(() => {
-    return filterNavigationRoutes(allRoutes, { authenticated, role })
+    return routes
       .map((route) => ({
         ...route,
         label: routeLabel(route, t),
@@ -79,7 +122,7 @@ export function useNavigationItems(): NavigationItem[] {
       .sort((a, b) =>
         a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
       ); // Alphabetical sorting by label
-  }, [allRoutes, authenticated, role, pathname, t]);
+  }, [routes, pathname, t]);
 }
 
 /**

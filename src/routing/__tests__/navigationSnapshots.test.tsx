@@ -9,7 +9,10 @@ import type { AuthUser, NavigationRoute } from '@donotdev/core';
 import { useNavigationItems } from '../useNavigation';
 import { useAccessibleNavigationRoutes } from '../useRouteDiscovery';
 
-const auth = vi.hoisted(() => ({ user: null as AuthUser | null }));
+const auth = vi.hoisted(() => ({
+  user: null as AuthUser | null,
+  tier: 'free',
+}));
 const translate = (key: string, options?: Record<string, unknown>) =>
   key === 'alpha:title' ? 'Alpha translated' : String(options?.defaultValue ?? key);
 
@@ -18,7 +21,27 @@ vi.mock('@donotdev/core', async (importOriginal) => ({
   ...await importOriginal<typeof import('@donotdev/core')>(),
   useTranslation: () => ({ t: translate }),
 }));
-vi.mock('../../utils/useAuthSafe', () => ({ useAuthSafe: () => auth.user }));
+// `can.navigate` stands in for the real rule: tier ranks free < pro, nothing else gated.
+const TIERS = ['free', 'pro'];
+const can = vi.hoisted(() => ({
+  current: undefined as unknown,
+}));
+vi.mock('../../utils/useAuthSafe', () => ({
+  useAuthSafe: (key: string) => {
+    if (key !== 'can') return auth.user;
+    // New identity per tier, as the real hook (rebuilt when the subscription changes).
+    const tier = auth.tier;
+    if ((can.current as { tier?: string } | undefined)?.tier !== tier) {
+      can.current = {
+        tier,
+        navigate: (config: { tier?: string; role?: string }) =>
+          config.role === undefined &&
+          (!config.tier || TIERS.indexOf(tier) >= TIERS.indexOf(config.tier)),
+      };
+    }
+    return can.current;
+  },
+}));
 vi.mock('@donotdev/ui/routing/hooks', () => ({ useRoutePath: () => '/zebra/child' }));
 
 const hooks = [useNavigationItems, useAccessibleNavigationRoutes];
@@ -26,6 +49,7 @@ const paths = (routes: NavigationRoute[]) => routes.map((route) => route.path);
 
 beforeEach(() => {
   auth.user = null;
+  auth.tier = 'free';
   useNavigationStore.getState().setCacheData({
     allRoutes: [], filteredRoutes: new Map(), lastUpdated: 0,
   });
@@ -33,45 +57,51 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe.each(hooks)('%s snapshot ownership', (useRoutes) => {
-  it('hydrates the initial snapshot after the real live store has initialized', async () => {
+  // Regression (shop review): the routes reached the store only in an effect after mount,
+  // so navigation was missing from the server HTML and popped in after hydration.
+  it('renders the build-time routes on the server and in the hydration pass, unchanged by the store init', async () => {
+    const mapping = [{
+      path: '/new-route', component: 'NewPage', importPath: '/NewPage.tsx', auth: false,
+    }];
+    const previous = globalThis._DNDEV_CONFIG_;
+    globalThis._DNDEV_CONFIG_ = { routes: { mapping } } as typeof globalThis._DNDEV_CONFIG_;
     const renders: string[][] = [];
     function Probe() {
       const routes = useRoutes();
       renders.push(paths(routes));
       return <span>{paths(routes).join(',')}</span>;
     }
-
-    const html = renderToString(<Probe />);
-    const initial = useNavigationStore.getInitialState();
-    await useNavigationStore.getState().initialize({ routes: [{
-      path: '/new-route', component: 'NewPage', importPath: '/NewPage.tsx', auth: false,
-    }] });
-    expect(initial.cache.allRoutes).toEqual([]);
-    // Demonstrate the dangerous legacy getter is genuinely live, not a mock selector.
-    expect(paths(initial.getFilteredRoutes({ authenticated: false, role: 'guest' })))
-      .toEqual(['/new-route']);
-    const cacheSize = useNavigationStore.getState().cache.filteredRoutes.size;
-    expect(renderToString(<Probe />)).toBe(html);
-
     const container = document.createElement('div');
-    container.innerHTML = html;
-    document.body.append(container);
-    renders.length = 0;
-    const errors: unknown[] = [];
     let root: ReturnType<typeof hydrateRoot> | undefined;
     try {
+      const html = renderToString(<Probe />);
+      expect(html).toContain('/new-route');
+      // The store's own initial state stays empty: the routes come from the config
+      expect(useNavigationStore.getInitialState().cache.allRoutes).toEqual([]);
+
+      container.innerHTML = html;
+      document.body.append(container);
+      renders.length = 0;
+      const errors: unknown[] = [];
       await act(async () => {
         root = hydrateRoot(container, <Probe />, {
           onRecoverableError: (error) => errors.push(error),
         });
       });
-      expect(renders[0]).toEqual([]);
+      expect(renders[0]).toEqual(['/new-route']);
       expect(errors).toEqual([]);
+
+      // The store initializes from the same mapping: same array, no re-render
+      const before = renders.length;
+      await act(async () => {
+        await useNavigationStore.getState().initialize({ routes: mapping });
+      });
       expect(container.textContent).toBe('/new-route');
-      expect(useNavigationStore.getState().cache.filteredRoutes.size).toBe(cacheSize);
+      expect(renders.length).toBe(before);
     } finally {
       await act(async () => root?.unmount());
       container.remove();
+      globalThis._DNDEV_CONFIG_ = previous;
     }
   });
 
@@ -98,7 +128,7 @@ describe.each(hooks)('%s snapshot ownership', (useRoutes) => {
   });
 });
 
-it('preserves differing default roles and the two output mappings/orderings', () => {
+it('gives both hooks one access rule (signed out = guest) and keeps their two output mappings/orderings', () => {
   const routes: NavigationRoute[] = [
     { path: '/zebra', label: 'zebra', auth: false, external: true },
     { path: '/alpha', label: 'Original', auth: false, meta: { namespace: 'alpha' } },
@@ -117,7 +147,6 @@ it('preserves differing default roles and the two output mappings/orderings', ()
   expect(accessible.result.current).toEqual([
     { path: '/zebra', label: 'zebra', icon: undefined, meta: undefined },
     { path: '/alpha', label: 'Original', icon: undefined, meta: routes[1]?.meta },
-    { path: '/role-only', label: 'Role only', icon: undefined, meta: undefined },
   ]);
 
   auth.user = { id: 'user', role: 'user' };
@@ -125,4 +154,23 @@ it('preserves differing default roles and the two output mappings/orderings', ()
   accessible.rerender();
   expect(paths(items.result.current)).toEqual(['/alpha', '/private', '/role-only', '/zebra']);
   expect(paths(accessible.result.current)).toEqual(['/zebra', '/alpha', '/role-only', '/private']);
+});
+
+describe.each(hooks)('%s tier gate', (useRoutes) => {
+  it('hides a tier-gated route without the tier and shows it with it', () => {
+    useNavigationStore.getState().setCacheData({
+      allRoutes: [
+        { path: '/open', label: 'Open', auth: false },
+        { path: '/pro', label: 'Pro', auth: { required: true, tier: 'pro' } },
+        { path: '/guest', label: 'Guest', auth: { role: 'guest' } },
+      ],
+    });
+    auth.user = { id: 'user', role: 'user' };
+    const routes = renderHook(useRoutes);
+    expect(paths(routes.result.current).sort()).toEqual(['/guest', '/open']);
+
+    auth.tier = 'pro';
+    routes.rerender();
+    expect(paths(routes.result.current).sort()).toEqual(['/guest', '/open', '/pro']);
+  });
 });

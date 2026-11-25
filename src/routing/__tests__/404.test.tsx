@@ -77,6 +77,17 @@ it('preserves the default pathname API and functional Home/Back/suggestion actio
   expect(state.navigate).toHaveBeenCalledWith('back');
 });
 
+// Regression (shop review): no <h1>; the route suggestions (after hydration) were above
+// the Home / Back actions and pushed them down when they appeared.
+it('has the title as its one h1 and the route suggestions after the Home / Back actions', () => {
+  render(<NotFoundPage showRequestedPath={false} />);
+  const headings = screen.getAllByRole('heading', { level: 1 });
+  expect(headings.map((heading) => heading.textContent)).toEqual(['Page non trouvée']);
+  const home = screen.getByRole('link', { name: "Retour à l'accueil" });
+  const suggestion = screen.getByRole('link', { name: 'Catalogue' });
+  expect(home.compareDocumentPosition(suggestion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
 it.each(['/missing', '/another/unknown', '/fr/inconnu'])('hydrates generic fallback at %s without the build pathname', async (pathname) => {
   const html = renderToString(<NotFoundPage showRequestedPath={false} />);
   expect(html).not.toContain('<code');

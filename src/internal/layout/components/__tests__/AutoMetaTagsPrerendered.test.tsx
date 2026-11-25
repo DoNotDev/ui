@@ -52,6 +52,8 @@ vi.mock('@donotdev/core', async () => {
     ...routeMatch,
     isNextJs: () => false,
     getLanguageRouting: () => ({ languages: ['fr', 'en'], defaultLanguage: 'fr' }),
+    // No record shown (layout store routeRecordLabel)
+    useLayout: () => null,
     useTranslation: () => ({
       t: (key: string, options?: { defaultValue?: string }) =>
         ({ 'about:title': 'About', 'about:description': 'Who we are & "why"' })[key] ??

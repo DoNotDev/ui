@@ -10,7 +10,7 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { Stack } from '@donotdev/components';
+import { Button, BUTTON_VARIANT, Stack } from '@donotdev/components';
 import { useTranslation, maybeTranslate, useAppConfig } from '@donotdev/core';
 import type { AppMetadata } from '@donotdev/core';
 
@@ -24,11 +24,20 @@ export interface FooterLegalLinksProps {
   app?: AppMetadata;
   /** Direction for links layout */
   direction?: 'row' | 'column';
+  /**
+   * Wrap the links onto more lines when the row is too narrow (`direction="row"`): the
+   * CSS-driven footer layout, right in the server HTML at every width (no breakpoint
+   * hook). @default 'nowrap'
+   */
+  wrap?: 'nowrap' | 'wrap';
   /** Gap between links */
   gap?: 'none' | 'tight' | 'medium' | 'large';
   /** Alignment of links */
   align?: 'start' | 'center' | 'end' | 'stretch';
 }
+
+/** Footer text size, inherited by the links (the `link` variant takes its text's size). */
+const LINKS_STYLE = { fontSize: 'var(--font-size-xs)' } as const;
 
 /**
  * FooterLegalLinks - Legal links component
@@ -36,8 +45,11 @@ export interface FooterLegalLinksProps {
  * Renders legal links from app.footer.legalLinks config.
  * If app not provided, reads from app config automatically.
  * Used in footer and sidebar when footer zone is hidden.
+ * Each link is a Button `link` variant rendered as the router Link: the framework's one
+ * text-link rule (colour, underline, hover, as wide as its text, minimum target height),
+ * at the footer's text size.
  *
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
@@ -46,6 +58,7 @@ export const FooterLegalLinks: React.ComponentType<FooterLegalLinksProps> = ({
   direction = 'column',
   gap = 'tight',
   align = 'stretch',
+  wrap = 'nowrap',
 }) => {
   const { t } = useTranslation('dndev');
   const appConfig = useAppConfig('app');
@@ -53,32 +66,33 @@ export const FooterLegalLinks: React.ComponentType<FooterLegalLinksProps> = ({
   const cookieNoticeRequired = useCookieNoticeRequired();
   const links = getLegalLinks(resolvedApp.footer, cookieNoticeRequired);
 
-  const linkStyle = {
-    transition: 'color var(--dur-fast) ease-out',
-    textDecoration: 'underline',
-    textUnderlineOffset: '2px',
-    color: 'var(--muted-foreground)',
-    fontSize: 'var(--font-size-xs)',
-  };
-
   if (links.length === 0) {
     return null;
   }
 
   return (
-    <Stack direction={direction} gap={gap} align={align}>
+    // As wide as its links (fit): beside other footer content in a wrapping row, the
+    // group moves to its own line only when the row is too narrow.
+    <Stack
+      direction={direction}
+      wrap={wrap}
+      gap={gap}
+      align={align}
+      width="fit"
+      style={LINKS_STYLE}
+    >
       {links.map((link: FooterLegalLink) => (
-        <Link
+        <Button
           key={link.path}
-          path={link.path}
-          style={linkStyle}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--primary)')}
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.color = 'var(--muted-foreground)')
-          }
+          variant={BUTTON_VARIANT.LINK}
+          render={({ children, ...props }) => (
+            <Link path={link.path} {...props}>
+              {children}
+            </Link>
+          )}
         >
           {maybeTranslate(t, link.label)}
-        </Link>
+        </Button>
       ))}
       <FooterBranding />
     </Stack>

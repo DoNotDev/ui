@@ -425,17 +425,6 @@ export function BaseStoresInitializer({
       if (removed) return;
       removed = true;
       removeShellLoader({ fade: true }); // Always fade
-
-      // Focus main so PageUp/PageDown works (CSR/SSR safe)
-      if (isClient()) {
-        requestAnimationFrame(() => {
-          const main = document.querySelector('main');
-          if (main) {
-            main.setAttribute('tabindex', '-1'); // Focusable but not in tab order
-            main.focus();
-          }
-        });
-      }
     };
 
     const checkBothReady = () => {

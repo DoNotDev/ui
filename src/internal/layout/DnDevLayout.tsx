@@ -22,7 +22,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import { cn, Stack } from '@donotdev/components';
+import { cn, Progress, Stack } from '@donotdev/components';
 import type {
   LayoutPreset,
   Density,
@@ -31,7 +31,7 @@ import type {
 } from '@donotdev/core';
 import { isClient, isNextJs, isDev, useBreakpoint } from '@donotdev/core';
 import { useLayout } from '@donotdev/core';
-import { useTranslation } from '@donotdev/core';
+import { useNavigationStore, useTranslation } from '@donotdev/core';
 import { useAppConfig } from '@donotdev/core';
 import { LAYOUT_PRESET, DENSITY } from '@donotdev/core';
 import { useRoutePath } from '@donotdev/ui/routing/hooks';
@@ -104,7 +104,7 @@ export const DnDevLayout = ({
   const debugEnabled = isDev() && features?.debug === true;
 
   // Subscribe to language changes for zone re-renders
-  useTranslation('dndev');
+  const { language } = useTranslation('dndev');
 
   // Layout config props
   const breadcrumbs = layout?.breadcrumbs ?? 'smart';
@@ -414,6 +414,27 @@ export const DnDevLayout = ({
     );
   }, [layout?.mergedbar, layout?.sidebar, layout?.mobile?.sidebar, config]);
 
+  // Keyboard scrolling: <main> is the page's only scroll container, so PageUp / PageDown /
+  // Space scroll it only while focus is inside it. Focus it once, when the layout mounts
+  // (hydration on Next, first render after the stores are ready on Vite), and only while
+  // nothing has focus: the user may already be in a field or an overlay of the server HTML.
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    const active = document.activeElement;
+    if (active === null || active === document.body) main.focus({ preventScroll: true });
+  }, []);
+
+  // In-app navigation in progress (navigation store, started by useNavigate, Next links and
+  // the language switch): the current page stays, main is aria-busy and the indeterminate
+  // Progress shows under the header (after --dur-fast, so instant navigations show nothing).
+  // A change of the rendered route (path or language) ends it.
+  const navigating = useNavigationStore((state) => state.navigating);
+  const endNavigation = useNavigationStore((state) => state.endNavigation);
+  useEffect(() => {
+    endNavigation();
+  }, [pathname, language, endNavigation]);
+
   // Apply routing animation data attribute (useLayoutEffect = before paint)
   useLayoutEffect(() => {
     if (!isClient() || !mainRef.current) return;
@@ -465,11 +486,22 @@ export const DnDevLayout = ({
       {/* Header zone - CSS hides on mobile for mergedBar presets */}
       {resolvedHeader}
 
+      {/* Main's scrollbar gutter beside the header: reserves the same width as main's
+          gutter, so the header (and a grid-row footer) end where main's content ends
+          (layout-variables.css `.dndev-scroll-gutter`) */}
+      <div className="dndev-scroll-gutter" aria-hidden="true" />
+
       {/* Sidebar zone - CSS hides on mobile or when width is 0 */}
       {resolvedSidebar}
 
       {/* Main content zone */}
-      <main ref={mainRef} role="main" className="main">
+      <main
+        ref={mainRef}
+        role="main"
+        className="main"
+        tabIndex={-1}
+        aria-busy={navigating || undefined}
+      >
         {breadcrumbs !== 'never' && !routeHideBreadcrumbs && (
           <div className="breadcrumbs-container">
             <Breadcrumbs
@@ -484,9 +516,21 @@ export const DnDevLayout = ({
           </Suspense>
         )}
 
-        {layout?.wrapper ? layout.wrapper({ children: content }) : content}
+        {/* The page slot: fills main above the footer wherever it sits among main's
+            children (a streaming Suspense boundary can leave a <template> first). */}
+        <div className="dndev-page">
+          {layout?.wrapper ? layout.wrapper({ children: content }) : content}
+        </div>
         {footerInline && resolvedFooter}
       </main>
+
+      {navigating && (
+        <Progress
+          className="dndev-navigation-progress"
+          variant="accent"
+          aria-hidden="true"
+        />
+      )}
 
       {/* Footer in grid zone when not inline */}
       {!footerInline && resolvedFooter}

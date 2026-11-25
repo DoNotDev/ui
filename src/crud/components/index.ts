@@ -15,6 +15,7 @@ export { EntityCardList } from './EntityCardList';
 export { EntityFormRenderer } from './EntityFormRenderer';
 export { EntityRecommendations } from './EntityRecommendations';
 export { EntityWorkflow } from './EntityWorkflow';
+export { useRecordBreadcrumb } from './useRecordBreadcrumb';
 export type { EntityWorkflowProps } from './EntityWorkflow';
 export * from './Form';
 

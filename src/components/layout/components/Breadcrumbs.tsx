@@ -39,17 +39,9 @@ import {
 // Platform-specific hooks via conditional exports
 import { useRoutePath } from '@donotdev/ui/routing/hooks';
 
+import { shownRecordLabel } from '../../../crud/components/useRecordBreadcrumb';
 import { Link } from '../../../routing/Link';
 import { useIsNotFoundDocument } from '../../../routing/NotFoundDocument';
-
-/** URL segment as the router hands it to the page (malformed encodings stay as they are). */
-function decodeSegment(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
 
 /** Single breadcrumb navigation item. */
 export interface BreadcrumbItem {
@@ -109,7 +101,7 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
   const { t } = useTranslation(['dndev', ...namespaces]);
   const seoConfig = useSeoConfig();
   const appMeta = useAppConfig('app');
-  // Record shown by the page (set by EntityFormRenderer / EntityDisplayRenderer)
+  // Record shown by the page (useRecordBreadcrumb: EntityFormRenderer / EntityDisplayRenderer, app pages)
   const recordLabel = useLayout('routeRecordLabel');
 
   // The 404 document is served for any unknown URL (Next: rendered once at build, at
@@ -132,14 +124,10 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
           (route) => ({ label: routeLabel(route, site), href: route.path })
         );
         const page = matchRoute(routes, pathname)?.route;
-        const lastSegment = pathname.split('/').filter(Boolean).at(-1);
         // The last segment naming the shown record (slug or id) shows the record's name
         const label =
-          recordLabel && lastSegment && decodeSegment(lastSegment) === recordLabel.id
-            ? recordLabel.label
-            : page
-              ? routeLabel(page, site)
-              : undefined;
+          shownRecordLabel(pathname, recordLabel) ??
+          (page ? routeLabel(page, site) : undefined);
         if (label) breadcrumbs.push({ label });
         return breadcrumbs;
       })();

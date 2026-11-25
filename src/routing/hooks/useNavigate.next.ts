@@ -14,9 +14,10 @@ import { useTransition } from 'react';
 
 import { useRouter as useNextRouter } from 'next/navigation';
 
-import { isClient, useOverlayStore } from '@donotdev/core';
+import { isClient, useNavigationStore, useOverlayStore } from '@donotdev/core';
 
 import type { Navigate, NavigateFunction, NavigateOptions } from './types';
+import { useRoutePath } from './useRoutePath.next';
 import { useLocalizedPath } from './useUrlLanguage.next';
 
 /**
@@ -38,6 +39,8 @@ export function useNavigate(): Navigate {
   const router = useNextRouter();
   const closeAll = useOverlayStore((state) => state.closeAll);
   const localize = useLocalizedPath();
+  const routePath = useRoutePath();
+  const startNavigation = useNavigationStore((state) => state.startNavigation);
   const [pending, startTransition] = useTransition();
 
   const navigate: NavigateFunction = (path, options) => {
@@ -49,6 +52,7 @@ export function useNavigate(): Navigate {
     }
 
     const to = localize(path);
+    startNavigation(path, routePath);
     startTransition(() => {
       if (options?.replace) router.replace(to);
       else router.push(to);

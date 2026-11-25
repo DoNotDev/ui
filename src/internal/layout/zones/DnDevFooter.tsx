@@ -5,11 +5,12 @@
  * @fileoverview DnDevFooter Zone Component
  * @description Footer zone with smart defaults.
  *
- * Default layout: Stack(FooterCopyright, FooterLegalLinks, FooterBranding)
- * - Desktop: 2-zone [Copyright] | [Links + Branding]
- * - Mobile: 2-line stacked, centered
+ * Default layout: a wrapping row (Stack direction="row" wrap="wrap"), CSS only, so the
+ * server HTML is the final layout at every width:
+ * - Wide: one row [Copyright] | [Legal links + Branding]
+ * - Narrow: the row wraps, the links group on its own line (its links wrap too)
  *
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
@@ -19,15 +20,12 @@ import type { ReactNode } from 'react';
 
 import { Stack } from '@donotdev/components';
 import type { AppMetadata } from '@donotdev/core';
-import { useBreakpoint, useTranslation, maybeTranslate } from '@donotdev/core';
+import { useTranslation } from '@donotdev/core';
 
 import { useCookieNoticeRequired } from '../../../components/cookie-consent/useCookieNoticeRequired';
-import { Link } from '../../../routing/Link';
 import { FooterBranding } from '../components/footer/FooterBranding';
-import {
-  getLegalLinks,
-  type FooterLegalLink,
-} from '../components/footer/useLegalLinks';
+import { FooterLegalLinks } from '../components/footer/FooterLegalLinks';
+import { getLegalLinks } from '../components/footer/useLegalLinks';
 
 // import { renderSlotValue } from '../renderers/slotUtils'; // Reserved for future slot override support
 
@@ -63,7 +61,6 @@ function DnDevFooterComponent({
   app = {},
 }: DnDevFooterProps): ReactNode {
   const { t } = useTranslation('dndev');
-  const isLaptopOrDesktop = useBreakpoint('isLaptopOrDesktop');
 
   // Get legal links (defaults or custom) — must be called before any return
   const cookieNoticeRequired = useCookieNoticeRequired();
@@ -91,61 +88,33 @@ function DnDevFooterComponent({
       ? `© ${new Date().getFullYear()} ${app.name || 'App'}. ${t('footer.legal.allRightsReserved')}`
       : copyrightConfig;
 
-  // Desktop/Wide: 2-zone layout [Copyright] | [Links + DoNotDev]
-  if (isLaptopOrDesktop) {
-    return (
-      <footer role="contentinfo" className="footer">
-        <Stack direction="row" align="center" justify="between" gap="none">
-          {showCopyright && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-              <span className="footer-copyright">{copyrightText}</span>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Stack direction="row" align="center">
-              {links.map((link: FooterLegalLink) => (
-                <Link
-                  key={link.path}
-                  path={link.path}
-                  style={{ fontSize: 'var(--font-size-xs)' }}
-                >
-                  {maybeTranslate(t, link.label)}
-                </Link>
-              ))}
-              <FooterBranding />
-            </Stack>
-          </div>
-        </Stack>
-      </footer>
-    );
-  }
-
-  // Mobile/Tablet: stacked layout
+  // One layout at every width, from CSS (right in the server HTML): [Copyright] |
+  // [Links + DoNotDev] on one row; on a narrow screen the row wraps (the links group on
+  // its own line, its links wrapping too). A breakpoint hook rendered the desktop row on
+  // the server and swapped to the stacked layout after hydration on phones.
   return (
     <footer role="contentinfo" className="footer">
-      <Stack align="center" gap="tight">
+      <Stack
+        direction="row"
+        wrap="wrap"
+        align="center"
+        justify="between"
+        gap="tight"
+      >
         {showCopyright && (
           <span className="footer-copyright">{copyrightText}</span>
         )}
-        <Stack
-          direction="row"
-          wrap="wrap"
-          gap="tight"
-          justify="center"
-          align="center"
-        >
-          {links.map((link: FooterLegalLink) => (
-            <Link
-              key={link.path}
-              path={link.path}
-              style={{ fontSize: 'var(--font-size-xs)' }}
-            >
-              {maybeTranslate(t, link.label)}
-            </Link>
-          ))}
+        {links.length > 0 ? (
+          <FooterLegalLinks
+            app={app}
+            direction="row"
+            wrap="wrap"
+            align="center"
+            gap="tight"
+          />
+        ) : (
           <FooterBranding />
-        </Stack>
+        )}
       </Stack>
     </footer>
   );

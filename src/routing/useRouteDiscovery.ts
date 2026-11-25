@@ -30,8 +30,6 @@ import type { JSX } from 'react';
 import type { ReactNode } from 'react';
 
 import {
-  useNavigationStore,
-  filterNavigationRoutes,
   getRoutes,
   getRouteManifest,
 } from '@donotdev/core';
@@ -41,6 +39,8 @@ import type {
 } from '@donotdev/core';
 
 import { useAuthSafe } from '../utils/useAuthSafe';
+
+import { useNavigableRoutes } from './useNavigation';
 
 // Use the single source of truth
 type RouteData = RoutesPluginConfig['mapping'][0];
@@ -207,7 +207,8 @@ export function useAccessibleRoutes(): RouteGroup[] {
  * Features:
  * - Memoized filtering of snapshot-owned routes
  * - Automatic updates when routes or auth change
- * - Consistent filtering logic with AuthGuard
+ * - Same access rule as `useNavigationItems` (`useNavigableRoutes`): menu visibility,
+ *   sign-in, role, then PageMeta tier and `validate` through `can.navigate` (AuthGuard's rule)
  * - Optimized for multiple component usage
  *
  * @returns Array of navigation routes filtered by user permissions
@@ -225,20 +226,17 @@ export function useAccessibleRoutes(): RouteGroup[] {
  * @author AMBROISE PARK Consulting
  */
 export function useAccessibleNavigationRoutes(): NavigationRoute[] {
-  const user = useAuthSafe('user');
-  const allRoutes = useNavigationStore((state) => state.cache.allRoutes);
-  return useMemo(() => {
-    const filteredRoutes = filterNavigationRoutes(allRoutes, {
-      authenticated: !!user,
-      role: user?.role || 'user',
-    });
-    return filteredRoutes.map((route) => ({
-      path: route.path,
-      label: route.label,
-      icon: route.icon,
-      meta: route.meta,
-    }));
-  }, [allRoutes, user]);
+  const routes = useNavigableRoutes();
+  return useMemo(
+    () =>
+      routes.map((route) => ({
+        path: route.path,
+        label: route.label,
+        icon: route.icon,
+        meta: route.meta,
+      })),
+    [routes]
+  );
 }
 
 /**

@@ -14,9 +14,9 @@
 import NextLink from 'next/link';
 import type { ReactElement } from 'react';
 
-import { useOverlayStore } from '@donotdev/core';
+import { useNavigationStore, useOverlayStore } from '@donotdev/core';
 // Platform-specific hooks via conditional exports (default → hooks.next)
-import { useLocalizedPath } from '@donotdev/ui/routing/hooks';
+import { useLocalizedPath, useRoutePath } from '@donotdev/ui/routing/hooks';
 
 import { useAuthSafe } from '../../utils/useAuthSafe';
 import { absolutePath } from './absolutePath';
@@ -50,6 +50,8 @@ export function InternalLink({
 }: InternalLinkProps): ReactElement {
   const localize = useLocalizedPath();
   const closeAll = useOverlayStore((state) => state.closeAll);
+  const routePath = useRoutePath();
+  const startNavigation = useNavigationStore((state) => state.startNavigation);
   const signedIn = useAuthSafe('isAuthenticated');
 
   return (
@@ -57,7 +59,10 @@ export function InternalLink({
       href={localize(absolutePath(path))}
       replace={replace}
       prefetch={!prefetch ? false : signedIn ? true : null}
-      onNavigate={() => closeAll()}
+      onNavigate={() => {
+        startNavigation(absolutePath(path), routePath);
+        closeAll();
+      }}
       {...anchorProps}
     >
       {children}

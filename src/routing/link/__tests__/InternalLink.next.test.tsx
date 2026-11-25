@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const closeAll = vi.hoisted(() => vi.fn());
+const startNavigation = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ isAuthenticated: false }));
 const nextLinkProps = vi.hoisted(() => ({ last: {} as Record<string, unknown> }));
 
@@ -28,6 +29,7 @@ vi.mock('next/link', () => ({
 }));
 vi.mock('@donotdev/ui/routing/hooks', () => ({
   useLocalizedPath: () => (path: string) => `/en${path}`,
+  useRoutePath: () => '/current',
 }));
 vi.mock('../../../utils/useAuthSafe', () => ({
   useAuthSafe: (key: 'isAuthenticated') => auth[key],
@@ -35,12 +37,16 @@ vi.mock('../../../utils/useAuthSafe', () => ({
 vi.mock('@donotdev/core', () => ({
   useOverlayStore: (select: (s: { closeAll: () => void }) => unknown) =>
     select({ closeAll }),
+  useNavigationStore: (
+    select: (s: { startNavigation: (to?: string, from?: string) => void }) => unknown
+  ) => select({ startNavigation }),
 }));
 
 import { InternalLink } from '../InternalLink.next';
 
 beforeEach(() => {
   closeAll.mockReset();
+  startNavigation.mockReset();
   auth.isAuthenticated = false;
   nextLinkProps.last = {};
 });
@@ -84,7 +90,7 @@ describe('InternalLink (Next.js, next/link)', () => {
     expect(signedIn.innerHTML).toBe(guest.innerHTML);
   });
 
-  it('passes replace, onClick and anchor attributes; closes overlays on navigation', () => {
+  it('passes replace, onClick and anchor attributes; starts the navigation and closes overlays', () => {
     const onClick = vi.fn();
     render(
       <InternalLink path="/a" replace onClick={onClick} className="nav" aria-label="Accueil">
@@ -96,6 +102,8 @@ describe('InternalLink (Next.js, next/link)', () => {
     expect(nextLinkProps.last.className).toBe('nav');
     expect(nextLinkProps.last['aria-label']).toBe('Accueil');
     (nextLinkProps.last.onNavigate as () => void)();
+    // Navigation store: target app path and the rendered route (the store skips same-route)
+    expect(startNavigation).toHaveBeenCalledWith('/a', '/current');
     expect(closeAll).toHaveBeenCalledTimes(1);
   });
 });

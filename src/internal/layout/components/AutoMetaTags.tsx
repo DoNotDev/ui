@@ -36,6 +36,7 @@ import {
   routeSeo,
   siteHeadTags,
   SITE_LOGO_PATH,
+  useLayout,
   useTranslation,
 } from '@donotdev/core';
 import { getDndevConfig } from '@donotdev/core';
@@ -44,6 +45,7 @@ import type { SeoMeta } from '@donotdev/core';
 // Platform-specific hooks via conditional exports
 import { useRoutePath, useUrlLanguage } from '@donotdev/ui/routing/hooks';
 
+import { shownRecordLabel } from '../../../crud/components/useRecordBreadcrumb';
 import { useIsNotFoundDocument } from '../../../routing/NotFoundDocument';
 import { headTagElement } from './headTagElement';
 import { HeadTags } from './HeadTags';
@@ -82,13 +84,19 @@ interface ResolvedRouteMetadata {
 /** No route manifest (no config): no route, no ancestor. */
 const EMPTY_ROUTES: readonly { path: string }[] = [];
 
-/** Route metadata of the 404 document: none (it has no URL of its own). */
-const NOT_FOUND_ROUTE_METADATA: ResolvedRouteMetadata = {
-  meta: {},
-  serverMetadata: false,
-  authOnly: false,
-  recordBreadcrumb: false,
-};
+/**
+ * Route metadata of the 404 document: its title only (`<title>`: the page's heading,
+ * `errors.notFound.title`, + ` | <site name>`). Nothing derived from the URL: it has no
+ * URL of its own.
+ */
+function notFoundRouteMetadata(title: string): ResolvedRouteMetadata {
+  return {
+    meta: { seo: { title } },
+    serverMetadata: false,
+    authOnly: false,
+    recordBreadcrumb: false,
+  };
+}
 
 /**
  * Get route metadata from the build-time config (`globalThis._DNDEV_CONFIG_`).
@@ -225,6 +233,9 @@ function buildSpeculationRules() {
  * - Vite prerendered page (static HTML the build wrote: static route, blog post, entity
  *   record): the identity tags the build embedded, exactly the prerendered ones; elsewhere
  *   `routeSeo` / `routeHeadTags` (@donotdev/core), the derivation the build uses
+ * - Page showing a record it names with `useRecordBreadcrumb` (Next private entity page,
+ *   crud display/form pages), outside server metadata and prerendered pages: titled
+ *   `<record name> | <site name>` once the record is shown (browser)
  */
 export const AutoMetaTags: ComponentType = () => {
   const pathname = useRoutePath();
@@ -255,7 +266,7 @@ export const AutoMetaTags: ComponentType = () => {
     authOnly,
     recordBreadcrumb,
   } = notFoundDocument
-    ? NOT_FOUND_ROUTE_METADATA
+    ? notFoundRouteMetadata(t('errors.notFound.title'))
     : getRouteMetadata(pathname);
   // Next routes whose page sets its identity on the server (generated entity metadata,
   // blog posts, a page module's own generateMetadata) get it from there: React 19 does not
@@ -280,6 +291,13 @@ export const AutoMetaTags: ComponentType = () => {
       ? null
       : prerenderedHead(pageUrl(pathname));
 
+  // The record the URL shows, named by its page (`useRecordBreadcrumb`, the breadcrumb's
+  // rule `shownRecordLabel`): the page's own title (`seo.title`) where its identity is set
+  // here (no server metadata, not prerendered), so its <title> reads
+  // `<record name> | <site name>`. Browser only: the page publishes the label in an effect.
+  const recordLabel = useLayout('routeRecordLabel');
+  const recordTitle = notFoundDocument ? undefined : shownRecordLabel(pathname, recordLabel);
+
   // Memoize computed values for performance — must be called before any early return.
   // routeSeo (@donotdev/core): the same derivation the Vite build prerenders with.
   const metaData = useMemo(() => {
@@ -288,10 +306,12 @@ export const AutoMetaTags: ComponentType = () => {
     // defaultImage: AppConfigProvider default (DEFAULT_OG_IMAGE, /og-image.png)
     const { defaultNamespace = 'home', defaultImage } = seoConfig;
     return routeSeo({
-      meta: routeMeta,
+      meta: recordTitle
+        ? { ...routeMeta, seo: { ...routeMeta.seo, title: recordTitle } }
+        : routeMeta,
       // The page's own namespace; a page without one reads the site defaults
       // (appConfig.seo.defaultNamespace), never their title. None on the 404 document:
-      // its title is the site name
+      // its title is its seo.title (the 404 heading) + the site name
       ns: notFoundDocument ? null : routeMeta.namespace || null,
       defaultNs: notFoundDocument ? null : defaultNamespace,
       t,
@@ -311,6 +331,7 @@ export const AutoMetaTags: ComponentType = () => {
     language,
     trailingSlash,
     routeMeta,
+    recordTitle,
     authOnly,
     siteName,
     baseUrl,

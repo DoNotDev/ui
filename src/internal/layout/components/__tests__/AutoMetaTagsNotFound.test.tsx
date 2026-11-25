@@ -25,8 +25,15 @@ vi.mock('@donotdev/core', async () => {
     }),
     isNextJs: () => true,
     // Page titles / descriptions translate, so a namespace lookup shows in the output
+    // No record shown (layout store routeRecordLabel)
+    useLayout: () => null,
     useTranslation: () => ({
-      t: (key: string) => (/:(title|description)$/.test(key) ? `T(${key})` : ''),
+      t: (key: string) =>
+        key === 'errors.notFound.title'
+          ? 'Page non trouvée'
+          : /:(title|description)$/.test(key)
+            ? `T(${key})`
+            : '',
     }),
     getDndevConfig: () => ({
       routes: { mapping: [], manifest: { hasBlogFeed: false } },
@@ -65,13 +72,14 @@ describe('AutoMetaTags in the 404 document', () => {
     expect(renderAt('/a/b')).toBe(renderAt('/_not-found'));
   });
 
-  it('has no URL-derived tag, the site name as title', () => {
+  it('has no URL-derived tag, the 404 heading + site name as title', () => {
     const html = renderAt('/legal/unknown');
     expect(html).not.toMatch(
       /rel="canonical"|og:url|hrefLang|"@type":"WebPage"|BreadcrumbList/
     );
     expect(html).not.toContain('T(');
-    expect(html).toContain('<title>Shop</title>');
+    expect(html).toContain('<title>Page non trouvée | Shop</title>');
+    expect(html).toContain('<meta property="og:title" content="Page non trouvée | Shop"/>');
     expect(html).toContain('<meta property="og:site_name" content="Shop"/>');
   });
 

@@ -227,7 +227,9 @@ function CustomSidebar() {
 }
 ```
 
-**SSR snapshot ownership:** `useNavigationItems()` and `useAccessibleNavigationRoutes()` subscribe to route data and update when either routes or auth change. For lower-level render derivation, select `state.cache.allRoutes` and call the pure `filterNavigationRoutes(routes, authState)` exported by `@donotdev/core` outside the store selector. Do not invoke `state.getFilteredRoutes()` inside a render selector: imperative getters read live state rather than the hydration snapshot. Existing imperative getters remain supported for event-time reads.
+**One access rule:** `useNavigationItems()` and `useAccessibleNavigationRoutes()` both call `useNavigableRoutes()`: `filterNavigationRoutes` (core: `hideFromMenu`, sign-in, role; signed out or without a role = guest), then `can.navigate` (the rule `AuthGuard` uses) for PageMeta `auth.tier` and `auth.validate`. A page the user cannot open is not listed. Without `@donotdev/auth` the degraded `can` applies (nothing crashes).
+
+**SSR snapshot ownership:** `useNavigationItems()` and `useAccessibleNavigationRoutes()` subscribe to route data and update when either routes or auth change. Their routes are in the server HTML: they read `getNavigationRoutesSnapshot` (`@donotdev/core`: the store's routes once initialized, else the build-time route mapping's) as both snapshots of `useSyncExternalStore`. For lower-level render derivation, do the same (`useSyncExternalStore(useNavigationStore.subscribe, getNavigationRoutesSnapshot, getNavigationRoutesSnapshot)`, not `state.cache.allRoutes`, which is empty on the server) and call the pure `filterNavigationRoutes(routes, authState)` exported by `@donotdev/core` outside the store selector. Do not invoke `state.getFilteredRoutes()` inside a render selector: imperative getters read live state rather than the hydration snapshot. Existing imperative getters remain supported for event-time reads.
 
 **DON'T manually build navigation:**
 ```tsx
@@ -320,6 +322,10 @@ function NavigationItem({ path }) {
 ```
 
 ---
+
+### 7. Navigation Feedback (built in)
+
+Every in-app navigation started by the framework (`Link`, `useNavigate`, the Next language switch) shows the same feedback, Next and Vite alike, with no app code: the current page stays on screen, `<main>` is `aria-busy="true"` and an indeterminate `Progress` lies under the header (shown after `--dur-fast`, so an instant navigation shows nothing). The navigation store (`useNavigationStore`: `navigating`, `startNavigation(to?, from?)`, `endNavigation()`) holds it: the entry points start it (a navigation to the route already shown starts nothing), `DnDevLayout` ends it when the rendered route (path or language) changes, redirects included. Browser back / forward shows none and needs none: both routers restore the page from their cache synchronously (measured: shop 132-645ms, admin ~270ms, main thread busy throughout), so nothing could paint meanwhile. On Vite the route pages share one Suspense boundary (RootLayout): the first load shows the spinner, an in-app navigation keeps the current page while the next page's code loads. A raw `next/link`, `<a>` or `react-router` call bypasses it: use the framework `Link` / `useNavigate` (Mistake 5).
 
 ## Outlet and Nested Routes
 

@@ -30,7 +30,7 @@
  *
  * - **Code Splitting**: Each route is lazy-loaded to reduce initial bundle size
  * - **Caching**: Lazy components are cached to prevent recreation
- * - **Suspense Boundaries**: Proper loading states prevent UI flicker
+ * - **One Suspense boundary** (RootLayout, around the route content): the first load shows the spinner; an in-app navigation keeps the current page while the next page loads (navigation progress bar)
  * - **Native Scroll Restoration**: Built-in scroll position memory
  *
  * @version 0.1.0
@@ -48,12 +48,11 @@
  * ```
  */
 
-import { lazy, Suspense, useLayoutEffect } from 'react';
+import { lazy, useLayoutEffect } from 'react';
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
 
-import { Spinner } from '@donotdev/components';
 import type { PageAuth, LayoutConfig, LayoutPreset } from '@donotdev/core';
 import {
   applyFirstVisitLanguage,
@@ -96,12 +95,11 @@ function NotFoundPage() {
 
   const LazyNotFoundPage = lazyComponentCache.get(cacheKey)!;
 
+  // Loading fallback: the one route-content Suspense of RootLayout
   return (
     <>
       <meta name="robots" content="noindex" />
-      <Suspense fallback={<Spinner overlay />}>
-        <LazyNotFoundPage />
-      </Suspense>
+      <LazyNotFoundPage />
     </>
   );
 }
@@ -134,12 +132,11 @@ const LazyRoute = ({
       lazy(component as () => Promise<{ default: ComponentType }>)
     );
   }
+  // No Suspense of its own: RootLayout wraps the route content in one boundary, so an
+  // in-app navigation (a transition) keeps the current page while this page's code loads
+  // (navigation progress bar) instead of swapping it for a spinner.
   const Component = lazyComponentCache.get(path)!;
-  return (
-    <Suspense fallback={<Spinner overlay />}>
-      <Component />
-    </Suspense>
-  );
+  return <Component />;
 };
 
 /** Extract preset from route meta (meta is unknown at the interface level) */

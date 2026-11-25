@@ -10,7 +10,7 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode, ReactElement, ComponentProps } from 'react';
 
 import {
@@ -18,9 +18,10 @@ import {
   LinkRendererProvider,
   Toaster,
   TooltipProvider,
+  TranslatorProvider,
 } from '@donotdev/components';
-import type { LinkRendererProps } from '@donotdev/components';
-import { getRoutes, useOverlayStore } from '@donotdev/core';
+import type { ComponentTranslate, LinkRendererProps } from '@donotdev/components';
+import { getRoutes, useOverlayStore, useTranslation } from '@donotdev/core';
 import type { FormNavigation } from '@donotdev/crud';
 // Platform-specific hooks via conditional exports
 import { useNavigate, useRoutePath } from '@donotdev/ui/routing/hooks';
@@ -79,19 +80,26 @@ interface UIProvidersProps {
  * @author AMBROISE PARK Consulting
  */
 export function UIProviders({ children }: UIProvidersProps): ReactElement {
+  const { t } = useTranslation('dndev');
+  const translate = useCallback<ComponentTranslate>(
+    (key, values) => String(t(key, values)),
+    [t]
+  );
   return (
     <DnDevErrorBoundary level="app" fallback={UIGlobalErrorFallback}>
       <LinkRendererProvider value={RouterLinkRenderer}>
-        <TooltipProvider>
-          {/* Module-level constant: crud is installed or not for the app's lifetime. */}
-          {isCrudModuleAvailable ? (
-            <FormNavigationBridge>{children}</FormNavigationBridge>
-          ) : (
-            children
-          )}
-          <Toaster />
-          <ModalDialog />
-        </TooltipProvider>
+        <TranslatorProvider value={translate}>
+          <TooltipProvider>
+            {/* Module-level constant: crud is installed or not for the app's lifetime. */}
+            {isCrudModuleAvailable ? (
+              <FormNavigationBridge>{children}</FormNavigationBridge>
+            ) : (
+              children
+            )}
+            <Toaster />
+            <ModalDialog />
+          </TooltipProvider>
+        </TranslatorProvider>
       </LinkRendererProvider>
     </DnDevErrorBoundary>
   );
