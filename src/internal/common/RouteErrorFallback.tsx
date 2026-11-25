@@ -218,7 +218,7 @@ export const RouteErrorFallback: ComponentType<RouteErrorFallbackProps> = ({
                     color: 'var(--destructive)',
                   }}
                 >
-                  Error Message:
+                  {t('routeError.errorMessage')}
                 </span>
                 <Button
                   variant={BUTTON_VARIANT.GHOST}

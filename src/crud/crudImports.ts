@@ -48,6 +48,8 @@ export const FormFieldRenderer = crudModule?.FormFieldRenderer;
 export const UploadProvider = crudModule?.UploadProvider;
 export const EntityFilters = crudModule?.EntityFilters;
 export const CrudCard = crudModule?.CrudCard;
+/** First-picture thumbnail (string, Picture or Picture[]): detail header image. */
+export const DisplayThumbnail = crudModule?.DisplayThumbnail;
 
 // --- Utils ---
 export const translateFieldLabel = crudModule?.translateFieldLabel;

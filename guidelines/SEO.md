@@ -37,10 +37,11 @@ under `/<lang>`, see core `I18N.md`). Automatic:
 
 - **Canonical / `og:url` / JSON-LD `url`:** the page in its own language (`/en/x` on the English page), entity pages included (AutoMetaTags emits canonical / `og:url` on every route).
 - **`hreflang`:** one `<link rel="alternate">` per language plus `x-default` (the root URL).
+- **`og:locale` / `og:locale:alternate`:** `og:locale` is the page's language as an Open Graph locale (`ll_TT`, `ogLocale` from `@donotdev/core`: the tag's own region, `fr-BE` → `fr_BE`, else its likely region, `fr` → `fr_FR`, `en` → `en_US`; a language without a two-letter region, `eo`, `es-419`, gets none), on every page with one language too. With hreflang (2+ languages, `seo.hreflang` not `false`), one `og:locale:alternate` per other language. Both come from `siteHeadTags` (AutoMetaTags on Next and Vite, the Vite prerender); none on the 404 document.
 - **Sitemap (Next `src/app/sitemap.xml/route.next.ts`, Vite `dist/sitemap.xml`):** every language's URL of each page, each entry with `alternates.languages`.
 - **Prerendered pages (Vite):** one file per language URL (`dist/about.html`, `dist/en/about.html`), each with its hreflang alternates.
 
-One language: unprefixed URLs, no `hreflang`.
+One language: unprefixed URLs, no `hreflang`, no `og:locale:alternate`.
 
 **Trailing slash (Next):** with `trailingSlash: true` in `defineNextConfig` (passed through to Next, which then redirects `/about` to `/about/`), every public URL the framework emits ends with `/`, language homes included (`/fr/`, `/about/`): canonical, `og:url`, `hreflang`, JSON-LD (`url`, breadcrumb items, entity page Product `url`, search `urlTemplate`), sitemap and llms.txt. File URLs (`/rss.xml`, images) keep their form. The build writes the setting into the route manifest (`routes.manifest.trailingSlash`) and the generated sitemap / llms.txt routes; `formatTrailingSlash` (`@donotdev/core`) is the one place that applies it. Unset or `false`: URLs unchanged.
 
@@ -71,7 +72,7 @@ export default defineViteConfig({
 **What happens** (after the bundle, no browser):
 
 1. `dist/_shell.html`: the SPA shell as Vite built it. The hosting rewrite serves it for every URL without a file (an unprerendered dynamic URL, a record published after the build); `dist/index.html` becomes the prerendered home page, so its tags never land on other URLs.
-2. One page per public static route and blog post **and per language** (default language at the root, others under `/<lang>`): `dist/about.html`, `dist/en/about.html`, `dist/index.html`, `dist/en.html`. Its head is the identity AutoMetaTags computes for that URL (`routeSeo` / `routeHeadTags` from `@donotdev/core`, the same functions: PageMeta + i18n in the page language, absolute `og:image` / `twitter:image`) plus canonical, `og:url`, `og:site_name` and hreflang (see Languages; `seo.hreflang: false` respected).
+2. One page per public static route and blog post **and per language** (default language at the root, others under `/<lang>`): `dist/about.html`, `dist/en/about.html`, `dist/index.html`, `dist/en.html`. Its head is the identity AutoMetaTags computes for that URL (`routeSeo` / `routeHeadTags` from `@donotdev/core`, the same functions: PageMeta + i18n in the page language, absolute `og:image` / `twitter:image`) plus canonical, `og:url`, `og:site_name`, `og:locale` (+ `og:locale:alternate`) and hreflang (`siteHeadTags`, see Languages; `seo.hreflang: false` respected).
 3. One page per public record of each entity route and language (see Entity pages (Vite)).
 4. `dist/sitemap.xml` and `dist/llms.txt` of the same URL set (see Sitemap & llms.txt).
 
@@ -112,7 +113,7 @@ An app whose own config lacks `cleanUrls` never serves the prerendered pages at 
 
 | Route | Page identity (title, description, Open Graph, Twitter, robots, JSON-LD) | Always AutoMetaTags |
 |-------|------|------|
-| Static (`/about`), dynamic without server metadata | AutoMetaTags (PageMeta + i18n) | canonical, `og:url`, `og:site_name`, `hreflang`, BreadcrumbList (site, the page's ancestors and the page, by page title) / WebSite / Organization JSON-LD |
+| Static (`/about`), dynamic without server metadata | AutoMetaTags (PageMeta + i18n) | canonical, `og:url`, `og:site_name`, `og:locale` / `og:locale:alternate`, `hreflang`, BreadcrumbList (site, the page's ancestors and the page, by page title) / WebSite / Organization JSON-LD |
 | Entity page (`/produits/:slug`, see below) | The generated page: `generateMetadata` + JSON-LD from the record (AutoMetaTags emits none) | same, except the BreadcrumbList: the page renders it (record title last) |
 | Page module exporting `generateMetadata` | That `generateMetadata` (AutoMetaTags emits none) | same |
 | Blog post (`blog` namespace, dynamic route) | The generated page's `generateMetadata` (per-post title, description, Open Graph) | same |
@@ -142,7 +143,7 @@ export const meta: PageMeta = {
 - **Declaring the entity:** `entity` is the `defineEntity` definition imported from the app's `entities` package; the build resolves it to its `collection` (`meta.entity`). A string, an identifier not imported from `'entities'`, or a value that is not a `defineEntity` with a literal `collection` fails the build, and so does any other expression: `import * as entities from 'entities'` with `entity: entities.productEntity` (the build reads the meta statically; write `import { productEntity } from 'entities'`). A dynamic page without `entity` is a plain dynamic page: its own exported `generateMetadata` (Next), else `seo: { noindex: true }` (see Dynamic Pages: Per-URL SEO Required).
 
 - **Read:** the generated `page.tsx` reads the record named by the URL (`<param> == value`, `status` not in `HIDDEN_STATUSES`) with the public server reader of `generateStaticParams` (signed-out visitor: RLS / Security Rules decide; `@donotdev/supabase` or `@donotdev/firebase`, any other provider fails the build). React `cache`: `generateMetadata` and the page share one read per request. The page's own client data reads are separate. `appConfig.prerenderRecords: false` stops the build-time prerender only: each URL still reads its record on its first request.
-- **`generateMetadata`:** title `<record title> | <site name>` (absolute: no layout title template; site name = `appConfig.seo.siteName`, else `appConfig.app.name`), description, Open Graph (title, description, absolute image, `og:type`), Twitter card. Derived by `deriveEntitySeo` with the entity's `seo` option (see Entity-derived identity), text in the URL's language (entity namespace then `crud` translations, `@donotdev/core/rsc`). Canonical, `og:url` and `hreflang` stay with AutoMetaTags.
+- **`generateMetadata`:** title `<record title> | <site name>` (absolute: no layout title template; site name = `appConfig.seo.siteName`, else `appConfig.app.name`), description, Open Graph (title, description, absolute image, `og:type`), Twitter card. Derived by `deriveEntitySeo` with the entity's `seo` option (see Entity-derived identity), text in the URL's language (entity namespace then `crud` translations, `@donotdev/core/rsc`). Canonical, `og:url`, `og:locale` and `hreflang` stay with AutoMetaTags.
 - **`og:type`:** PageMeta `seo.type` (`website` default, `article`, `product`). `product` also renders Product JSON-LD (`<script type="application/ld+json">`, from `buildProductJsonLd`) and `<meta property="og:type" content="product">` in the page (Next's metadata API has no `product` type).
 - **BreadcrumbList JSON-LD:** rendered by the page (`buildBreadcrumbJsonLd`, shared with the Vite record pages and AutoMetaTags): the site name, the page's ancestors (`routeAncestors`: URL prefixes that are pages, else PageMeta `parent`, see ROUTING.md) each named by its page title in the page language (`routeLabel`, the `<title>` chain; the generated page embeds those routes as `BREADCRUMB_ROUTES`), the record title last: the label the visible breadcrumb shows for the page (`useRecordBreadcrumb`: the slug on `/produits/:slug`, the id on `/products/:id`). A URL prefix that is no page is no item (`/produits/serum` with `parent: '/catalogue'`: site > Catalogue > record). No record title: no BreadcrumbList.
 - **Missing record** (unknown value, hidden status): `notFound()`. The response is HTTP 404 with the app's 404 page and Next's `noindex`; a page component's own not-found state is never served for such a URL.
@@ -171,7 +172,7 @@ export default function SearchPage() {
 ```
 
 - **`'use client'` page exporting `generateMetadata`:** the build fails (Next reads it only from server modules, the page would ship without metadata). Keep the page module a server component that renders the client UI.
-- **Canonical / `hreflang`:** AutoMetaTags emits them; do not set `alternates` or `openGraph.url` (a second canonical).
+- **Canonical / `hreflang` / `og:locale`:** AutoMetaTags emits them; do not set `alternates`, `openGraph.url` (a second canonical) or `openGraph.locale` / `openGraph.alternateLocale` (a second `og:locale`).
 - **Vite:** ignored (no server).
 
 ---

@@ -13,6 +13,7 @@
 import type { ComponentType } from 'react';
 
 import { Card, cn } from '@donotdev/components';
+import { useTranslation } from '@donotdev/core';
 
 /** Props for the FloatingLanguageSwitcher component. */
 export interface FloatingLanguageSwitcherProps {
@@ -32,6 +33,7 @@ export interface FloatingLanguageSwitcherProps {
 const FloatingLanguageSwitcher: ComponentType<
   FloatingLanguageSwitcherProps
 > = ({ languages, currentLanguage, onLanguageChange, className }) => {
+  const { t } = useTranslation('dndev');
   return (
     <Card
       className={cn('dndev-z-modal', className)}
@@ -45,7 +47,7 @@ const FloatingLanguageSwitcher: ComponentType<
         transition: 'var(--dur-fast) ease-out',
       }}
       role="region"
-      aria-label="Language selector"
+      aria-label={t('language.selector')}
       data-role="floating"
     >
       <select
@@ -57,7 +59,7 @@ const FloatingLanguageSwitcher: ComponentType<
         }}
         value={currentLanguage}
         onChange={(e) => onLanguageChange?.(e.target.value)}
-        aria-label="Select language"
+        aria-label={t('language.selectLanguage')}
       >
         {languages.map((lang) => (
           <option key={lang} value={lang}>

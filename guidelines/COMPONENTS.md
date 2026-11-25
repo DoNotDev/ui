@@ -106,7 +106,7 @@
 ## CRUD Display Components (from @donotdev/ui)
 
 - **DisplayFieldRenderer** - Renders read-only field displays.
-- **EntityDisplayRenderer** - Renders complete entity displays.
+- **EntityDisplayRenderer** - Detail page of one record: header (thumbnail, record name, status badge, Edit / Delete for viewers with the entity's update / delete role; `basePath`, `hideActions`), fields in a label | value grid grouped by `field.group`, references by label, empty fields as "—".
 - **TextFieldDisplay** - Text field display component.
 - **BadgeFieldDisplay** - Badge field display component.
 - **AvatarFieldDisplay** - Avatar field display component.

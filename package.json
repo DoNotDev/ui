@@ -1,6 +1,6 @@
 {
   "name": "@donotdev/ui",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "type": "module",
   "private": false,
   "license": "MIT",
@@ -67,11 +67,11 @@
   },
   "peerDependencies": {
     "@donotdev/ai": "^0.3.2",
-    "@donotdev/auth": "^0.3.6",
+    "@donotdev/auth": "^0.3.7",
     "@donotdev/billing": "^0.3.4",
-    "@donotdev/components": "^0.3.7",
-    "@donotdev/core": "^0.3.6",
-    "@donotdev/crud": "^0.3.6",
+    "@donotdev/components": "^0.3.8",
+    "@donotdev/core": "^0.3.7",
+    "@donotdev/crud": "^0.3.7",
     "@donotdev/oauth": "^0.3.4",
     "@hookform/resolvers": "^5.9.2",
     "lucide-react": "^0.575.0",

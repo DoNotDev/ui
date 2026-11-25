@@ -105,7 +105,7 @@ function DnDevMergedBarComponent({
     <Button
       variant={BUTTON_VARIANT.GHOST}
       icon={Icon}
-      aria-label="Open navigation"
+      aria-label={t('navigation.open')}
     />
   );
 

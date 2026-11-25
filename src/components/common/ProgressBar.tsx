@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 
 import { cn } from '@donotdev/components';
+import { useTranslation } from '@donotdev/core';
 
 interface ProgressBarProps {
   /** Whether the progress bar is active */
@@ -57,6 +58,7 @@ const ProgressBar: ComponentType<ProgressBarProps> = ({
   className,
   show = true,
 }) => {
+  const { t } = useTranslation('dndev');
   const [fakeProgress, setFakeProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -122,7 +124,7 @@ const ProgressBar: ComponentType<ProgressBarProps> = ({
       aria-valuenow={Math.round(currentProgress)}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label="Page loading progress"
+      aria-label={t('navigation.loadingProgress')}
     >
       <div
         style={{

@@ -148,7 +148,7 @@ const Breadcrumbs: ComponentType<BreadcrumbsProps> = ({
   return (
     <nav
       role="navigation"
-      aria-label="Breadcrumb navigation"
+      aria-label={t('navigation.breadcrumb')}
       className={cn('breadcrumbs', className)}
     >
       {allItems.map((item, index) => {

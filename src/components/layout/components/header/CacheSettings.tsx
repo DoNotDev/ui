@@ -88,7 +88,7 @@ function CacheSettings() {
       if (cacheOptions.localStorage && typeof window !== 'undefined') {
         try {
           localStorage.clear();
-          clearedItems.push('localStorage');
+          clearedItems.push(t('settings.clearCache.localStorage'));
         } catch (err) {
           console.error('Failed to clear localStorage:', err);
         }
@@ -98,7 +98,7 @@ function CacheSettings() {
       if (cacheOptions.sessionStorage && typeof window !== 'undefined') {
         try {
           sessionStorage.clear();
-          clearedItems.push('sessionStorage');
+          clearedItems.push(t('settings.clearCache.sessionStorage'));
         } catch (err) {
           console.error('Failed to clear sessionStorage:', err);
         }
@@ -126,7 +126,7 @@ function CacheSettings() {
               })
             );
           }
-          clearedItems.push('IndexedDB');
+          clearedItems.push(t('settings.clearCache.indexedDB'));
         } catch (err) {
           console.error('Failed to clear IndexedDB:', err);
         }
@@ -156,7 +156,7 @@ function CacheSettings() {
               );
             });
           }
-          clearedItems.push('WebSQL');
+          clearedItems.push(t('settings.clearCache.webSQL'));
         } catch (err) {
           console.error('Failed to clear WebSQL:', err);
         }
@@ -179,7 +179,7 @@ function CacheSettings() {
               }
             })
           );
-          clearedItems.push('Application Cache');
+          clearedItems.push(t('settings.clearCache.applicationCache'));
         } catch (err) {
           console.error('Failed to clear application cache:', err);
         }
@@ -199,7 +199,7 @@ function CacheSettings() {
               }
             })
           );
-          clearedItems.push('Service Workers');
+          clearedItems.push(t('settings.clearCache.serviceWorker'));
         } catch (err) {
           console.error('Failed to clear service workers:', err);
         }
@@ -216,7 +216,7 @@ function CacheSettings() {
             document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
             document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
           });
-          clearedItems.push('Cookies');
+          clearedItems.push(t('settings.clearCache.cookies'));
         } catch (err) {
           console.error('Failed to clear cookies:', err);
         }
@@ -229,7 +229,7 @@ function CacheSettings() {
           if ('gc' in window && typeof legacyGlobals.gc === 'function') {
             legacyGlobals.gc();
           }
-          clearedItems.push('Memory Cache');
+          clearedItems.push(t('settings.clearCache.memoryCache'));
         } catch (err) {
           console.error('Failed to clear memory cache:', err);
         }

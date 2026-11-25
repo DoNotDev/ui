@@ -132,7 +132,7 @@ export function AuthGuardFallback({
                 </p>
               </div>
 
-              <Suspense fallback={<div>Loading providers...</div>}>
+              <Suspense fallback={<div>{t('dndev:messages.loading')}</div>}>
                 <MultipleAuthProviders
                   layout="vertical"
                   spacing="tight"

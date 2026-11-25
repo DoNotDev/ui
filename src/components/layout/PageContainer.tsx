@@ -15,6 +15,7 @@ import { Suspense } from 'react';
 import type { ComponentProps, ComponentType, ReactNode } from 'react';
 
 import { cn } from '@donotdev/components';
+import { useTranslation } from '@donotdev/core';
 import type { Density } from '@donotdev/core';
 
 import DnDevErrorBoundary from '../../internal/common/DnDevErrorBoundary';
@@ -23,8 +24,9 @@ import RouteErrorFallback from '../../internal/common/RouteErrorFallback';
 function PageContainerErrorFallback(
   props: ComponentProps<typeof RouteErrorFallback>
 ) {
+  const { t } = useTranslation('dndev');
   return (
-    <Suspense fallback={<div>Loading error fallback...</div>}>
+    <Suspense fallback={<div>{t('messages.loading')}</div>}>
       <RouteErrorFallback {...props} />
     </Suspense>
   );

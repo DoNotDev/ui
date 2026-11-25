@@ -92,12 +92,21 @@ describe('AutoMetaTags: one URL per language', () => {
     );
   });
 
-  it('one language: no hreflang, unprefixed canonical', () => {
+  it('og:locale is the page language, og:locale:alternate each other language', () => {
+    const html = renderToStaticMarkup(<AutoMetaTags />);
+    expect(html).toContain('<meta property="og:locale" content="en_US"/>');
+    expect(html).toContain('<meta property="og:locale:alternate" content="fr_FR"/>');
+    expect(html.match(/og:locale:alternate/g)).toHaveLength(1);
+  });
+
+  it('one language: no hreflang, unprefixed canonical, og:locale only', () => {
     page.routing = { languages: ['fr'], defaultLanguage: 'fr' };
     page.language = 'fr';
     const html = renderToStaticMarkup(<AutoMetaTags />);
     expect(html).not.toContain('hrefLang');
     expect(linkHref(html, 'rel="canonical"')).toBe('https://shop.example/produits');
+    expect(html).toContain('<meta property="og:locale" content="fr_FR"/>');
+    expect(html).not.toContain('og:locale:alternate');
   });
 
   it('publisher logo in JSON-LD is an absolute URL', () => {

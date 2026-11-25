@@ -596,13 +596,55 @@ aside[role='navigation'].sidebar[data-dragging='true']
   padding-block: var(--gap-sm);
 }
 
-/* Interactive elements in all zones: full width */
+/* Interactive elements in all zones, and in the phone menu sheet (DnDevMergedBar), which
+   shows the sidebar's zones: full width, start-aligned. Coded here only (the layout owns
+   these classes; components never style them). This file loads after the components
+   CSS, so the alignment is :where()-scoped (one class): a component rule of two classes
+   still wins over it, as it did when this rule sat in components patterns.css (e.g. the
+   Accordion trigger's space-between). */
 .sidebar-top .dndev-interactive,
 .sidebar-content .dndev-interactive,
 .sidebar-bottom .dndev-interactive {
   width: 100%;
   min-width: 0;
-  /* justify-content handled by patterns.css parent selector */
+}
+
+.merged-bar-sheet-content .dndev-interactive {
+  width: 100%;
+}
+
+:where(.sidebar-top, .sidebar-content, .sidebar-bottom, .merged-bar-sheet-content)
+  .dndev-interactive {
+  justify-content: flex-start;
+}
+
+/* Outline buttons in the sidebar content and bottom zones: no inline-end border, the
+   resize handle is the separator. Same specificity as when it sat in components
+   patterns.css; the outline Toggle (Toggle.css: same specificity, later in the components
+   CSS, so it kept its border) is excluded at zero specificity (:where), so it still does. */
+.sidebar-content
+  .dndev-interactive[data-variant='outline']:where(
+    :not([data-state='on'], [data-state='off'])
+  ),
+.sidebar-bottom
+  .dndev-interactive[data-variant='outline']:where(
+    :not([data-state='on'], [data-state='off'])
+  ) {
+  border-inline-end: none;
+}
+
+/* Sidebar tooltips open toward the page: right in LTR, left in RTL (Tooltip reads
+   --tooltip-side; nothing else sets it) */
+.sidebar-top,
+.sidebar-content,
+.sidebar-bottom {
+  --tooltip-side: right;
+}
+
+[dir='rtl'] .sidebar-top,
+[dir='rtl'] .sidebar-content,
+[dir='rtl'] .sidebar-bottom {
+  --tooltip-side: left;
 }
 
 /* Hide kbd elements in sidebar when collapsed - prevents collapse blocking */
@@ -683,9 +725,18 @@ aside[role='navigation'].sidebar[data-collapsed='true'] {
   }
 }
 
-/* In-app navigation in progress (DnDevLayout): the indeterminate Progress laid over the
-   top edge of main's area, under the header, taking no space; hidden for the first
-   --dur-fast so an instant navigation shows nothing. */
+/* In-app navigation in progress (DnDevLayout + useNavigationProgress): a trickle bar laid
+   over the top edge of main's area, under the header, taking no space. Nothing shows for
+   the first --dur-fast (an instant navigation shows nothing); then the bar grows fast to
+   ~50% (indicator 0 → 1 over --dur-slow) while the root creeps slower and slower from 0.5
+   to 0.9 (10s ease-out): it never stops visibly, never reaches the end. `data-finishing`
+   (the navigation ended): the root completes to 1 over --dur-normal, then fades out over
+   --dur-normal; DnDevLayout removes it when that opacity transition ends (or is cancelled:
+   ended before it showed). Only transform and opacity move, so it keeps moving on the
+   compositor while the main thread loads and renders the next page (a layout property
+   such as `inset-inline-start` froze). The root's transitions run from its current value
+   when the finish interrupts them; the starting values are in the @starting-style below.
+   transform-origin has no logical keyword: inline start is left, right in RTL. */
 .dndev-progress.dndev-navigation-progress {
   grid-area: main;
   align-self: start;
@@ -693,8 +744,61 @@ aside[role='navigation'].sidebar[data-collapsed='true'] {
   height: 3px;
   border-radius: 0;
   background-color: transparent;
-  opacity: 0;
-  animation: fade-in var(--dur-fast) linear var(--dur-fast) forwards;
+  opacity: 1;
+  transform: scaleX(0.9);
+  transform-origin: left;
+  transition:
+    opacity var(--dur-fast) linear var(--dur-fast),
+    transform 10s ease-out var(--dur-fast);
+
+  &:dir(rtl) {
+    transform-origin: right;
+  }
+
+  /* The indicator: full width (not the indeterminate 40% sliding segment), the fast
+     stage; scaleX(0) until it starts (`both`), so nothing paints during the delay */
+  > [data-state] {
+    inset-inline-start: 0;
+    width: 100%;
+    transform-origin: inherit;
+    animation: dndev-navigation-progress-start var(--dur-slow) var(--ease-heavy)
+      var(--dur-fast) both;
+  }
+
+  &[data-finishing] {
+    opacity: 0;
+    transform: scaleX(1);
+    transition:
+      opacity var(--dur-normal) linear var(--dur-normal),
+      transform var(--dur-normal) var(--ease-heavy);
+  }
+
+  /* Reduced motion: no growth, a still full bar while navigating, removed when done */
+  @media (prefers-reduced-motion: reduce) {
+    transform: none;
+    transition: opacity var(--dur-fast) linear var(--dur-fast);
+
+    > [data-state] {
+      animation: none;
+    }
+  }
+}
+
+@starting-style {
+  .dndev-progress.dndev-navigation-progress {
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+}
+
+@keyframes dndev-navigation-progress-start {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
 }
 
 /* Main content: Starts at header-height and sidebar-width */
@@ -1246,9 +1350,9 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
   /* Break out of PageContainer padding and max-width constraint: the page width
      (`100cqi`: main's content box, main is the inline-size container; no sidebar, no
      scrollbar gutter), centred on main like the PageContainer */
-  width: 100cqi;
-  max-width: 100cqi;
-  margin-inline: calc(50% - 50cqi);
+  width: var(--page-bleed-width);
+  max-width: var(--page-bleed-width);
+  margin-inline: var(--page-bleed-margin);
   /* Eat gap BEFORE section only */
   margin-top: calc(-1 * var(--gap-lg));
   margin-bottom: 0;
@@ -1259,9 +1363,9 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
 /* HeroSection: breakthrough when fullHeight or contain mode */
 .dndev-container > .dndev-hero-section[style*='height'],
 .dndev-container > .dndev-hero-section--bg-contain {
-  width: 100cqi;
-  max-width: 100cqi;
-  margin-inline: calc(50% - 50cqi);
+  width: var(--page-bleed-width);
+  max-width: var(--page-bleed-width);
+  margin-inline: var(--page-bleed-margin);
   margin-top: calc(-1 * var(--gap-lg));
   margin-bottom: 0;
   --content-width: var(--max-content-width, 100%);

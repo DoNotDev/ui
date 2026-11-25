@@ -44,6 +44,7 @@ import {
   useCrudFilters,
 } from '../crudImports';
 import { CrudCard } from './CrudCardLink';
+import { CrudLoadError } from './CrudLoadError';
 import { useNavigate } from '../../routing';
 import { useAuthSafe } from '../../utils/useAuthSafe';
 
@@ -202,6 +203,7 @@ export function EntityCardList({
     processed,
     loading: fetchLoading,
     error: fetchError,
+    refresh,
   } = useCrudCardList(entity, {
     enabled: !isPreview,
     staleTime,
@@ -284,6 +286,10 @@ export function EntityCardList({
   const fieldsToFilter = useMemo(() => getListCardFieldNames(entity), [entity]);
 
   const entityName = t('name', { defaultValue: entity.name });
+  // The load error's subject: the plural name, as EntityList
+  const entityNames = t('namePlural', { defaultValue: entityName });
+  // In preview mode the read is off: no error state
+  const listError = isPreview ? null : fetchError;
 
   return (
     <>
@@ -331,7 +337,9 @@ export function EntityCardList({
         title={
           loading
             ? tCrud('results.title.fetching')
-            : resultLabel
+            : listError
+              ? undefined // the load error box's title says it once (as EntityList)
+              : resultLabel
               ? resultLabel(data.length)
               : tCrud('results.title.count', {
                   count: data.length,
@@ -343,21 +351,12 @@ export function EntityCardList({
       >
         {loading ? (
           <CardListSkeleton cols={cols} entity={entity} />
-        ) : fetchError ? (
-          <Stack
-            align="center"
-            justify="center"
-            style={{ padding: 'var(--gap-lg)', textAlign: 'center' }}
-          >
-            <Text level="h3" style={{ color: 'var(--destructive)' }}>
-              {tCrud('errors.fetchFailed', { entity: entityName })}
-            </Text>
-            <Text level="small" style={{ color: 'var(--destructive)' }}>
-              {fetchError instanceof Error
-                ? fetchError.message
-                : String(fetchError)}
-            </Text>
-          </Stack>
+        ) : listError ? (
+          <CrudLoadError
+            error={listError}
+            entity={entityNames}
+            onRetry={refresh}
+          />
         ) : data.length === 0 ? (
           <Stack
             align="center"

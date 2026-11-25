@@ -15,6 +15,7 @@ vi.mock('@donotdev/ui/routing/link', () => ({
 }));
 vi.mock('@donotdev/core', () => ({
   useConsent: () => vi.fn(),
+  useTranslation: () => ({ t: (key: string) => key }),
   useAppConfig: () => ({}),
   isCookieNoticeRequired: () => false,
   getDndevConfig: () => null,

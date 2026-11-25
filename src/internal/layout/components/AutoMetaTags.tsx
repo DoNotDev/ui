@@ -9,14 +9,14 @@
  * Features:
  * - Zero-configuration SEO setup
  * - Open Graph and Twitter Card support with image dimensions
- * - hreflang alternate links (auto from i18n config)
+ * - hreflang alternate links and og:locale / og:locale:alternate (auto from i18n config)
  * - Speculation Rules API (prefetch/prerender for Chromium) - opt-in, requires CSP config
  * - BreadcrumbList (home, the page's ancestors `routeAncestors`, the page; named by their
  *   route titles) + WebSite JSON-LD structured data
  * - Internationalization integration
  * - Canonical URL management
  *
- * @version 0.3.0
+ * @version 0.4.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
@@ -223,7 +223,7 @@ function buildSpeculationRules() {
  *
  * Features:
  * - Automatic route-based meta tag generation
- * - i18n integration with hreflang
+ * - i18n integration with hreflang and og:locale
  * - Open Graph and Twitter Cards with image dimensions
  * - Speculation Rules API
  * - BreadcrumbList + WebSite JSON-LD
@@ -364,10 +364,13 @@ export const AutoMetaTags: ComponentType = () => {
     : pageOwnsIdentity
       ? []
       : routeHeadTags(metaData, { siteName, baseUrl });
-  // Canonical, og:url (with an app URL), og:site_name, hreflang: the build writes the same
+  // Canonical, og:url (with an app URL), og:site_name, og:locale (+ og:locale:alternate
+  // with hreflang), hreflang: the build writes the same. No og:locale on the 404 document
+  // (nothing derived from the URL)
   const siteTags = siteHeadTags({
     url: baseUrl ? metaData.url : null,
     siteName,
+    language: notFoundDocument ? null : language,
     alternates: shouldEmitHreflang
       ? languageUrls(pathname, baseUrl, routing, trailingSlash)
       : null,
@@ -379,7 +382,7 @@ export const AutoMetaTags: ComponentType = () => {
 
   return (
     <HeadTags>
-      {/* SITE: canonical, og:url, og:site_name, hreflang (every route) */}
+      {/* SITE: canonical, og:url, og:site_name, og:locale, hreflang (every route) */}
       {siteTags.map(headTagElement)}
 
       {/* PAGE IDENTITY: title, description, Open Graph, Twitter, WebPage / record JSON-LD */}

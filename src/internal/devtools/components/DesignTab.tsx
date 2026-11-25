@@ -509,7 +509,7 @@ export const DesignTab = () => {
                                 height: '1rem',
                                 backgroundColor: `var(${name})`,
                                 border: '1px solid var(--border)',
-                                borderRadius: 'var(--radius-sm)',
+                                borderRadius: 'var(--radius-interactive)',
                               }}
                             />
                             <Text className="dndev-font-mono dndev-text-xs dndev-text-muted-foreground">
@@ -686,7 +686,7 @@ export const DesignTab = () => {
                 gap="tight"
                 style={{
                   padding: 'var(--gap-sm)',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: 'var(--radius-interactive)',
                 }}
               >
                 <Text
@@ -788,7 +788,7 @@ export const DesignTab = () => {
                   gap="tight"
                   style={{
                     padding: 'var(--gap-sm)',
-                    borderRadius: 'var(--radius-sm)',
+                    borderRadius: 'var(--radius-interactive)',
                     backgroundColor: isHighlighted
                       ? 'var(--primary)'
                       : 'transparent',
@@ -839,7 +839,7 @@ export const DesignTab = () => {
                         width: '2rem',
                         height: '1.5rem',
                         border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius-sm)',
+                        borderRadius: 'var(--radius-interactive)',
                         cursor: 'pointer',
                         padding: 0,
                       }}

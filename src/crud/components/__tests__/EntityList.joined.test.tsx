@@ -1,6 +1,6 @@
 // packages/ui/src/crud/components/__tests__/EntityList.joined.test.tsx
 
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -25,6 +25,8 @@ const state = vi.hoisted(() => ({
   joinedForm: null as null | { formKey: string },
   extensionFields: [] as Array<Record<string, unknown>>,
   errors: {} as Record<string, Record<string, string>>,
+  /** The rows' read error (null: read) */
+  readError: null as Error | null,
   filterKeys: [] as string[],
   filtersProps: [] as Array<{ viewerRole?: string; filterKey?: string }>,
   changes: {} as Record<string, Record<string, unknown>>,
@@ -42,8 +44,14 @@ const state = vi.hoisted(() => ({
 vi.mock('@donotdev/core', async (orig) => ({
   ...(await orig<object>()),
   useTranslation: () => ({
-    t: (key: string, opts?: { count?: number }) =>
-      opts?.count !== undefined ? `${key}:${opts.count}` : key,
+    t: (key: string, opts?: { count?: number; query?: string }) =>
+      opts?.count !== undefined
+        ? `${key}:${opts.count}`
+        : opts?.query !== undefined
+          ? `${key}:${opts.query}`
+          : key,
+    i18n: { language: 'en' },
+    language: 'en',
   }),
 }));
 vi.mock('../../../routing', () => ({
@@ -92,7 +100,7 @@ vi.mock('../../crudImports', () => ({
     pendingCount: state.pendingCount,
     hasEdits: state.pendingCount > 0,
     loading: false,
-    error: null,
+    error: state.readError,
     joined: state.joinedForm !== null,
     access: { create: true, update: true, delete: true },
     extensionFields: state.extensionFields,
@@ -101,7 +109,7 @@ vi.mock('../../crudImports', () => ({
   }),
   useCrudFilters: (options: { collection: string }) => {
     state.filterKeys.push(options.collection);
-    return { filters: {} };
+    return { filters: {}, setFilters: vi.fn() };
   },
 }));
 
@@ -118,12 +126,21 @@ import { joinedLineEntity as lineEntity, joinedNoteEntity as noteEntity, joinedN
 
 const parent = { field: 'orderId', value: 'o1' };
 
+/** Focuses the editable cell of a column (header text) in a body row: its editor opens. */
+const openEditor = (row: number, header: string) => {
+  const index = screen.getAllByRole('columnheader').map((th) => th.textContent).indexOf(header);
+  const td = () => document.querySelectorAll('tbody tr')[row]!.children[index] as HTMLElement;
+  act(() => td().querySelector<HTMLElement>('[data-edit-row]')!.focus());
+  return td().querySelector<HTMLInputElement & HTMLSelectElement>('[data-edit-row]')!;
+};
+
 beforeEach(() => {
   state.joinedForm = { formKey: 'form-1' };
   state.changes = {};
   state.pendingCount = 0;
   state.extensionFields = [];
   state.errors = {};
+  state.readError = null;
   state.filterKeys.length = 0;
   state.filtersProps.length = 0;
   for (const spy of Object.values(state.rows)) spy.mockClear();
@@ -134,8 +151,12 @@ describe('EntityList joined to the parent form', () => {
   it('has no own Save: shows the pending count and Discard', () => {
     state.changes = { l1: { quantity: 5 } };
     state.pendingCount = 1;
-    render(<EntityList entity={lineEntity} parent={parent} />);
-    expect(screen.getByText('bulkEdit.pending:1')).toBeTruthy();
+    const { container } = render(<EntityList entity={lineEntity} parent={parent} />);
+    // In the toolbar row (the parent form's footer holds its Save), not a bottom bar
+    const pending = screen.getByText('bulkEdit.pending:1');
+    expect(pending.closest('.dndev-table-toolbar')).toBeTruthy();
+    expect(container.contains(pending)).toBe(true);
+    expect(document.querySelector('.dndev-action-bar')).toBeNull();
     expect(screen.queryByRole('button', { name: 'actions.save' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'bulkEdit.discard' }));
     expect(state.rows.discard).toHaveBeenCalledOnce();
@@ -149,9 +170,19 @@ describe('EntityList joined to the parent form', () => {
     expect(state.bulk).not.toHaveBeenCalled();
   });
 
+  // Owner decision 2026-11-25 F7: deletable={false} keeps selection (bulk edit), no Delete
+  it('deletable={false}: rows stay selectable, no Delete', () => {
+    render(<EntityList entity={lineEntity} parent={parent} deletable={false} />);
+    fireEvent.click(screen.getAllByRole('checkbox')[0]!); // select all
+    expect(screen.getByRole('toolbar')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'bulkEdit.deleteSelected:2' })).toBeNull();
+    expect(state.rows.remove).not.toHaveBeenCalled();
+  });
+
   it('edits cells into the rows (not into a list Save)', () => {
     render(<EntityList entity={lineEntity} parent={parent} />);
-    const product = screen.getAllByRole('combobox', { name: 'productId' })[0]!;
+    const product = openEditor(0, 'productId');
+    expect(product.tagName).toBe('SELECT');
     fireEvent.change(product, { target: { value: 'p3' } });
     expect(state.rows.update).toHaveBeenCalledWith('l1', { productId: 'p3' });
   });
@@ -218,9 +249,9 @@ describe('EntityList read-only (editable={false})', () => {
 describe('EntityList joined: all lines, nothing else', () => {
   it('has no filters section, search, export or pagination; Add never navigates', () => {
     render(<EntityList entity={noteEntity} parent={parent} />);
-    expect(screen.queryByText('filters.title')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'filters.button' })).toBeNull();
     expect(screen.queryByPlaceholderText('actions.searchPlaceholder')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'export' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'table.export' })).toBeNull();
     expect(screen.queryByRole('navigation')).toBeNull();
     expect(screen.queryByRole('link', { name: /addNew/ })).toBeNull();
     expect(screen.getByRole('button', { name: /addNew/ }).getAttribute('type')).toBe('button');
@@ -260,7 +291,7 @@ describe('EntityList extend', () => {
     );
     expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toContain('offer.price');
     // Standalone with extend: own Save once something is pending, filters and search shown.
-    expect(screen.getByText('filters.title')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'filters.button' })).toBeTruthy();
     expect(screen.getByPlaceholderText('actions.searchPlaceholder')).toBeTruthy();
   });
 });
@@ -269,9 +300,29 @@ describe('EntityList row errors', () => {
   it('marks the cells of rows.errors with their message', () => {
     state.errors = { l1: { quantity: 'quantity is not valid' } };
     render(<EntityList entity={lineEntity} parent={parent} />);
-    const quantity = screen.getAllByRole('textbox', { name: 'quantity' })[0]!;
+    const quantity = openEditor(0, 'quantity');
+    expect(quantity.getAttribute('aria-label')).toBe('quantity');
     expect(quantity.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByText('quantity is not valid')).toBeTruthy();
+  });
+});
+
+describe('EntityList joined: read failure', () => {
+  // Owner decision 2026-11-25 E1: the shared load error, never the raw message
+  it('shows the translated load error and a retry instead of the rows', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    state.readError = new Error('Missing or insufficient permissions.');
+    render(<EntityList entity={lineEntity} parent={parent} />);
+    // Said once: the box's title, no failed Section heading (as the detail page)
+    expect(screen.getAllByText('errors.fetchFailed')).toHaveLength(1);
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('messages.error');
+    expect(alert.textContent).not.toContain('Missing or insufficient permissions.');
+    expect(consoleError).toHaveBeenCalled();
+    expect(screen.queryByRole('table')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'routeError.tryAgain' }));
+    expect(state.rows.refresh).toHaveBeenCalledTimes(1);
+    consoleError.mockRestore();
   });
 });
 

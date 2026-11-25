@@ -1,6 +1,6 @@
 // packages/ui/src/crud/components/__tests__/EntityCardList.test.tsx
 
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Opt-in feed (pageSize): 12 cards first, 12 more each time the sentinel after the grid
@@ -11,8 +11,12 @@ const ROWS = Array.from({ length: 30 }, (_, i) => ({
   name: `Apartment ${i + 1}`,
 }));
 
-const { observed } = vi.hoisted(() => ({
+const { observed, listState } = vi.hoisted(() => ({
   observed: [] as Array<(entry: { isIntersecting: boolean }) => void>,
+  listState: {
+    error: null as unknown,
+    refresh: (() => Promise.resolve()) as () => Promise<void>,
+  },
 }));
 
 vi.mock('@donotdev/components', async (orig) => ({
@@ -41,10 +45,11 @@ vi.mock('../CrudCardLink', () => ({
 vi.mock('../../crudImports', () => ({
   isCrudModuleAvailable: true,
   useCrudCardList: () => ({
-    items: ROWS,
-    processed: ROWS,
+    items: listState.error ? [] : ROWS,
+    processed: listState.error ? [] : ROWS,
     loading: false,
-    error: null,
+    error: listState.error,
+    refresh: listState.refresh,
   }),
   useEntityFavorites: () => ({
     isFavorite: () => false,
@@ -72,6 +77,7 @@ const reachEnd = () =>
 describe('EntityCardList feed', () => {
   beforeEach(() => {
     observed.length = 0;
+    listState.error = null;
   });
 
   it('renders every card when pageSize is not set', () => {
@@ -101,5 +107,35 @@ describe('EntityCardList feed', () => {
       observed.at(-1)!({ isIntersecting: false });
     });
     expect(cardCount()).toBe(12);
+  });
+});
+
+describe('EntityCardList read failure', () => {
+  beforeEach(() => {
+    observed.length = 0;
+    listState.error = null;
+    listState.refresh = () => Promise.resolve();
+  });
+
+  // Owner decision 2026-11-25 E1: the shared load error box (translated title and
+  // reason, Retry), never the raw message; said once (no failed Section heading)
+  it('shows the shared load error and a retry, never the raw message', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const retry = vi.fn(() => Promise.resolve());
+    const raw = new Error('Missing or insufficient permissions.');
+    listState.error = raw;
+    listState.refresh = retry;
+    render(<EntityCardList entity={entity} hideFilters />);
+    const alert = screen.getByRole('alert');
+    expect(within(alert).getByText('errors.fetchFailed')).toBeTruthy();
+    expect(alert.textContent).toContain('messages.error');
+    expect(screen.queryByText(raw.message)).toBeNull();
+    expect(screen.getAllByText('errors.fetchFailed')).toHaveLength(1);
+    expect(screen.queryByText('emptyState.title')).toBeNull();
+    expect(screen.queryAllByTestId('card')).toHaveLength(0);
+    expect(consoleError).toHaveBeenCalledWith(expect.any(String), raw);
+    fireEvent.click(screen.getByRole('button', { name: 'routeError.tryAgain' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    consoleError.mockRestore();
   });
 });

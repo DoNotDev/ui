@@ -29,7 +29,7 @@ All presets automatically include these components when applicable:
 *   **AuthMenu** - Automatically shown if auth is configured in `.env` (Firebase keys present)
 *   **Navigation Menu** - Automatically generated from `src/pages/*Page.tsx` files for sidebars
 *   **GoTo Component** - Command palette (Cmd+K) for quick navigation - always available
-*   **Navigation feedback** - While an in-app navigation is in progress the page stays, `<main>` is `aria-busy` and an indeterminate `Progress` shows under the header (ROUTING.md, Navigation Feedback)
+*   **Navigation feedback** - While an in-app navigation is in progress the page stays, `<main>` is `aria-busy` and a progress bar trickles under the header, then completes and fades out (ROUTING.md, Navigation Feedback)
 *   **Footer** - Automatic footer with copyright and legal links
 *   **LegalLinks + Copyright** - Automatically included in footer from `config/legal.ts`
 

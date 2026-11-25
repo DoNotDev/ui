@@ -40,6 +40,7 @@ import Breadcrumbs from '../../components/layout/components/Breadcrumbs';
 import { GoToWrapper } from '../../routing';
 import { DEFAULT_SLOTS } from './config/defaults';
 import { presetRegistry } from './config/presets';
+import { useNavigationProgress } from './useNavigationProgress';
 import {
   DnDevHeader,
   DnDevSidebar,
@@ -426,14 +427,17 @@ export const DnDevLayout = ({
   }, []);
 
   // In-app navigation in progress (navigation store, started by useNavigate, Next links and
-  // the language switch): the current page stays, main is aria-busy and the indeterminate
-  // Progress shows under the header (after --dur-fast, so instant navigations show nothing).
-  // A change of the rendered route (path or language) ends it.
+  // the language switch): the current page stays, main is aria-busy and the trickle progress
+  // bar shows under the header (after --dur-fast, so instant navigations show nothing).
+  // A change of the rendered route (path or language) ends it; the bar then completes and
+  // fades out before it is removed (useNavigationProgress).
   const navigating = useNavigationStore((state) => state.navigating);
   const endNavigation = useNavigationStore((state) => state.endNavigation);
   useEffect(() => {
     endNavigation();
   }, [pathname, language, endNavigation]);
+  const { progress: navigationProgress, onFaded: onNavigationProgressFaded } =
+    useNavigationProgress(navigating);
 
   // Apply routing animation data attribute (useLayoutEffect = before paint)
   useLayoutEffect(() => {
@@ -524,11 +528,15 @@ export const DnDevLayout = ({
         {footerInline && resolvedFooter}
       </main>
 
-      {navigating && (
+      {navigationProgress && (
         <Progress
+          key={navigationProgress.run}
           className="dndev-navigation-progress"
           variant="accent"
           aria-hidden="true"
+          data-finishing={navigationProgress.finishing || undefined}
+          onTransitionEnd={onNavigationProgressFaded}
+          onTransitionCancel={onNavigationProgressFaded}
         />
       )}
 

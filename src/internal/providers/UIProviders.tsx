@@ -10,18 +10,23 @@
  * @author AMBROISE PARK Consulting
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode, ReactElement, ComponentProps } from 'react';
 
 import {
+  ComponentLocaleProvider,
   Dialog,
   LinkRendererProvider,
   Toaster,
   TooltipProvider,
-  TranslatorProvider,
 } from '@donotdev/components';
-import type { ComponentTranslate, LinkRendererProps } from '@donotdev/components';
-import { getRoutes, useOverlayStore, useTranslation } from '@donotdev/core';
+import type { ComponentLocale, LinkRendererProps } from '@donotdev/components';
+import {
+  getAppTimeZone,
+  getRoutes,
+  useOverlayStore,
+  useTranslation,
+} from '@donotdev/core';
 import type { FormNavigation } from '@donotdev/crud';
 // Platform-specific hooks via conditional exports
 import { useNavigate, useRoutePath } from '@donotdev/ui/routing/hooks';
@@ -80,15 +85,19 @@ interface UIProvidersProps {
  * @author AMBROISE PARK Consulting
  */
 export function UIProviders({ children }: UIProvidersProps): ReactElement {
-  const { t } = useTranslation('dndev');
-  const translate = useCallback<ComponentTranslate>(
-    (key, values) => String(t(key, values)),
-    [t]
-  );
+  // Components' built-in labels and formatting: the i18n language and the eager `dndev`
+  // namespace, both the request language on the server render and the hydration pass;
+  // the app's time zone (i18n.timeZone: throws when the generated i18n config is not loaded)
+  const { t, language } = useTranslation('dndev');
+  const locale: ComponentLocale = {
+    language,
+    timeZone: getAppTimeZone(),
+    translate: (key, values) => String(t(key, values)),
+  };
   return (
     <DnDevErrorBoundary level="app" fallback={UIGlobalErrorFallback}>
       <LinkRendererProvider value={RouterLinkRenderer}>
-        <TranslatorProvider value={translate}>
+        <ComponentLocaleProvider value={locale}>
           <TooltipProvider>
             {/* Module-level constant: crud is installed or not for the app's lifetime. */}
             {isCrudModuleAvailable ? (
@@ -99,7 +108,7 @@ export function UIProviders({ children }: UIProvidersProps): ReactElement {
             <Toaster />
             <ModalDialog />
           </TooltipProvider>
-        </TranslatorProvider>
+        </ComponentLocaleProvider>
       </LinkRendererProvider>
     </DnDevErrorBoundary>
   );

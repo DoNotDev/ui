@@ -18,7 +18,7 @@ import type {
   AnchorHTMLAttributes,
 } from 'react';
 
-import { useConsent } from '@donotdev/core';
+import { useConsent, useTranslation } from '@donotdev/core';
 // Platform-specific internal link via conditional exports (next/link on Next, react-router on Vite)
 import { InternalLink } from '@donotdev/ui/routing/link';
 
@@ -82,6 +82,7 @@ export const Link: ComponentType<LinkProps> = ({
 }) => {
   const showCookieBanner = useConsent('showCookieBanner');
   const cookieNoticeRequired = useCookieNoticeRequired();
+  const { t } = useTranslation('dndev');
 
   // Special framework trigger: #cookie-settings
   if (path === '#cookie-settings') {
@@ -116,7 +117,7 @@ export const Link: ComponentType<LinkProps> = ({
           gap: icon && (label || children) ? 'var(--gap-sm)' : undefined,
           ...rest.style,
         }}
-        aria-label={ariaLabel || label || 'Cookie Settings'}
+        aria-label={ariaLabel || label || t('footer.legal.cookieSettings')}
         aria-describedby={ariaDescribedBy}
         {...rest}
       >

@@ -94,10 +94,10 @@ describe('page geometry from main, not the viewport', () => {
 
   it('sizes the PageContainer breakthrough from main (cqi), never the viewport', () => {
     expect(layoutCss).toMatch(
-      /\.dndev-container > \.dndev-tech-bento \{[^}]*width: 100cqi;\s*max-width: 100cqi;\s*margin-inline: calc\(50% - 50cqi\);/
+      /\.dndev-container > \.dndev-tech-bento \{[^}]*width: var\(--page-bleed-width\);\s*max-width: var\(--page-bleed-width\);\s*margin-inline: var\(--page-bleed-margin\);/
     );
     expect(layoutCss).toMatch(
-      /\.dndev-container > \.dndev-hero-section--bg-contain \{[^}]*width: 100cqi;\s*max-width: 100cqi;\s*margin-inline: calc\(50% - 50cqi\);/
+      /\.dndev-container > \.dndev-hero-section--bg-contain \{[^}]*width: var\(--page-bleed-width\);\s*max-width: var\(--page-bleed-width\);\s*margin-inline: var\(--page-bleed-margin\);/
     );
     expect(layoutCss).not.toMatch(/^\s*(max-)?width:[^;]*\d+d?vw/m);
     expect(layoutCss).not.toMatch(/^\s*margin-inline:[^;]*\d+d?vw/m);

@@ -52,7 +52,7 @@ export const AuthDebugButton: ComponentType = () => {
         onClick={() => setIsExpanded(!isExpanded)}
         style={{
           padding: 'var(--gap-sm) var(--gap-md)',
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: 'var(--radius-interactive)',
           fontSize: 'var(--font-size-sm)',
           fontFamily: 'monospace',
           transition: 'background-color var(--duration-normal)',
@@ -79,7 +79,7 @@ export const AuthDebugButton: ComponentType = () => {
             insetInlineEnd: 0,
             backgroundColor: 'rgba(0, 0, 0, 0.9)',
             color: 'white',
-            borderRadius: 'var(--radius-lg)',
+            borderRadius: 'var(--radius-floating)',
             minWidth: '200px',
             border: '1px solid rgb(75 85 99)',
           }}

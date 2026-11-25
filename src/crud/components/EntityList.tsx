@@ -4,7 +4,21 @@
 /**
  * @fileoverview Entity List Component
  * @description Table view for admin/internal CRUD operations.
- * Features: Filters section + Results section with DataTable
+ * Layout: one `<Section>` with an admin header (title = the count wording, "64
+ * products"; an empty collection: "No products yet"; Add at the end), one toolbar row
+ * ([search][Filters] … [Export][Refresh][app `actions`]), the DataTable. The
+ * Filters button (badge: active filters) opens the entity filters in a side sheet.
+ * Checked rows ("N selected · bulk edit · Delete · ✕") and unsaved edits ("N unsaved
+ * changes · Discard · Save") show in the bottom ActionBar: nothing above the table moves.
+ * Empty states: an empty collection ("No products yet" + Add) vs no row matching the
+ * search / filters ("No results for “x”" + Clear); a failed read shows the shared load
+ * error (`CrudLoadError`: translated title and reason, Retry; the raw error in the console).
+ *
+ * **Columns** (generated from the field types; hand-built DataTables set their own):
+ * image 56 px, boolean 72, date 112, timestamp 180, select 120, reference 180, rating
+ * 104, numbers end-aligned with tabular digits, long text on 2 lines; the first `text` field is the
+ * row name (min 240 px, flexible, pinned at the inline start). Under 768 px rows stack
+ * (CSS only); with `listCardFields`, only those fields (and the name) are shown there.
  *
  * **Routing:** Convention basePath = `/${collection}`. View/Edit = basePath/:id, Create = basePath/new.
  * Override basePath for nested routes; use onClick(id) to open sheet instead of navigating.
@@ -23,7 +37,8 @@
  *
  * **Joined to the parent's form:** with `parent`, `editable` (default) and an
  * edit form open on that record, the list is a display of `useChildRows`: no own Save, deletes wait for
- * the form's Save, pending counts + Discard; add opens a picker (link table:
+ * the form's Save, pending counts + Discard (in the toolbar row: the form's own footer
+ * holds the Save, a bottom bar would cover it); add opens a picker (link table:
  * one reference besides the parent's) or adds a blank row. `parent.value: null`
  * (parent not created yet) only shows "Create the draft before adding …".
  *
@@ -33,13 +48,15 @@
  * `useChildRows`).
  *
  * **Read-only** (`editable={false}`): no Add, no row selection, no delete.
+ * **No delete** (`deletable={false}`): editing and row selection (bulk edit) stay, the
+ * selection bar has no Delete.
  *
  * @version 0.1.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
 
-import { Search, Undo2 } from 'lucide-react';
+import { ListFilter, Search, Undo2 } from 'lucide-react';
 import { Suspense, lazy, useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -50,17 +67,20 @@ import {
   ActionButton,
   Section,
   Input,
-  Alert,
+  Sheet,
   Text,
 } from '@donotdev/components';
 import type { TableColumn, TablePendingChanges } from '@donotdev/components';
 import {
   describeEntity,
+  effectivePrice,
+  fieldColumnTitle,
   getEntityByCollection,
   useTranslation,
 } from '@donotdev/core';
 import type {
   AnyEntity,
+  EntityField,
   EntityListExtraColumn,
   EntityListProps,
 } from '@donotdev/core';
@@ -69,6 +89,7 @@ import type { InferEntityData } from '@donotdev/crud';
 import { Link, useNavigate } from '../../routing';
 import { useAuthSafe } from '../../utils/useAuthSafe';
 import { cellEditFor } from './cellEditFor';
+import { CrudLoadError } from './CrudLoadError';
 import { assertEntityParent, childCreatePath } from './entityParent';
 import type { SavedEntityParent } from './entityParent';
 import {
@@ -95,31 +116,113 @@ const ChildRowsPicker = lazy(() => import('./ChildRowsPicker'));
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 type ListRow = Record<string, unknown> & { id: string };
 
+/** Width of a column by field type (generated lists; hand-built DataTables set their own). */
+const FIELD_TYPE_WIDTHS: Partial<Record<string, number>> = {
+  image: 56,
+  images: 56,
+  avatar: 56,
+  boolean: 72,
+  checkbox: 72,
+  switch: 72,
+  date: 112,
+  timestamp: 180,
+  'datetime-local': 180,
+  select: 120,
+  radio: 120,
+  combobox: 120,
+  badge: 120,
+  reference: 180,
+  rating: 104,
+};
+
+/** Numeric field types: end-aligned, tabular digits (DataTable `align: 'end'`). */
+const NUMERIC_FIELD_TYPES = new Set([
+  'number',
+  'range',
+  'currency',
+  'price',
+  'rating',
+  'year',
+]);
+
+/** Long-text field types: two lines per cell before "…". */
+const LONG_TEXT_FIELD_TYPES = new Set(['textarea', 'richtext']);
+
+/** Minimum width of the record name column (the first text field), which takes the free space. */
+const NAME_COLUMN_MIN_WIDTH = 240;
+
 /**
- * Toolbar grid, by the number of cells after the first (search): refresh, add,
- * app actions. Module-level: no style object per render.
+ * Column preset of a field (P4): width by type, numbers end-aligned, long text
+ * on two lines; the record name column (first text field) wide, flexible and
+ * pinned at the inline start; on phones (< 768 px) only the entity's
+ * `listCardFields` (and the name) are shown in each stacked row.
  */
-const TOOLBAR_STYLES = [0, 1, 2, 3, 4].map((after) => ({
-  display: 'grid',
-  gridTemplateColumns: ['1fr', ...Array<string>(after).fill('auto')].join(' '),
-}));
+function fieldColumnPreset(
+  fieldName: string,
+  fieldConfig: EntityField,
+  layout: { nameField: string | undefined; phoneFields: Set<string> | null }
+): Pick<
+  TableColumn<ListRow>,
+  'width' | 'minWidth' | 'align' | 'lines' | 'sticky' | 'hideOnPhone'
+> {
+  const type = fieldConfig.type;
+  const isName = fieldName === layout.nameField;
+  const width = FIELD_TYPE_WIDTHS[type];
+  return {
+    align: NUMERIC_FIELD_TYPES.has(type) ? 'end' : 'start',
+    ...(width !== undefined && { width }),
+    ...(LONG_TEXT_FIELD_TYPES.has(type) && { lines: 2 as const }),
+    ...(isName && { minWidth: NAME_COLUMN_MIN_WIDTH, sticky: true }),
+    ...(layout.phoneFields &&
+      !isName &&
+      !layout.phoneFields.has(fieldName) && { hideOnPhone: true }),
+  };
+}
+
+/**
+ * Fields a stacked row shows on phones: the entity's `listCardFields` (list or
+ * slot layout), or null (every column) when it declares none.
+ */
+function phoneFieldsOf(entity: AnyEntity): Set<string> | null {
+  const cards = entity.listCardFields;
+  if (!cards) return null;
+  if (Array.isArray(cards)) return new Set(cards);
+  return new Set([
+    ...(cards.title ?? []),
+    ...(cards.subtitle ?? []),
+    ...(cards.content ?? []),
+    ...(cards.footer ?? []),
+  ]);
+}
+
+/** The record name column: the first `text` field shown. */
+function nameFieldOf(entity: AnyEntity, fieldsToShow: string[]): string | undefined {
+  return fieldsToShow.find((name) => entity.fields[name]?.type === 'text');
+}
 
 /**
  * Columns of the entity's list fields (the parent column hidden), formatted,
- * edited in their cells when `editing`.
+ * sized by field type, edited in their cells when `editing`.
  */
 function entityColumns<T extends ListRow>(
   entity: AnyEntity,
   fieldsToShow: string[],
   options: {
     t: Translate;
+    /** UI language: cell editor option order */
+    language: string;
     viewerRole: string;
     referenceData: Record<string, Record<string, string>>;
     editing: boolean;
     interactive: boolean;
   }
 ): TableColumn<T>[] {
-  const { t, viewerRole, referenceData, editing, interactive } = options;
+  const { t, language, viewerRole, referenceData, editing, interactive } =
+    options;
+  const layout = {
+    nameField: nameFieldOf(entity, fieldsToShow),
+    phoneFields: phoneFieldsOf(entity),
+  };
   return fieldsToShow
     .map((fieldName) => {
       const fieldConfig = entity.fields[fieldName];
@@ -127,18 +230,27 @@ function entityColumns<T extends ListRow>(
 
       const label = translateFieldLabel(fieldName, fieldConfig, t);
       const fieldType = fieldConfig.type;
-      const isNumeric = fieldType === 'number' || fieldType === 'range';
-      const align: 'start' | 'center' | 'end' = isNumeric ? 'end' : 'start';
 
       return {
         key: fieldName,
-        title: label,
+        // A price column says "VAT incl." once, in its header (cells: the amount)
+        title: fieldColumnTitle(label, fieldConfig, t),
         dataIndex: fieldName as keyof T,
-        sortable: interactive,
         filterable: interactive,
-        align,
+        ...fieldColumnPreset(fieldName, fieldConfig, layout),
         ...(editing && {
-          edit: cellEditFor(entity, fieldName, viewerRole, referenceData, t),
+          edit: cellEditFor(
+            entity,
+            fieldName,
+            viewerRole,
+            referenceData,
+            t,
+            language
+          ),
+        }),
+        // A price sorts on the price it shows (discount applied), not its text
+        ...(fieldType === 'price' && {
+          sortValue: (row: T) => effectivePrice(row[fieldName]),
         }),
         render: (value: unknown, record: T) =>
           formatValue(value, fieldConfig, t, {
@@ -164,7 +276,7 @@ function appColumns<T extends ListRow>(
   }));
 }
 
-/** App toolbar content (`actions`), one toolbar cell. */
+/** App toolbar content (`actions`), at the end of the toolbar. */
 function ToolbarActions({ actions }: { actions: ReactNode }) {
   return (
     <Stack direction="row" gap="tight" align="center">
@@ -173,13 +285,234 @@ function ToolbarActions({ actions }: { actions: ReactNode }) {
   );
 }
 
+/** What the list header says: its read state and the rows it counts. */
+interface ListHeadingState {
+  loading: boolean;
+  failed: boolean;
+  /** Rows of the read (client mode: after search / filters; server mode: the query total). */
+  count: number;
+}
+
+/**
+ * Words of the list header and states, from the entity's `name` / `namePlural`
+ * translations. `heading` is the Section title: the count wording ("64 products",
+ * "0 products") or "Loading..."; none when the read failed (the load error box's own
+ * title says it once, as on the detail page). No separate plural title: a page
+ * that titles itself ("Products") never shows the name twice. `empty` is the empty
+ * row's text ("No products yet"), said there only. Each crud locale picks the forms
+ * it needs (`name`, `names`, lowercase `nameLower`, `namesLower`).
+ */
+function useListWords(entity: AnyEntity) {
+  // `language`, not `i18n.language`: set during the server render and hydration pass too
+  const { t, language } = useTranslation([entity.namespace, 'crud']);
+  const { t: tCrud } = useTranslation('crud');
+  const name = t('name', { defaultValue: entity.name });
+  const names = t('namePlural', { defaultValue: name });
+  const words = {
+    name,
+    names,
+    nameLower: name.toLocaleLowerCase(language),
+    namesLower: names.toLocaleLowerCase(language),
+  };
+  return {
+    heading: ({ loading, failed, count }: ListHeadingState): string | undefined =>
+      loading
+        ? tCrud('messages.loading')
+        : failed
+          ? undefined
+          : tCrud('list.count', { count, ...words }),
+    empty: tCrud('list.empty', words),
+    /** The entity's plural name (the load error's subject) */
+    names,
+  };
+}
+
+/**
+ * The list's Section: an admin header (title = the count wording or the read
+ * state, none on a failed read; plain heading style, the Add button at the end),
+ * then the table.
+ */
+function ListSection({
+  title,
+  add,
+  tone,
+  children,
+}: {
+  title: string | undefined;
+  add: ReactNode;
+  tone: EntityListProps['tone'];
+  children: ReactNode;
+}) {
+  return (
+    <Section
+      title={title}
+      titleVariant="heading"
+      textAlign="start"
+      actions={add}
+      tone={tone}
+    >
+      {children}
+    </Section>
+  );
+}
+
+/**
+ * "Filters" toolbar button (badge: active filters count) opening the entity
+ * filters in a side sheet: nothing above the table moves.
+ */
+function FiltersButton({
+  entity,
+  data,
+  fieldsToFilter,
+  viewerRole,
+  activeCount,
+  disabled,
+}: {
+  entity: AnyEntity;
+  data: ListRow[];
+  fieldsToFilter: string[];
+  viewerRole: string;
+  activeCount: number;
+  disabled?: boolean;
+}) {
+  const { t: tCrud } = useTranslation('crud');
+  const label = tCrud('filters.button');
+  return (
+    <Sheet
+      size="narrow"
+      title={tCrud('filters.title')}
+      closeLabel={tCrud('actions.close')}
+      trigger={
+        <Button
+          variant="outline"
+          icon={ListFilter}
+          badge={activeCount}
+          disabled={disabled}
+          aria-label={
+            activeCount > 0
+              ? tCrud('filters.buttonActive', { count: activeCount })
+              : label
+          }
+        >
+          {label}
+        </Button>
+      }
+    >
+      <EntityFilters
+        entity={entity}
+        data={data}
+        fieldsToFilter={fieldsToFilter}
+        viewerRole={viewerRole}
+        // One column; the sheet body scrolls (the sidebar variant's own
+        // ScrollArea would clip the filters below the sheet's height)
+        cols={1}
+      />
+    </Sheet>
+  );
+}
+
+/**
+ * The table's empty row: an empty collection ("No products yet" + Add), or no
+ * row matching the search / filters ("No results for “x”" + Clear).
+ */
+function ListEmptyState({
+  filtered,
+  searchQuery,
+  emptyLabel,
+  add,
+  onClear,
+}: {
+  filtered: boolean;
+  searchQuery: string;
+  emptyLabel: string;
+  add: ReactNode;
+  onClear: () => void;
+}) {
+  const { t: tCrud } = useTranslation('crud');
+  return (
+    <Stack align="center" gap="tight">
+      <Text as="span" variant="muted">
+        {!filtered
+          ? emptyLabel
+          : searchQuery !== ''
+            ? tCrud('list.noResultsFor', { query: searchQuery })
+            : tCrud('filters.noResults')}
+      </Text>
+      {filtered ? (
+        <Button variant="link" onClick={onClear}>
+          {tCrud('actions.clear')}
+        </Button>
+      ) : (
+        add
+      )}
+    </Stack>
+  );
+}
+
+/** Pending edits in the bottom bar: "N unsaved changes", Discard, Save; why the last write failed. */
+function PendingBar({
+  count,
+  saving,
+  failure,
+  onSave,
+  onDiscard,
+}: {
+  count: number;
+  saving: boolean;
+  failure: string | null;
+  /** Absent: the parent form's Save writes the rows (joined list). */
+  onSave?: () => void;
+  onDiscard: () => void;
+}) {
+  const { t: tCrud } = useTranslation('crud');
+  return (
+    <>
+      {failure && (
+        <Text as="span" variant="destructive" role="alert">
+          {failure}
+        </Text>
+      )}
+      {count > 0 && (
+        <>
+          <Text as="span" weight="medium">
+            {tCrud('bulkEdit.pending', { count })}
+          </Text>
+          <Button
+            type="button"
+            icon={Undo2}
+            variant="outline"
+            display="full"
+            onClick={onDiscard}
+            disabled={saving}
+          >
+            {tCrud('bulkEdit.discard')}
+          </Button>
+          {onSave && (
+            <Button
+              type="button"
+              intent="save"
+              variant="primary"
+              display="full"
+              onClick={onSave}
+              loading={saving}
+            >
+              {saving ? tCrud('form.saving') : tCrud('actions.save')}
+            </Button>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 /**
  * Entity List Component - Table view for admin/internal operations
  *
  * Features:
- * - Filters section (collapsible): closed unless filters are active (e.g. from the URL)
- * - Results section with the search / refresh / add toolbar and the DataTable
- * - Excel-like table display with formatted values
+ * - Admin Section header: the count ("64 products") or state as title, Add at the end
+ * - One toolbar row: search, Filters (side sheet, active-count badge), Export, Refresh
+ * - Excel-like table display with formatted values, columns sized by field type
+ * - Selection and unsaved edits in the bottom ActionBar; empty / no-result / error states
  * - Open-link icon per row, bulk select, bulk delete of the checked rows
  * - Auto-routing when handlers not provided
  * - With `parent`, `editable` (default) and an edit form open on that record:
@@ -244,6 +577,7 @@ function StandaloneEntityList({
   queryOptions,
   exportable = true,
   editable = true,
+  deletable = true,
   parent,
   preview,
   tone,
@@ -273,10 +607,11 @@ function StandaloneEntityList({
 
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Filters panel starts closed so the table is above the fold; open when filters
-  // are already applied (URL or store), so they are never hidden.
-  const { filters } = useCrudFilters({ collection: entity.collection });
-  const hasActiveFilters = Object.keys(filters).length > 0;
+  // Filters open in a side sheet from the toolbar; the button counts the active ones.
+  const { filters, setFilters } = useCrudFilters({
+    collection: entity.collection,
+  });
+  const activeFilterCount = Object.keys(filters).length;
 
   // useCrudList now handles client-side filter + search + sort via `processed`
   // effectiveMode tells us if auto-mode switched to server (for DataTable props)
@@ -285,6 +620,7 @@ function StandaloneEntityList({
     items: rawData,
     processed: fetchedData,
     loading: fetchLoading,
+    error: fetchError,
     mutate: refreshList,
     effectiveMode,
   } = useCrudList(entity, {
@@ -314,6 +650,8 @@ function StandaloneEntityList({
       (preview as EntityData[])
     : fetchedData;
   const loading = isPreview ? false : fetchLoading;
+  // The read failed: shown as an error, never as an empty table
+  const listError = isPreview ? null : fetchError;
 
   // useCrud -> bulk save of in-place edits, bulk delete of checked rows
   const { bulk } = useCrud(entity);
@@ -364,7 +702,7 @@ function StandaloneEntityList({
   const { t: tCrud } = useTranslation('crud');
 
   // Entity + crud namespaces so formatValue can resolve crud:price.* etc.
-  const { t } = useTranslation([entity.namespace, 'crud']);
+  const { t, language } = useTranslation([entity.namespace, 'crud']);
 
   // Refresh handler - triggers manual refetch in useList
   const handleRefresh = async () => {
@@ -403,6 +741,7 @@ function StandaloneEntityList({
 
   const dataColumns = entityColumns<EntityData>(entity, fieldsToShow, {
     t,
+    language,
     viewerRole,
     referenceData,
     editing: isEditing,
@@ -417,199 +756,186 @@ function StandaloneEntityList({
     })),
   ];
 
-  // Entity name for section title
-  const entityName = t('name', { defaultValue: entity.name });
+  const words = useListWords(entity);
+  // Records listed: in server mode the query's total (the rows are one page)
+  const serverTotal = effectiveMode === 'server' ? listData?.total : undefined;
+  const resultCount = serverTotal ?? filteredData.length;
+  const filtered = searchQuery !== '' || activeFilterCount > 0;
 
-  // Result count
-  const resultCount = filteredData.length;
+  // Read-only list (editable={false}): no Add
+  const add = !editable ? null : isPreview ? (
+    <Button intent="add" variant="primary" disabled>
+      {tCrud('addNew')}
+    </Button>
+  ) : (
+    <Button
+      intent="add"
+      variant="primary"
+      render={({ children, ...renderProps }) => (
+        <Link
+          path={parent ? childCreatePath(base, parent) : `${base}/new`}
+          {...renderProps}
+        >
+          {children}
+        </Link>
+      )}
+    >
+      {tCrud('addNew')}
+    </Button>
+  );
 
   // Always show table structure - DataTable will show skeleton rows when loading
   return (
-    <>
-      {!hideFilters && (
-        <Section
-          title={tCrud('filters.title', {
-            entity: entityName,
-          })}
-          collapsible
-          defaultOpen={hasActiveFilters}
-          tone={tone}
-        >
-          <EntityFilters
-            entity={entity}
-            data={rawData}
-            fieldsToFilter={fieldsToShow}
-            viewerRole={viewerRole}
-          />
-        </Section>
-      )}
-
-      {/* Results Section */}
-      <Section
-        title={
-          loading
-            ? tCrud('results.title.fetching')
-            : tCrud('results.title.count', {
-                count: resultCount,
-              })
-        }
-        tone={tone}
-      >
-        <Stack>
-          <Stack
-            direction="row"
-            gap="tight"
-            align="center"
-            className="dndev-w-full"
-            style={TOOLBAR_STYLES[1 + (editable ? 1 : 0) + (actions ? 1 : 0)]}
-          >
-            <Input
-              placeholder={tCrud('actions.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              icon={Search}
-              className="dndev-w-full"
-              disabled={isPreview}
-            />
-            <Button
-              intent="reload"
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={isPreview || loading}
-              display="compact"
-              aria-label={tCrud('actions.refresh')}
-            />
-            {/* Read-only list (editable={false}): no Add */}
-            {!editable ? null : isPreview ? (
-              <Button intent="add" display="compact" disabled>
-                {tCrud('addNew')}
-              </Button>
-            ) : (
+    <ListSection
+      title={words.heading({
+        loading,
+        failed: !!listError,
+        count: resultCount,
+      })}
+      add={add}
+      tone={tone}
+    >
+      {listError ? (
+        <CrudLoadError
+          error={listError}
+          entity={words.names}
+          onRetry={handleRefresh}
+        />
+      ) : (
+        <DataTable
+          data={filteredData}
+          columns={columns}
+          sortable={!isPreview}
+          searchable={false}
+          // One toolbar row: [search][Filters] … [Export][Refresh][app actions]
+          toolbarStart={
+            <>
+              <Input
+                placeholder={tCrud('actions.searchPlaceholder')}
+                aria-label={tCrud('actions.search')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                icon={Search}
+                className="dndev-w-full"
+                disabled={isPreview}
+              />
+              {!hideFilters && (
+                <FiltersButton
+                  entity={entity}
+                  data={rawData}
+                  fieldsToFilter={fieldsToShow}
+                  viewerRole={viewerRole}
+                  activeCount={activeFilterCount}
+                  disabled={isPreview}
+                />
+              )}
+            </>
+          }
+          toolbarEnd={
+            <>
               <Button
-                intent="add"
-                display="compact"
-                render={({ children, ...renderProps }) => (
-                  <Link
-                    path={parent ? childCreatePath(base, parent) : `${base}/new`}
-                    {...renderProps}
-                  >
-                    {children}
-                  </Link>
-                )}
-              >
-                {tCrud('addNew')}
-              </Button>
-            )}
-            {actions && <ToolbarActions actions={actions} />}
-          </Stack>
-          {isEditing && pendingCount > 0 && (
-            <Stack direction="row" gap="tight" align="center" wrap="wrap">
-              <Text level="body">
-                {tCrud('bulkEdit.pending', { count: pendingCount })}
-              </Text>
-              <Button
-                intent="save"
-                display="compact"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? tCrud('form.saving') : tCrud('actions.save')}
-              </Button>
-              <Button
-                icon={Undo2}
+                intent="reload"
                 variant="outline"
-                display="compact"
-                onClick={() => {
+                onClick={handleRefresh}
+                disabled={isPreview || loading}
+                aria-label={tCrud('actions.refresh')}
+              >
+                {tCrud('actions.refresh')}
+              </Button>
+              {actions && <ToolbarActions actions={actions} />}
+            </>
+          }
+          emptyState={
+            <ListEmptyState
+              filtered={filtered}
+              searchQuery={searchQuery}
+              emptyLabel={words.empty}
+              add={add}
+              onClear={() => {
+                setSearchQuery('');
+                setFilters({});
+              }}
+            />
+          }
+          pagination
+          loading={loading}
+          onRowClick={isPreview ? undefined : (item) => handleView(item.id)}
+          // Read-only list (editable={false}): no selection, no delete
+          selectable={!isPreview && editable}
+          getRowId={(row: EntityData) => row.id}
+          onSelect={(rows: EntityData[]) =>
+            setSelectedIds(rows.map((row) => row.id))
+          }
+          openLabel={tCrud('actions.open')}
+          {...(!isPreview &&
+            (onClick
+              ? { onRowOpen: (row: EntityData) => onClick(row.id) }
+              : { getRowHref: (row: EntityData) => `${base}/${row.id}` }))}
+          // Bottom bar: checked rows (bulk edit + delete), unsaved edits.
+          // deletable={false}: selection stays for bulk edit, no Delete
+          {...(!isPreview &&
+            editable &&
+            deletable && {
+              selectionActions: () => (
+                <ActionButton
+                  action={handleDeleteSelected}
+                  confirmTitle={tCrud('delete.titleSelected', {
+                    count: checkedIds.length,
+                  })}
+                  confirmText={tCrud('delete.confirmSelected', {
+                    count: checkedIds.length,
+                  })}
+                  confirmLabel={tCrud('actions.delete')}
+                  cancelLabel={tCrud('actions.cancel')}
+                  variant="outline"
+                  intent="delete"
+                  display="full"
+                >
+                  {tCrud('bulkEdit.deleteSelected', {
+                    count: checkedIds.length,
+                  })}
+                </ActionButton>
+              ),
+            })}
+          {...((pendingCount > 0 || failedCount > 0) && {
+            actionBarContent: (
+              <PendingBar
+                count={isEditing ? pendingCount : 0}
+                saving={saving}
+                failure={
+                  failedCount > 0
+                    ? tCrud('bulkEdit.failed', { count: failedCount })
+                    : null
+                }
+                onSave={() => void handleSave()}
+                onDiscard={() => {
                   setPendingChanges({});
                   setFailedCount(0);
                 }}
-                disabled={saving}
-              >
-                {tCrud('bulkEdit.discard')}
-              </Button>
-            </Stack>
-          )}
-          {failedCount > 0 && (
-            <Alert
-              variant="error"
-              title={tCrud('bulkEdit.failed', { count: failedCount })}
-            />
-          )}
-          {!isPreview && editable && checkedIds.length > 0 && (
-            <Stack direction="row" gap="tight" align="center" wrap="wrap">
-              <ActionButton
-                action={handleDeleteSelected}
-                confirmTitle={tCrud('delete.titleSelected', {
-                  count: checkedIds.length,
-                })}
-                confirmText={tCrud('delete.confirmSelected', {
-                  count: checkedIds.length,
-                })}
-                confirmLabel={tCrud('actions.delete')}
-                cancelLabel={tCrud('actions.cancel')}
-                variant="outline"
-                intent="delete"
-                display="compact"
-              >
-                {tCrud('bulkEdit.deleteSelected', { count: checkedIds.length })}
-              </ActionButton>
-            </Stack>
-          )}
-          <DataTable
-            data={filteredData}
-            columns={columns}
-            sortable={!isPreview}
-            searchable={false}
-            pagination
-            loading={loading}
-            onRowClick={isPreview ? undefined : (item) => handleView(item.id)}
-            // Read-only list (editable={false}): no selection, no delete
-            selectable={!isPreview && editable}
-            getRowId={(row: EntityData) => row.id}
-            onSelect={(rows: EntityData[]) =>
-              setSelectedIds(rows.map((row) => row.id))
-            }
-            openLabel={tCrud('actions.open')}
-            {...(!isPreview &&
-              (onClick
-                ? { onRowOpen: (row: EntityData) => onClick(row.id) }
-                : { getRowHref: (row: EntityData) => `${base}/${row.id}` }))}
-            {...(isEditing && {
-              editable: true,
-              pendingChanges,
-              onPendingChange: setPendingChanges,
-              editLabels: {
-                selected: tCrud('bulkEdit.selected'),
-                field: tCrud('bulkEdit.field'),
-                value: tCrud('bulkEdit.value'),
-                apply: tCrud('bulkEdit.apply'),
-              },
+              />
+            ),
+          })}
+          {...(isEditing && {
+            editable: true,
+            pendingChanges,
+            onPendingChange: setPendingChanges,
+          })}
+          // Persisted page size — always controlled via CrudStore
+          pageSize={storedPageSize}
+          onPageSizeChange={setStoredPageSize}
+          // Server-side pagination props (when explicitly server or auto-switched to server)
+          {...(!isPreview &&
+            effectiveMode === 'server' && {
+              currentPage,
+              total: listData?.total,
+              onPageChange: setCurrentPage,
             })}
-            // Pagination labels (translated)
-            showingLabel={tCrud('pagination.showing')}
-            paginationPreviousLabel={tCrud('pagination.previous')}
-            paginationNextLabel={tCrud('pagination.next')}
-            paginationItemsPerPagePlaceholder={tCrud(
-              'pagination.itemsPerPagePlaceholder'
-            )}
-            // Persisted page size — always controlled via CrudStore
-            pageSize={storedPageSize}
-            onPageSizeChange={setStoredPageSize}
-            // Server-side pagination props (when explicitly server or auto-switched to server)
-            {...(!isPreview &&
-              effectiveMode === 'server' && {
-                currentPage,
-                total: listData?.total,
-                onPageChange: setCurrentPage,
-              })}
-            // Export functionality
-            exportable={isPreview ? false : exportable}
-            exportFilename={`${entity.collection}-export`}
-            exportLabel={tCrud('export')}
-          />
-        </Stack>
-      </Section>
-    </>
+          // Export functionality
+          exportable={isPreview ? false : exportable}
+          exportFilename={`${entity.collection}-export`}
+        />
+      )}
+    </ListSection>
   );
 }
 
@@ -646,6 +972,7 @@ function RowsEntityList({
   pageSize: pageSizeProp,
   exportable = true,
   editable = true,
+  deletable = true,
   parent,
   tone,
   extraColumns,
@@ -666,15 +993,17 @@ function RowsEntityList({
     ...(pageSizeProp != null && { defaultPageSize: pageSizeProp }),
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const { filters } = useCrudFilters({ collection: entity.collection });
-  const hasActiveFilters = Object.keys(filters).length > 0;
+  const { filters, setFilters } = useCrudFilters({
+    collection: entity.collection,
+  });
+  const activeFilterCount = Object.keys(filters).length;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
   /** Why the last own Save did not write (invalid rows count, or the write error). */
   const [saveError, setSaveError] = useState<string | null>(null);
   const { t: tCrud } = useTranslation('crud');
-  const { t } = useTranslation([entity.namespace, 'crud']);
+  const { t, language } = useTranslation([entity.namespace, 'crud']);
 
   // Link table (joined): add picks records of the other side (already linked excluded).
   const linkField = parent && joined ? linkFieldOf(entity, parent.field) : null;
@@ -760,6 +1089,8 @@ function RowsEntityList({
   const fieldsToShow = (entity.listFields || Object.keys(entity.fields)).filter(
     (fieldName) => fieldName !== parent?.field
   );
+  // Phones: with listCardFields, the stacked rows leave the extension columns out
+  const extensionPhoneFields = phoneFieldsOf(entity) && new Set<string>();
   // Extension columns: each extension entity's list fields the viewer may see, prefixed.
   const extensionColumns: TableColumn<ListRow>[] = rows.extensionFields
     .filter((field) => {
@@ -774,18 +1105,34 @@ function RowsEntityList({
         throw new Error(`EntityList: extension field "${field.name}" has no extension "${scope}".`);
       }
       const unprefixed = field.name.slice(scope.length + 1);
-      const isNumeric = field.config.type === 'number' || field.config.type === 'range';
       return {
         key: field.name,
-        title: translateFieldLabel(field.name, field.config, t),
+        title: fieldColumnTitle(
+          translateFieldLabel(field.name, field.config, t),
+          field.config,
+          t
+        ),
         dataIndex: field.name,
-        sortable: true,
         filterable: !joined,
-        align: isNumeric ? ('end' as const) : ('start' as const),
+        // Sized by type; never the row's name; on phones only with listCardFields absent
+        ...fieldColumnPreset(field.name, field.config, {
+          nameField: undefined,
+          phoneFields: extensionPhoneFields,
+        }),
         ...(isEditing &&
           field.editable && {
-            edit: cellEditFor(ext.entity, unprefixed, viewerRole, referenceData, t),
+            edit: cellEditFor(
+              ext.entity,
+              unprefixed,
+              viewerRole,
+              referenceData,
+              t,
+              language
+            ),
           }),
+        ...(field.config.type === 'price' && {
+          sortValue: (row: ListRow) => effectivePrice(row[field.name]),
+        }),
         render: (value: unknown, record: ListRow) =>
           formatValue(value, field.config, t, {
             compact: true,
@@ -797,6 +1144,7 @@ function RowsEntityList({
   const columns: TableColumn<ListRow>[] = [
     ...entityColumns<ListRow>(entity, fieldsToShow, {
       t,
+      language,
       viewerRole,
       referenceData,
       editing: isEditing && rows.access.update,
@@ -808,146 +1156,130 @@ function RowsEntityList({
       ...rows.edits.changes[row.id],
     })),
   ];
-  const entityName = t('name', { defaultValue: entity.name });
+  const words = useListWords(entity);
   const showAdd = editable && rows.access.create;
-  const toolbarCells = 1 + (showAdd ? 1 : 0) + (actions ? 1 : 0);
+  const filtered = !joined && (searchQuery !== '' || activeFilterCount > 0);
+  // deletable={false}: selection stays for bulk edit, no Delete
+  const canDelete =
+    editable &&
+    deletable &&
+    checkedIds.length > 0 &&
+    (rows.access.delete || checkedIds.every((id) => addedIds.has(id)));
+
+  const add = !showAdd ? null : joined ? (
+    // Joined: rows are added in place (picker or blank row), never a navigation.
+    <Button
+      type="button"
+      intent="add"
+      variant="primary"
+      onClick={() => (linkField ? setPicking(true) : rows.add([{}]))}
+      disabled={rows.loading}
+    >
+      {tCrud('addNew')}
+    </Button>
+  ) : (
+    <Button
+      intent="add"
+      variant="primary"
+      render={({ children, ...renderProps }) => (
+        <Link
+          path={parent ? childCreatePath(base, parent) : `${base}/new`}
+          {...renderProps}
+        >
+          {children}
+        </Link>
+      )}
+    >
+      {tCrud('addNew')}
+    </Button>
+  );
 
   return (
     <>
-      {!joined && !hideFilters && (
-        <Section
-          title={tCrud('filters.title', { entity: entityName })}
-          collapsible
-          defaultOpen={hasActiveFilters}
-          tone={tone}
-        >
-          <EntityFilters
-            entity={entity}
-            data={rows.items}
-            fieldsToFilter={fieldsToShow}
-            viewerRole={viewerRole}
-          />
-        </Section>
-      )}
-
-      <Section
-        title={
-          rows.loading
-            ? tCrud('results.title.fetching')
-            : tCrud('results.title.count', { count: data.length })
-        }
+      <ListSection
+        title={words.heading({
+          loading: rows.loading,
+          failed: !!rows.error,
+          count: data.length,
+        })}
+        add={add}
         tone={tone}
       >
-        <Stack>
-          <Stack
-            direction="row"
-            gap="tight"
-            align="center"
-            className="dndev-w-full"
-            style={TOOLBAR_STYLES[joined ? toolbarCells - 1 : toolbarCells]}
-          >
-            {!joined && (
-              <Input
-                placeholder={tCrud('actions.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                icon={Search}
-                className="dndev-w-full"
-              />
-            )}
-            <Button
-              intent="reload"
-              variant="outline"
-              onClick={() => void rows.refresh()}
-              disabled={rows.loading}
-              display="compact"
-              aria-label={tCrud('actions.refresh')}
-            />
-            {showAdd &&
-              (joined ? (
-                // Joined: rows are added in place (picker or blank row), never a navigation.
-                <Button
-                  type="button"
-                  intent="add"
-                  display="compact"
-                  onClick={() => (linkField ? setPicking(true) : rows.add([{}]))}
-                  disabled={rows.loading}
-                >
-                  {tCrud('addNew')}
-                </Button>
-              ) : (
-                <Button
-                  intent="add"
-                  display="compact"
-                  render={({ children, ...renderProps }) => (
-                    <Link
-                      path={parent ? childCreatePath(base, parent) : `${base}/new`}
-                      {...renderProps}
-                    >
-                      {children}
-                    </Link>
-                  )}
-                >
-                  {tCrud('addNew')}
-                </Button>
-              ))}
-            {actions && <ToolbarActions actions={actions} />}
-          </Stack>
-          {rows.pendingCount > 0 && (
-            <Stack direction="row" gap="tight" align="center" wrap="wrap">
-              <Text level="body">
-                {tCrud('bulkEdit.pending', { count: rows.pendingCount })}
-              </Text>
-              {!joined && (
-                <Button
-                  type="button"
-                  intent="save"
-                  display="compact"
-                  onClick={() => void save()}
-                  disabled={saving}
-                >
-                  {saving ? tCrud('form.saving') : tCrud('actions.save')}
-                </Button>
-              )}
-              <Button
-                type="button"
-                icon={Undo2}
-                variant="outline"
-                display="compact"
-                onClick={() => {
-                  rows.discard();
-                  setSaveError(null);
-                }}
-                disabled={saving}
-              >
-                {tCrud('bulkEdit.discard')}
-              </Button>
-            </Stack>
-          )}
-          {saveError && <Alert variant="error" title={saveError} />}
-          {editable &&
-            checkedIds.length > 0 &&
-            (rows.access.delete || checkedIds.every((id) => addedIds.has(id))) && (
-              <Stack direction="row" gap="tight" align="center" wrap="wrap">
-                <Button
-                  type="button"
-                  variant="outline"
-                  intent="delete"
-                  display="compact"
-                  onClick={() => {
-                    rows.remove(checkedIds);
-                    setSelectedIds([]);
-                  }}
-                >
-                  {tCrud('bulkEdit.deleteSelected', { count: checkedIds.length })}
-                </Button>
-              </Stack>
-            )}
+        {rows.error ? (
+          <CrudLoadError
+            error={rows.error}
+            entity={words.names}
+            onRetry={rows.refresh}
+          />
+        ) : (
           <DataTable
             data={data}
             columns={columns}
             sortable
             searchable={false}
+            // One toolbar row. Joined: all lines shown (no search, filters, export);
+            // its unsaved edits sit in the toolbar, not a bottom bar that would cover
+            // the parent form's own action footer (its Save writes them).
+            {...(joined && {
+              toolbarStart: (
+                <PendingBar
+                  count={rows.pendingCount}
+                  saving={false}
+                  failure={null}
+                  onDiscard={() => rows.discard()}
+                />
+              ),
+            })}
+            {...(!joined && {
+              toolbarStart: (
+                <>
+                  <Input
+                    placeholder={tCrud('actions.searchPlaceholder')}
+                    aria-label={tCrud('actions.search')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    icon={Search}
+                    className="dndev-w-full"
+                  />
+                  {!hideFilters && (
+                    <FiltersButton
+                      entity={entity}
+                      data={rows.items}
+                      fieldsToFilter={fieldsToShow}
+                      viewerRole={viewerRole}
+                      activeCount={activeFilterCount}
+                    />
+                  )}
+                </>
+              ),
+            })}
+            toolbarEnd={
+              <>
+                <Button
+                  type="button"
+                  intent="reload"
+                  variant="outline"
+                  onClick={() => void rows.refresh()}
+                  disabled={rows.loading}
+                  aria-label={tCrud('actions.refresh')}
+                >
+                  {tCrud('actions.refresh')}
+                </Button>
+                {actions && <ToolbarActions actions={actions} />}
+              </>
+            }
+            emptyState={
+              <ListEmptyState
+                filtered={filtered}
+                searchQuery={searchQuery}
+                emptyLabel={words.empty}
+                add={add}
+                onClear={() => {
+                  setSearchQuery('');
+                  setFilters({});
+                }}
+              />
+            }
             pagination={!joined}
             loading={rows.loading}
             onRowClick={(row) => open(row.id)}
@@ -960,31 +1292,50 @@ function RowsEntityList({
             onRowOpen={(row: ListRow) => open(row.id)}
             // Fields breaking the entity's rules, checked on every change
             cellErrors={rows.errors}
+            // Bottom bar: checked rows (bulk edit + delete), unsaved edits
+            {...(canDelete && {
+              selectionActions: () => (
+                <Button
+                  type="button"
+                  variant="outline"
+                  intent="delete"
+                  display="full"
+                  onClick={() => {
+                    rows.remove(checkedIds);
+                    setSelectedIds([]);
+                  }}
+                >
+                  {tCrud('bulkEdit.deleteSelected', { count: checkedIds.length })}
+                </Button>
+              ),
+            })}
+            {...(!joined &&
+              (rows.pendingCount > 0 || saveError) && {
+              actionBarContent: (
+                <PendingBar
+                  count={rows.pendingCount}
+                  saving={saving}
+                  failure={saveError}
+                  {...(!joined && { onSave: () => void save() })}
+                  onDiscard={() => {
+                    rows.discard();
+                    setSaveError(null);
+                  }}
+                />
+              ),
+            })}
             {...(isEditing && {
               editable: true,
               pendingChanges: rows.edits.changes,
               onPendingChange: applyPending,
-              editLabels: {
-                selected: tCrud('bulkEdit.selected'),
-                field: tCrud('bulkEdit.field'),
-                value: tCrud('bulkEdit.value'),
-                apply: tCrud('bulkEdit.apply'),
-              },
             })}
-            showingLabel={tCrud('pagination.showing')}
-            paginationPreviousLabel={tCrud('pagination.previous')}
-            paginationNextLabel={tCrud('pagination.next')}
-            paginationItemsPerPagePlaceholder={tCrud(
-              'pagination.itemsPerPagePlaceholder'
-            )}
             pageSize={pageSize}
             onPageSizeChange={setPageSize}
             exportable={!joined && exportable}
             exportFilename={`${entity.collection}-export`}
-            exportLabel={tCrud('export')}
           />
-        </Stack>
-      </Section>
+        )}
+      </ListSection>
       {picking && linkField && linkEntity && (
         <Suspense fallback={null}>
           <ChildRowsPicker

@@ -159,7 +159,7 @@ const Skeleton: ComponentType<SkeletonProps> = ({
       className={cn('dndev-skeleton', className)}
       style={{
         ...baseStyles,
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--radius-interactive)',
         width: width || '100%',
         height: height || '20px',
         ...getSkeletonStyles(),
@@ -256,7 +256,7 @@ export const SkeletonCard: ComponentType<
       display: 'grid',
       gap: 'var(--gap-md)',
       border: '1px solid var(--border)',
-      borderRadius: 'var(--radius-lg)',
+      borderRadius: 'var(--radius-surface)',
       padding: 'var(--gap-lg)',
     }}
   >

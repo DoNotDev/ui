@@ -91,6 +91,9 @@ export function useNavigableRoutes(): NavigationRoute[] {
  * only show routes the user can access: menu visibility, sign-in and role
  * (`filterNavigationRoutes`), then the page's full access rule (`can.navigate`,
  * the one AuthGuard uses), which adds PageMeta `auth.tier` and `auth.validate`.
+ * Labels are each page's `<namespace>:title` in the UI language: the hook loads the
+ * routes' page namespaces (a build loads them lazily), so menus and the 404 suggestions
+ * never fall back to the file-derived English names.
  *
  * @version 0.1.0
  * @since 0.0.1
@@ -107,8 +110,12 @@ export function useNavigableRoutes(): NavigationRoute[] {
  */
 export function useNavigationItems(): NavigationItem[] {
   const pathname = useRoutePath();
-  const { t } = useTranslation();
   const routes = useNavigableRoutes();
+  // Labels read each route's `<namespace>:title`: their namespaces load here (lazy page
+  // namespaces of a build are not loaded until asked for; without them a label falls
+  // back to the file-derived English name, e.g. on the 404 page or in a menu)
+  const namespaces = useMemo(() => routeNamespaces(routes), [routes]);
+  const { t, language } = useTranslation(namespaces);
 
   return useMemo(() => {
     return routes
@@ -119,10 +126,12 @@ export function useNavigationItems(): NavigationItem[] {
         hasChildren: false,
         children: undefined,
       }))
+      // Alphabetical by label, in the UI language: the same order on the server render
+      // and the client (the runtime's default locale differs between them)
       .sort((a, b) =>
-        a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
-      ); // Alphabetical sorting by label
-  }, [routes, pathname, t]);
+        a.label.localeCompare(b.label, language, { sensitivity: 'base' })
+      );
+  }, [routes, pathname, t, language]);
 }
 
 /**
@@ -160,6 +169,19 @@ export function useNavigationRoute(path: string): NavigationItem | undefined {
 }
 
 // ===== HELPER FUNCTIONS =====
+
+/**
+ * Namespaces the routes' labels read ({@link routeLabel}): `dndev` first (the
+ * `useTranslation()` default), then each route's page namespace once.
+ */
+function routeNamespaces(routes: readonly NavigationRoute[]): string[] {
+  const namespaces = new Set<string>(['dndev']);
+  for (const route of routes) {
+    const namespace = route.meta?.namespace;
+    if (typeof namespace === 'string' && namespace !== '') namespaces.add(namespace);
+  }
+  return [...namespaces];
+}
 
 /**
  * Navigation label of a route: the page's `<namespace>:title` (the PageMeta contract,

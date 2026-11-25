@@ -86,7 +86,7 @@ const GoToInput = () => {
             padding: '0.25rem 0.5rem',
             fontSize: 'var(--font-size-xs)',
             fontFamily: 'var(--font-mono)',
-            borderRadius: 'var(--radius-sm)',
+            borderRadius: 'var(--radius-interactive)',
           }}
         >
           {isMac ? '⌘K' : 'Ctrl+K'}

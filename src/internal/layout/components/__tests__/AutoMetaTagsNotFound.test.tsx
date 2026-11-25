@@ -75,7 +75,7 @@ describe('AutoMetaTags in the 404 document', () => {
   it('has no URL-derived tag, the 404 heading + site name as title', () => {
     const html = renderAt('/legal/unknown');
     expect(html).not.toMatch(
-      /rel="canonical"|og:url|hrefLang|"@type":"WebPage"|BreadcrumbList/
+      /rel="canonical"|og:url|og:locale|hrefLang|"@type":"WebPage"|BreadcrumbList/
     );
     expect(html).not.toContain('T(');
     expect(html).toContain('<title>Page non trouvée | Shop</title>');

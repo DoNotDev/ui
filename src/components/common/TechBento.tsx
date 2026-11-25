@@ -13,6 +13,7 @@ import {
   TONE,
   cn,
 } from '@donotdev/components';
+import { useTranslation } from '@donotdev/core';
 import type {
   BentoColumns,
   BentoGap,
@@ -112,6 +113,7 @@ export function TechBento({
   defaultOpen,
   className,
 }: TechBentoProps) {
+  const { t } = useTranslation('dndev');
   // Convert Grid's cols format to Bento's columns format
   // Grid: [mobile, tablet, laptop, desktop]
   // Bento: { mobile, tablet, desktop, wide }
@@ -149,7 +151,7 @@ export function TechBento({
       items={items}
       columns={bentoColumns}
       gap={gap}
-      ariaLabel="Technology stack"
+      ariaLabel={t('techStack.label')}
     />
   );
 

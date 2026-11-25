@@ -18,7 +18,7 @@
 import { memo, useRef, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
-import { useLayout } from '@donotdev/core';
+import { useLayout, useTranslation } from '@donotdev/core';
 
 import { DEFAULT_SLOTS } from '../config/defaults';
 
@@ -61,6 +61,7 @@ function DnDevSidebarComponent({
   minWidth = DEFAULT_SLOTS.sidebar.minWidth,
   maxWidth = DEFAULT_SLOTS.sidebar.maxWidth,
 }: DnDevSidebarProps): ReactNode {
+  const { t } = useTranslation('dndev');
   // Custom mode: children provided = consumer owns zone visuals, data-custom skips polish CSS
   const isCustom = children !== undefined;
   // Resize state
@@ -233,7 +234,7 @@ function DnDevSidebarComponent({
     <aside
       ref={asideRef}
       role="navigation"
-      aria-label="Site navigation"
+      aria-label={t('navigation.site')}
       className="sidebar"
       data-dragging={isDragging}
       data-collapsed={isCollapsed}
@@ -258,7 +259,7 @@ function DnDevSidebarComponent({
         onDoubleClick={toggleCollapse}
         onKeyDown={handleKeyDown}
         role="separator"
-        aria-label="Resize sidebar. Double-click or Enter to toggle. Home to collapse, End to fit content."
+        aria-label={t('navigation.resizeSidebar')}
         aria-valuenow={sidebarWidth}
         aria-valuemin={minWidth}
         aria-valuemax={maxWidth}

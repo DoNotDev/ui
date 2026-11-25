@@ -27,7 +27,7 @@ import {
   Text,
 } from '@donotdev/components';
 import type { TableColumn } from '@donotdev/components';
-import { statusCan, useTranslation } from '@donotdev/core';
+import { fieldColumnTitle, statusCan, useTranslation } from '@donotdev/core';
 import type { AnyEntity } from '@donotdev/core';
 
 import {
@@ -97,7 +97,12 @@ export default function ChildRowsPicker({
     return [
       {
         key: fieldName,
-        title: translateFieldLabel(fieldName, config, t),
+        // Price columns carry the note their cells leave out ('VAT incl.')
+        title: fieldColumnTitle(
+          translateFieldLabel(fieldName, config, t),
+          config,
+          t
+        ),
         dataIndex: fieldName,
         sortable: true,
         render: (value: unknown, record: PickRow) =>
@@ -166,12 +171,6 @@ export default function ChildRowsPicker({
             onSelect={(rows: PickRow[]) =>
               setSelectedIds(rows.map((row) => row.id))
             }
-            showingLabel={tCrud('pagination.showing')}
-            paginationPreviousLabel={tCrud('pagination.previous')}
-            paginationNextLabel={tCrud('pagination.next')}
-            paginationItemsPerPagePlaceholder={tCrud(
-              'pagination.itemsPerPagePlaceholder'
-            )}
           />
         )}
       </Stack>

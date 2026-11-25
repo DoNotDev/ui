@@ -21,6 +21,7 @@ import { useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 
 import { Button, BUTTON_VARIANT, Popover, Stack } from '@donotdev/components';
+import { useTranslation } from '@donotdev/core';
 
 /** Props for the HeaderMenu component. */
 export interface HeaderMenuProps {
@@ -80,6 +81,7 @@ function endsInteraction({
  * ```
  */
 export const HeaderMenu = ({ children, className }: HeaderMenuProps) => {
+  const { t } = useTranslation('dndev');
   const [open, setOpen] = useState(false);
 
   const closeAfterAction = (event: MouseEvent<HTMLElement>) => {
@@ -99,7 +101,7 @@ export const HeaderMenu = ({ children, className }: HeaderMenuProps) => {
             <Button
               variant={BUTTON_VARIANT.GHOST}
               icon={Menu}
-              aria-label="Menu"
+              aria-label={t('navigation.headerMenu')}
               className={className}
             />
           }
