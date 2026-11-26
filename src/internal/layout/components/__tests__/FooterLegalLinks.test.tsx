@@ -26,9 +26,10 @@ import { FooterLegalLinks } from '../footer/FooterLegalLinks';
 afterEach(cleanup);
 
 // Regression (shop review): the legal links were hand-styled anchors (16px high, an
-// inline copy of the link look) and the branding link sized its icon in px.
+// inline copy of the link look). The branding link stays a plain external anchor with a
+// 12px icon (owner 2026-11-26: the Button version made the icon 24px, reverted).
 describe('FooterLegalLinks', () => {
-  it('renders every link, branding included, as the Button link variant', () => {
+  it('renders the legal links as the Button link variant, branding as an external link', () => {
     render(
       <FooterLegalLinks
         app={{
@@ -41,7 +42,7 @@ describe('FooterLegalLinks', () => {
         }}
       />
     );
-    for (const name of ['CGV', 'Privacy', 'DoNotDev']) {
+    for (const name of ['CGV', 'Privacy']) {
       const link = screen.getByRole('link', { name });
       expect(link.getAttribute('data-variant')).toBe('link');
       expect(link.classList.contains('dndev-interactive')).toBe(true);

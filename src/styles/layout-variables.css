@@ -977,6 +977,14 @@ footer[role='contentinfo']:not([data-custom]) a:not(.dndev-interactive):hover {
   padding-block-end: var(--action-bar-height, 0px);
 }
 
+/* WCAG 2.2 SC 2.4.11 Focus Not Obscured (Minimum), technique C43 (CSS scroll-padding):
+   main, the page's only scroll container, keeps an element focused by the keyboard
+   (a DataTable cell, a list entry's target) scrolled into view above the shown
+   ActionBar (fixed, portalled), whose height it reads from the same property. */
+main[role='main'] {
+  scroll-padding-block-end: var(--action-bar-height, 0px);
+}
+
 /* Desktop (>=1024px): Always hide merged-bar */
 @media (width >=1024px) {
   .merged-bar {

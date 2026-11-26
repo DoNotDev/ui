@@ -29,7 +29,13 @@ const { listSpy, bulkSpy, listState } = vi.hoisted(() => ({
     insertedIds: [],
     updatedIds: [],
     deletedIds: [],
-    failed: [] as Array<{ op: string; id?: string; error: string }>,
+    failed: [] as Array<{
+      op: string;
+      id?: string;
+      error: string;
+      field?: string;
+      i18nKey?: string;
+    }>,
   })),
 }));
 
@@ -191,7 +197,7 @@ describe('EntityList deletable={false}', () => {
 describe('EntityList partial bulk save', () => {
   beforeEach(() => bulkSpy.mockClear());
 
-  it('keeps failed rows pending and shows their count; saved rows leave', async () => {
+  it('keeps failed rows pending with their cells in error; saved rows leave', async () => {
     bulkSpy.mockResolvedValueOnce({
       insertedIds: [],
       updatedIds: ['p1'],
@@ -208,7 +214,19 @@ describe('EntityList partial bulk save', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'actions.save' }));
 
-    expect(await screen.findByText('bulkEdit.failed:1')).toBeTruthy();
+    // p2's sent cell is in error (the DataTable's list), no 'N failed' text
+    await waitFor(() =>
+      expect(cellOf(1, 'brandId').getAttribute('data-invalid')).toBe('true')
+    );
+    expect(screen.queryByText('bulkEdit.failed:1')).toBeNull();
+    const errors = screen.getByRole('button', { name: 'table.errors' });
+    expect(errors.closest('.dndev-action-bar')).toBeTruthy();
+    const cell = cellOf(1, 'brandId').querySelector<HTMLElement>('[data-edit-row]')!;
+    // The backend's own text ('denied') is never shown
+    expect(document.getElementById(cell.getAttribute('aria-describedby')!)?.textContent).toBe(
+      'crud:form.saveFailed'
+    );
+    expect(cellOf(0, 'brandId').getAttribute('data-invalid')).toBeNull();
     expect(bulkSpy).toHaveBeenCalledWith({
       updates: [
         { id: 'p1', patch: { brandId: 'b2' } },
@@ -217,6 +235,39 @@ describe('EntityList partial bulk save', () => {
     });
     // p2 stays pending, p1 is saved
     expect(screen.getByText('bulkEdit.pending:1')).toBeTruthy();
+    // Edited again: its cell leaves the error list, the button goes with it
+    fireEvent.change(openEditor(1, 'brandId'), { target: { value: 'b1' } });
+    expect(cellOf(1, 'brandId').getAttribute('data-invalid')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'table.errors' })).toBeNull();
+  });
+
+  it('marks only the field the backend names, with its i18n message', async () => {
+    bulkSpy.mockResolvedValueOnce({
+      insertedIds: [],
+      updatedIds: [],
+      deletedIds: [],
+      failed: [
+        {
+          op: 'update',
+          id: 'p1',
+          error: 'violates check constraint',
+          field: 'brandId',
+          i18nKey: 'crud:childRows.invalidValue',
+        },
+      ],
+    });
+    render(<EntityList entity={productEntity} basePath="/produits" />);
+    fireEvent.change(openEditor(0, 'brandId'), { target: { value: 'b2' } });
+    fireEvent.change(openEditor(0, 'categoryId'), { target: { value: 'c2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'actions.save' }));
+    await waitFor(() =>
+      expect(cellOf(0, 'brandId').getAttribute('data-invalid')).toBe('true')
+    );
+    expect(cellOf(0, 'categoryId').getAttribute('data-invalid')).toBeNull();
+    const cell = cellOf(0, 'brandId').querySelector<HTMLElement>('[data-edit-row]')!;
+    expect(document.getElementById(cell.getAttribute('aria-describedby')!)?.textContent).toBe(
+      'crud:childRows.invalidValue'
+    );
   });
 });
 

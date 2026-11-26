@@ -37,6 +37,7 @@ const state = vi.hoisted(() => ({
     remove: vi.fn(),
     discard: vi.fn(),
     refresh: vi.fn(async () => {}),
+    save: vi.fn(async (): Promise<unknown> => undefined),
   },
   bulk: vi.fn(async () => ({ insertedIds: [], updatedIds: [], deletedIds: [], failed: [] })),
 }));
@@ -296,6 +297,41 @@ describe('EntityList extend', () => {
   });
 });
 
+describe('EntityList own Save, partial failure', () => {
+  it('puts the cells a save rejected in error until their value changes', async () => {
+    state.joinedForm = null;
+    state.changes = { l1: { quantity: 5 } };
+    state.pendingCount = 1;
+    state.rows.save.mockResolvedValueOnce({
+      insertedIds: [],
+      updatedIds: [],
+      deletedIds: [],
+      failed: [{ op: 'update', id: 'l1', error: 'denied' }],
+    });
+    const view = render(
+      <EntityList
+        entity={noteEntity}
+        extend={{ offer: { entity: offerEntity, field: 'noteId' } }}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'actions.save' }));
+    const index = screen.getAllByRole('columnheader').map((th) => th.textContent).indexOf('quantity');
+    const td = () => document.querySelectorAll('tbody tr')[0]!.children[index] as HTMLElement;
+    await waitFor(() => expect(td().getAttribute('data-invalid')).toBe('true'));
+    expect(screen.getByRole('button', { name: 'table.errors' })).toBeTruthy();
+    // Edited again: no longer the value the save rejected
+    state.changes = { l1: { quantity: 6 } };
+    view.rerender(
+      <EntityList
+        entity={noteEntity}
+        extend={{ offer: { entity: offerEntity, field: 'noteId' } }}
+      />
+    );
+    expect(td().getAttribute('data-invalid')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'table.errors' })).toBeNull();
+  });
+});
+
 describe('EntityList row errors', () => {
   it('marks the cells of rows.errors with their message', () => {
     state.errors = { l1: { quantity: 'quantity is not valid' } };
@@ -303,7 +339,12 @@ describe('EntityList row errors', () => {
     const quantity = openEditor(0, 'quantity');
     expect(quantity.getAttribute('aria-label')).toBe('quantity');
     expect(quantity.getAttribute('aria-invalid')).toBe('true');
-    expect(screen.getByText('quantity is not valid')).toBeTruthy();
+    // Not printed in the row: visually hidden in the cell (described by), and the
+    // open editor's tooltip
+    const message = document.getElementById(quantity.getAttribute('aria-describedby')!);
+    expect(message?.textContent).toBe('quantity is not valid');
+    expect(message?.classList.contains('dndev-sr-only')).toBe(true);
+    expect(screen.getByRole('tooltip').textContent).toBe('quantity is not valid');
   });
 });
 

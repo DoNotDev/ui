@@ -29,7 +29,10 @@
  *
  * **Editing (default):** list fields are edited in their cells (DataTable `editable`),
  * checked rows take one value at once; Save writes every change in one `bulk({ updates })`.
- * Partial success: rows that fail stay pending (still marked) with an error count.
+ * Partial success: rows that fail stay pending; their cells are in error (`cellErrors`:
+ * the failure's field when the backend names one, else every cell the row sent;
+ * message from the failure's i18n key, else `crud:form.saveFailed`), listed in the
+ * DataTable's "N errors" button, each until its value changes or the next save.
  * `editable={false}`: read-only cells (no Add, selection or delete), a row click opens the record.
  *
  * **Nested list:** `parent={{ field, value }}` lists one parent's children; the add
@@ -80,6 +83,7 @@ import {
 } from '@donotdev/core';
 import type {
   AnyEntity,
+  BulkFailure,
   EntityField,
   EntityListExtraColumn,
   EntityListProps,
@@ -276,6 +280,79 @@ function appColumns<T extends ListRow>(
   }));
 }
 
+/** A cell a bulk save did not write: the value it sent and why (translated). */
+interface FailedCell {
+  sent: unknown;
+  message: string;
+}
+
+/** Cells a bulk save did not write, by row id and field. */
+type FailedCells = Record<string, Record<string, FailedCell>>;
+
+/**
+ * Cells of a partly failed bulk save. Per failure, the row it sent (`sentRow`: its
+ * id and the values written, `null` when the failure has no row, e.g. a delete):
+ * the failure's `field` when the backend names one and the row sent it, else every
+ * field the row sent. `message(failure, field)` translates it (the backend's own
+ * text is never shown).
+ */
+function failedCellsOf(
+  failed: readonly BulkFailure[],
+  sentRow: (failure: BulkFailure) => { id: string; values: Record<string, unknown> } | null,
+  message: (failure: BulkFailure, field: string) => string
+): FailedCells {
+  const cells: FailedCells = {};
+  for (const failure of failed) {
+    const row = sentRow(failure);
+    if (!row) continue;
+    const fields =
+      failure.field !== undefined && failure.field in row.values
+        ? [failure.field]
+        : Object.keys(row.values);
+    for (const field of fields) {
+      (cells[row.id] ??= {})[field] = {
+        sent: row.values[field],
+        message: message(failure, field),
+      };
+    }
+  }
+  return cells;
+}
+
+/**
+ * Cell message of a save failure: its i18n key (`crud:childRows.invalidValue`,
+ * `{{field}}` = the field label) when the backend maps the rule, else
+ * `crud:form.saveFailed`. `t`: entity + `crud` namespaces.
+ */
+function saveFailureMessage(
+  entity: AnyEntity,
+  t: Translate
+): (failure: BulkFailure, field: string) => string {
+  return (failure, field) =>
+    failure.i18nKey
+      ? t(failure.i18nKey, {
+          field: translateFieldLabel(field, entity.fields[field], t),
+        })
+      : t('crud:form.saveFailed');
+}
+
+/**
+ * DataTable `cellErrors` of the failed cells whose value is still the one sent: an
+ * edited (or reverted) cell leaves the error list at once.
+ */
+function failedCellErrors(
+  cells: FailedCells,
+  valueOf: (id: string, field: string) => unknown
+): Record<string, Record<string, string>> {
+  const errors: Record<string, Record<string, string>> = {};
+  for (const [id, fields] of Object.entries(cells)) {
+    for (const [field, { sent, message }] of Object.entries(fields)) {
+      if (Object.is(valueOf(id, field), sent)) (errors[id] ??= {})[field] = message;
+    }
+  }
+  return errors;
+}
+
 /** App toolbar content (`actions`), at the end of the toolbar. */
 function ToolbarActions({ actions }: { actions: ReactNode }) {
   return (
@@ -449,7 +526,11 @@ function ListEmptyState({
   );
 }
 
-/** Pending edits in the bottom bar: "N unsaved changes", Discard, Save; why the last write failed. */
+/**
+ * Pending edits in the bottom bar: "N unsaved changes", Discard, Save; why the last
+ * write failed when no cell carries it (a delete, a write not attempted). Cells a save
+ * rejected are in the DataTable's own "N errors" list, beside this.
+ */
 function PendingBar({
   count,
   saving,
@@ -665,21 +746,26 @@ function StandaloneEntityList({
   const presentIds = new Set(filteredData.map((row) => row.id));
   const checkedIds = selectedIds.filter((id) => presentIds.has(id));
   const [saving, setSaving] = useState(false);
-  // Rows the last bulk save / delete did not write (they stay pending / checked)
+  // Rows the last bulk delete (or a save not attempted) did not write: no cell to mark
   const [failedCount, setFailedCount] = useState(0);
+  // Cells the last bulk save did not write: in error (DataTable list) until edited
+  const [failedCells, setFailedCells] = useState<FailedCells>({});
   const pendingCount = Object.values(pendingChanges).reduce(
     (sum, row) => sum + Object.keys(row).length,
     0
   );
 
   // Partial success: saved rows leave the pending set, failed rows stay pending
-  // (still marked) so nothing typed is lost; the alert gives the count to retry.
+  // (still marked) so nothing typed is lost; their cells are in error (the list
+  // in the bottom bar) until edited. The next save starts a new list.
   const handleSave = async () => {
     setSaving(true);
     setFailedCount(0);
+    setFailedCells({});
+    const sent = pendingChanges;
     try {
       const { failed } = await bulk({
-        updates: Object.entries(pendingChanges).map(([id, patch]) => ({
+        updates: Object.entries(sent).map(([id, patch]) => ({
           id,
           patch: patch as Partial<EntityData>,
         })),
@@ -687,10 +773,19 @@ function StandaloneEntityList({
       const failedIds = new Set(failed.map((f) => f.id));
       setPendingChanges(
         Object.fromEntries(
-          Object.entries(pendingChanges).filter(([id]) => failedIds.has(id))
+          Object.entries(sent).filter(([id]) => failedIds.has(id))
         )
       );
-      setFailedCount(failedIds.size);
+      setFailedCells(
+        failedCellsOf(
+          failed,
+          (failure) =>
+            failure.id !== undefined && sent[failure.id]
+              ? { id: failure.id, values: sent[failure.id]! }
+              : null,
+          saveFailureMessage(entity, t)
+        )
+      );
     } catch {
       // Batch not attempted: every edit stays pending
       setFailedCount(Object.keys(pendingChanges).length);
@@ -863,6 +958,11 @@ function StandaloneEntityList({
           // Read-only list (editable={false}): no selection, no delete
           selectable={!isPreview && editable}
           getRowId={(row: EntityData) => row.id}
+          // Cells the last save rejected, while their value is the one sent
+          cellErrors={failedCellErrors(
+            failedCells,
+            (id, field) => pendingChanges[id]?.[field]
+          )}
           onSelect={(rows: EntityData[]) =>
             setSelectedIds(rows.map((row) => row.id))
           }
@@ -911,6 +1011,7 @@ function StandaloneEntityList({
                 onDiscard={() => {
                   setPendingChanges({});
                   setFailedCount(0);
+                  setFailedCells({});
                 }}
               />
             ),
@@ -1002,6 +1103,8 @@ function RowsEntityList({
   const [saving, setSaving] = useState(false);
   /** Why the last own Save did not write (invalid rows count, or the write error). */
   const [saveError, setSaveError] = useState<string | null>(null);
+  /** Cells the last own Save did not write (partial success): in error until edited. */
+  const [failedCells, setFailedCells] = useState<FailedCells>({});
   const { t: tCrud } = useTranslation('crud');
   const { t, language } = useTranslation([entity.namespace, 'crud']);
 
@@ -1041,6 +1144,15 @@ function RowsEntityList({
       );
   const data = shownIds ? rows.base.filter((row) => shownIds.has(row.id)) : rows.base;
   const checkedIds = selectedIds.filter((id) => baseById.has(id));
+  // Cell errors: the cells the last Save rejected (while their value is the one sent),
+  // the entity's rules on the edited rows over them
+  const itemsById = new Map(rows.items.map((row) => [row.id, row]));
+  const cellErrors = failedCellErrors(failedCells, (id, field) =>
+    itemsById.get(id)?.[field]
+  );
+  for (const [id, fields] of Object.entries(rows.errors)) {
+    cellErrors[id] = { ...cellErrors[id], ...fields };
+  }
   const isEditing =
     editable &&
     (rows.access.update || rows.extensionFields.some((field) => field.editable));
@@ -1076,8 +1188,33 @@ function RowsEntityList({
   const save = async () => {
     setSaving(true);
     setSaveError(null);
+    setFailedCells({});
+    // What this save sends: a failure's index / id points into it
+    const sent = rows.edits;
     try {
-      await rows.save();
+      const result = await rows.save();
+      if (result) {
+        setFailedCells(
+          failedCellsOf(
+            result.failed,
+            (failure) => {
+              if (failure.op === 'insert') {
+                const added =
+                  failure.index === undefined ? undefined : sent.added[failure.index];
+                if (!added) return null;
+                const { id, ...values } = added;
+                return { id, values: { ...values, ...sent.changes[id] } };
+              }
+              const patch =
+                failure.op === 'update' && failure.id !== undefined
+                  ? sent.changes[failure.id]
+                  : undefined;
+              return patch ? { id: failure.id!, values: patch } : null;
+            },
+            saveFailureMessage(entity, t)
+          )
+        );
+      }
     } catch (error) {
       // Not written: every edit stays pending. Invalid rows: the count (cells show each field).
       setSaveError(error instanceof Error ? error.message : tCrud('form.saveFailed'));
@@ -1290,8 +1427,9 @@ function RowsEntityList({
             }
             openLabel={tCrud('actions.open')}
             onRowOpen={(row: ListRow) => open(row.id)}
-            // Fields breaking the entity's rules, checked on every change
-            cellErrors={rows.errors}
+            // Fields breaking the entity's rules (checked on every change), and the
+            // cells the last Save rejected while their value is the one sent
+            cellErrors={cellErrors}
             // Bottom bar: checked rows (bulk edit + delete), unsaved edits
             {...(canDelete && {
               selectionActions: () => (
@@ -1320,6 +1458,7 @@ function RowsEntityList({
                   onDiscard={() => {
                     rows.discard();
                     setSaveError(null);
+                    setFailedCells({});
                   }}
                 />
               ),
