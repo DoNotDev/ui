@@ -22,7 +22,7 @@ import {
   useOverlayStore,
 } from '@donotdev/core';
 
-import type { Navigate, NavigateFunction, NavigateOptions } from './types';
+import { BACK_FALLBACK, type Navigate, type NavigateFunction, type NavigateOptions } from './types';
 import { useRoutePath } from './useRoutePath.vite';
 import { useUrlLanguage } from './useUrlLanguage.vite';
 
@@ -53,21 +53,24 @@ export function useNavigate(): Navigate {
   const navigate: NavigateFunction = (path, options) => {
     closeAll();
 
-    if (path === 'back') {
+    if (path === 'back' && useNavigationStore.getState().inAppHistory) {
       startTransition(() => {
         void routerNavigate(-1);
       });
       return;
     }
 
-    const split = path.startsWith('/')
-      ? splitLanguagePath(path, getLanguageRouting())
+    // 'back' after a direct landing: the previous entry is another site or none, so open
+    // the fallback instead of leaving the app.
+    const target = path === 'back' ? (options?.fallback ?? BACK_FALLBACK) : path;
+    const split = target.startsWith('/')
+      ? splitLanguagePath(target, getLanguageRouting())
       : null;
     if (split?.prefixed && split.language !== language) {
-      window.location.assign(path);
+      window.location.assign(target);
       return;
     }
-    const to = split?.prefixed ? split.path : path;
+    const to = split?.prefixed ? split.path : target;
     startNavigation(to, routePath);
 
     startTransition(() => {
@@ -78,9 +81,13 @@ export function useNavigate(): Navigate {
   return Object.assign(navigate, { navigate, pending });
 }
 
-export function useBack() {
-  const navigate = useRouterNavigate();
-  return () => navigate(-1);
+/**
+ * Back navigation: the previous page when it is a page of this app, otherwise `fallback`
+ * (default `'/'`), never out of the app. Same as `navigate('back', { fallback })`.
+ */
+export function useBack(fallback: string = BACK_FALLBACK) {
+  const navigate = useNavigate();
+  return () => navigate('back', { fallback });
 }
 
 export function useRefresh() {

@@ -38,7 +38,7 @@ import { Link, useNavigate, useParams } from '@donotdev/ui';
 <Text level="h2">Title</Text>
 ```
 
-Levels: `h1`, `h2`, `h3`, `h4`, `body`, `small`, `caption`. Limit to 2-3 levels per page.
+Levels: `h1`, `h2`, `h3`, `h4`, `h5`, `h6`, `body`, `small`, `caption`. Limit to 2-3 levels per page. A `Text` nested in another `Text` with no `level` / `weight` keeps its parent's weight (a coloured phrase in a heading: `<Text as="span" variant="accent">`, no inline weight).
 
 **RTL: Always use `start`/`end` - never `left`/`right`.**
 

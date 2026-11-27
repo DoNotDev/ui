@@ -73,7 +73,7 @@
 ## Routing Hooks
 
 - **useNavigate** - Navigate to routes programmatically.
-- **useBack** - Navigate back in history.
+- **useBack** - `useBack(fallback = '/')`: back to the previous page when it is a page of this app, otherwise to `fallback` (direct landing: link from elsewhere, typed URL, new tab). Never leaves the app. Same as `navigate('back', { fallback })`.
 - **useRefresh** - Refresh current route.
 - **usePrefetch** - Prefetch route data.
 - **useLocation** - Get current location (reads the query string).

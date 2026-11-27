@@ -71,8 +71,11 @@ export const AuthDebugButton: ComponentType = () => {
 
       {isExpanded && (
         <div
-          className="dndev-absolute bottom-full font-mono"
+          className="dndev-absolute"
           style={{
+            // Above the button (was Tailwind bottom-full / font-mono: no CSS defined them)
+            insetBlockEnd: '100%',
+            fontFamily: 'var(--font-mono)',
             zIndex: 'calc(var(--z-toast) + 100)',
             marginBottom: 'var(--gap-sm)',
             padding: 'var(--gap-md)',

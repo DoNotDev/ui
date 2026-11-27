@@ -16,7 +16,7 @@ import { useRouter as useNextRouter } from 'next/navigation';
 
 import { isClient, useNavigationStore, useOverlayStore } from '@donotdev/core';
 
-import type { Navigate, NavigateFunction, NavigateOptions } from './types';
+import { BACK_FALLBACK, type Navigate, type NavigateFunction, type NavigateOptions } from './types';
 import { useRoutePath } from './useRoutePath.next';
 import { useLocalizedPath } from './useUrlLanguage.next';
 
@@ -46,13 +46,16 @@ export function useNavigate(): Navigate {
   const navigate: NavigateFunction = (path, options) => {
     closeAll();
 
-    if (path === 'back') {
+    if (path === 'back' && useNavigationStore.getState().inAppHistory) {
       startTransition(() => router.back());
       return;
     }
 
-    const to = localize(path);
-    startNavigation(path, routePath);
+    // 'back' after a direct landing: the previous entry is another site or none, so open
+    // the fallback instead of leaving the app.
+    const target = path === 'back' ? (options?.fallback ?? BACK_FALLBACK) : path;
+    const to = localize(target);
+    startNavigation(target, routePath);
     startTransition(() => {
       if (options?.replace) router.replace(to);
       else router.push(to);
@@ -69,9 +72,13 @@ export function useNavigate(): Navigate {
   return Object.assign(navigate, { navigate, pending });
 }
 
-export function useBack() {
-  const router = useNextRouter();
-  return () => router.back();
+/**
+ * Back navigation: the previous page when it is a page of this app, otherwise `fallback`
+ * (default `'/'`), never out of the app. Same as `navigate('back', { fallback })`.
+ */
+export function useBack(fallback: string = BACK_FALLBACK) {
+  const navigate = useNavigate();
+  return () => navigate('back', { fallback });
 }
 
 export function useRefresh() {

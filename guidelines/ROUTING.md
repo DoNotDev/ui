@@ -270,8 +270,12 @@ function LoginForm() {
 **Navigate back:**
 ```tsx
 const navigate = useNavigate();
-navigate('back'); // Framework handles browser history
+navigate('back'); // the previous page when it is a page of this app, otherwise '/'
+navigate('back', { fallback: '/catalogue' }); // other target after a direct landing
+const back = useBack(); // same, as a handler: useBack('/catalogue') to override the fallback
 ```
+
+A back navigation never leaves the app. The visitor landed on the page directly (link from another site, typed URL, new tab): there is no in-app page to return to, so it opens the fallback (`'/'` by default). Next and Vite alike; the navigation store's `inAppHistory` (set by `DnDevLayout` on the first route change) decides. `@donotdev/expo`: `router.canGoBack()` decides, same fallback.
 
 **With options:**
 ```tsx

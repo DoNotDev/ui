@@ -83,7 +83,6 @@ function SettingsMenu({
       onClick: () => changeLanguage(language.id),
       disabled: isLoading,
       checked: isActive,
-      className: isActive ? 'bg-accent' : undefined,
       iconEnd: isActive && !isLoading ? Check : undefined,
       children: (
         <Stack direction="row" align="center" gap="tight">

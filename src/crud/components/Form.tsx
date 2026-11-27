@@ -27,7 +27,7 @@ import {
   useFormContext,
 } from 'react-hook-form';
 
-import { FieldMessage, Label, Slot, cn, Stack } from '@donotdev/components';
+import { FieldMessage, Label, Slot, Stack } from '@donotdev/components';
 
 /**
  * Form provider component
@@ -160,7 +160,7 @@ const useFormField = () => {
 /**
  * Form label component
  *
- * Renders a label for a form field with error state styling.
+ * Renders a label for a form field; in error it sets `data-state="error"` (Label.css: `--destructive` text).
  *
  * @param {ComponentProps<typeof Label>} props - Component props
  * @returns {JSX.Element | null} Form label component
@@ -174,7 +174,8 @@ const FormLabel = ({ className, ...props }: ComponentProps<typeof Label>) => {
   const { error, formItemId } = formField;
   return (
     <Label
-      className={cn(error && 'text-destructive', className)}
+      className={className}
+      data-state={error ? 'error' : undefined}
       htmlFor={formItemId}
       {...props}
     />

@@ -21,12 +21,12 @@ interface SkeletonProps {
   /** The type of skeleton to render */
   variant?: 'text' | 'circular' | 'rectangular' | 'rounded';
   /**
-   * Width of the skeleton (ESCAPE HATCH - prefer className for styling)
+   * Width of the skeleton
    * Use when you need precise programmatic control (e.g., matching dynamic content)
    */
   width?: string | number;
   /**
-   * Height of the skeleton (ESCAPE HATCH - prefer className for styling)
+   * Height of the skeleton
    * Use when you need precise programmatic control (e.g., matching dynamic content)
    */
   height?: string | number;
@@ -51,9 +51,7 @@ interface SkeletonProps {
  * - Accessibility support
  * - Smooth animations
  *
- * STYLING APPROACH:
- * - Prefer: <Skeleton className="h-4 w-[250px]" /> (utility classes)
- * - Escape hatch: <Skeleton width={dynamicWidth} height={40} /> (when programmatic)
+ * Sizing: <Skeleton width={250} height={16} /> (no utility classes: the framework has no Tailwind)
  *
  * @version 0.1.0
  * @since 0.0.1

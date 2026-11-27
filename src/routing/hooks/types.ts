@@ -16,9 +16,20 @@ export interface NavigateOptions {
   replace?: boolean;
   /** Preserve scroll position (default: false, scrolls to top) */
   preserveScroll?: boolean;
+  /**
+   * With `'back'`: the app path to open when the previous history entry is not a page of
+   * this app (the visitor landed here directly). Default `'/'` (`BACK_FALLBACK`).
+   */
+  fallback?: string;
 }
 
-/** Navigates to an app path, or `'back'`. */
+/** Default target of a back navigation after a direct landing. */
+export const BACK_FALLBACK = '/';
+
+/**
+ * Navigates to an app path, or `'back'`: the previous page when it is a page of this app
+ * (navigation store `inAppHistory`), otherwise `options.fallback` (default `'/'`).
+ */
 export type NavigateFunction = (path: string, options?: NavigateOptions) => void;
 
 /**

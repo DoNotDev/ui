@@ -433,9 +433,13 @@ export const DnDevLayout = ({
   // fades out before it is removed (useNavigationProgress).
   const navigating = useNavigationStore((state) => state.navigating);
   const endNavigation = useNavigationStore((state) => state.endNavigation);
+  // The same change also tells back navigations whether the previous history entry is a
+  // page of this app (useBack: native back, or its fallback after a direct landing).
+  const recordRoute = useNavigationStore((state) => state.recordRoute);
   useEffect(() => {
     endNavigation();
-  }, [pathname, language, endNavigation]);
+    recordRoute(`${language}:${pathname}`);
+  }, [pathname, language, endNavigation, recordRoute]);
   const { progress: navigationProgress, onFaded: onNavigationProgressFaded } =
     useNavigationProgress(navigating);
 
