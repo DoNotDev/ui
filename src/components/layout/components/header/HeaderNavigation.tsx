@@ -59,6 +59,12 @@ export interface HeaderNavigationProps {
    * Renders null if the path is not found or inaccessible.
    */
   path?: string;
+  /**
+   * Single-item mode only: count bubble on the item's icon (work waiting on that page: orders
+   * to prepare, accounts to review). `0` or absent shows none. The count is added to the
+   * link's accessible name ("Orders (3)"), the bubble itself being decorative.
+   */
+  badge?: number;
 }
 
 /**
@@ -78,6 +84,7 @@ const HeaderNavigation: ComponentType<HeaderNavigationProps> = ({
   showIcons = true,
   display = DISPLAY.AUTO,
   path,
+  badge,
 }) => {
   const { t } = useTranslation('dndev');
   const isMobile = useBreakpoint('isMobile');
@@ -88,10 +95,13 @@ const HeaderNavigation: ComponentType<HeaderNavigationProps> = ({
   // Single-item mode — render one route as a Button link.
   if (path) {
     if (!singleRoute) return null;
+    const count = badge && badge > 0 ? badge : undefined;
     return (
       <Button
         variant="ghost"
         display={display}
+        badge={count}
+        aria-label={count ? `${singleRoute.label} (${count})` : undefined}
         icon={
           showIcons ? (
             <Icon icon={singleRoute.icon} fallback={LinkIcon} />

@@ -21,7 +21,7 @@
 - **AppTitle** - App title display component.
 - **GameTitle** - Game title component for game preset.
 - **Breadcrumbs** - Breadcrumb navigation component. Auto-generated from the route, or `items` (`{ label, href? }`, the last one is the current page, not a link), `showHome`. Wraps on narrow screens; flush with the content edge in page content (the layout's breadcrumb bar insets it).
-- **HeaderNavigation** - Header navigation menu component.
+- **HeaderNavigation** - Header navigation menu component. `path`: one route as a single link (label from the page's `<namespace>:title`, icon from its PageMeta, active on the route and its child routes, nothing rendered if the user may not see it); with `badge` (a count, `0` = none) the count shows on the icon and is added to the link's accessible name ("Orders (3)"). Works in a header row or a sidebar: active is an `--accent` underline in the header, the fill elsewhere (sidebar, dropdowns, burger panels).
 - **DropdownNavigation** - Dropdown navigation menu.
 - **HeaderMenu** - Header controls inline from 1024px up, behind a hamburger below (CSS switch, no hydration swap). Popups inside it (DropdownMenu, Dialog) work from the burger panel.
 - **SettingsMenu** - Settings menu component.

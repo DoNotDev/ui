@@ -52,4 +52,14 @@ describe('HeaderNavigation single-item mode', () => {
   it('renders nothing for a route the user may not see', () => {
     expect(renderToString(<HeaderNavigation path="/pro" />)).toBe('');
   });
+
+  it('badge: the count on the icon and in the accessible name; 0 shows none', () => {
+    nav.isActive = false;
+    const html = renderToString(<HeaderNavigation path="/catalogue" badge={3} />);
+    expect(html).toContain('aria-label="Catalogue (3)"');
+    expect(html).toMatch(/>3</);
+    const none = renderToString(<HeaderNavigation path="/catalogue" badge={0} />);
+    expect(none).toContain('aria-label="Catalogue"');
+    expect(none).not.toMatch(/>0</);
+  });
 });
